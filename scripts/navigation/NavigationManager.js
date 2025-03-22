@@ -13,10 +13,13 @@ class NavigationManager {
             { from: "OverworldScene", to: "CraftingScene" },
             { from: "OverworldScene", to: "CharacterSheetScene" },
             { from: "DungeonSelectScene", to: "DungeonScene" },
+            { from: "DungeonScene", to: "EncounterScene" },
+            { from: "EncounterScene", to: "DungeonScene" },
             { from: "DungeonScene", to: "CombatResultScene" },
             { from: "CombatResultScene", to: "DungeonScene", condition: "Next Level" },
             { from: "CombatResultScene", to: "PostRunSummaryScene", condition: "Retreat with Loot" },
             { from: "PostRunSummaryScene", to: "OverworldScene" },
+            { from: "DungeonScene", to: "OverworldScene" },
             { from: "InventoryScene", to: "CraftingScene" },
             { from: "InventoryScene", to: "OverworldScene" },
             { from: "CraftingScene", to: "OverworldScene" },
@@ -51,28 +54,20 @@ class NavigationManager {
      * @param {string} fromScene - The name of the current scene
      * @param {string} toScene - The name of the target scene
      * @param {string} condition - Optional condition for conditional navigation
-     * @returns {boolean} - Whether the navigation is valid
+     * @returns {boolean} True if navigation is valid, false otherwise
      */
     isValidNavigation(fromScene, toScene, condition = null) {
-        // Find all possible transitions from the current scene
-        const possibleTransitions = this.navigationFlow.filter(
-            flow => flow.from === fromScene && flow.to === toScene
+        // Special case for the key-based scene name vs. class name
+        const fromSceneKey = fromScene === 'DungeonScene' ? 'DungeonScene' : fromScene;
+        
+        // Find all valid navigation paths from this scene
+        const validPaths = this.navigationFlow.filter(path => 
+            path.from === fromSceneKey && 
+            path.to === toScene && 
+            (condition === null || path.condition === undefined || path.condition === condition)
         );
-
-        // If no transitions found, navigation is invalid
-        if (possibleTransitions.length === 0) {
-            return false;
-        }
-
-        // If condition is provided, check if it matches any of the transitions
-        if (condition) {
-            return possibleTransitions.some(
-                transition => !transition.condition || transition.condition === condition
-            );
-        }
-
-        // If no condition is provided, allow navigation if there's at least one transition without a condition
-        return possibleTransitions.some(transition => !transition.condition);
+        
+        return validPaths.length > 0;
     }
 
     /**

@@ -4,6 +4,7 @@ import CharacterSelectScene from './scenes/CharacterSelectScene.js';
 import OverworldScene from './scenes/OverworldScene.js';
 import DungeonSelectScene from './scenes/DungeonSelectScene.js';
 import DungeonScene from './scenes/DungeonScene.js';
+import EncounterScene from './scenes/EncounterScene.js';
 import CombatResultScene from './scenes/CombatResultScene.js';
 import PostRunSummaryScene from './scenes/PostRunSummaryScene.js';
 import InventoryScene from './scenes/InventoryScene.js';
@@ -27,6 +28,7 @@ window.addEventListener('load', function() {
                 OverworldScene,
                 DungeonSelectScene,
                 DungeonScene,
+                EncounterScene,
                 CombatResultScene,
                 PostRunSummaryScene,
                 InventoryScene,

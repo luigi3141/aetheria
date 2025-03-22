@@ -2,6 +2,7 @@ import UIManager from '../ui/UIManager.js';
 import Button from '../ui/components/Button.js';
 import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
+import TransitionManager from '../ui/TransitionManager.js';
 
 /**
  * DungeonSelectScene - Scene for selecting which dungeon to explore
@@ -15,6 +16,14 @@ class DungeonSelectScene extends Phaser.Scene {
         // Load dungeon selection assets
         this.load.image('dungeon-bg', 'https://labs.phaser.io/assets/skies/space2.png');
         this.load.image('dungeon-icon', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        
+        // Load transition assets
+        this.load.spritesheet('door', 'https://labs.phaser.io/assets/sprites/metalslug_mummy37x45.png', { 
+            frameWidth: 37, 
+            frameHeight: 45 
+        });
+        this.load.audio('door-open', 'assets/audio/door_open.wav');
+        this.load.audio('combat-start', 'assets/audio/combat_start.wav');
     }
 
     create() {
@@ -24,6 +33,9 @@ class DungeonSelectScene extends Phaser.Scene {
         
         // Create UI Manager
         this.ui = new UIManager(this);
+        
+        // Create Transition Manager
+        this.transitions = new TransitionManager(this);
         
         // Add background
         this.add.image(width/2, height/2, 'dungeon-bg').setDisplaySize(width, height);
@@ -50,19 +62,27 @@ class DungeonSelectScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Sample dungeon data - in a real implementation, this would come from gameState
-        const dungeons = [
-            { name: "Forest Ruins", level: 1, difficulty: "Easy" },
-            { name: "Crystal Caves", level: 5, difficulty: "Medium" },
-            { name: "Shadow Temple", level: 10, difficulty: "Hard" },
-            { name: "Dragon's Lair", level: 15, difficulty: "Very Hard" }
-        ];
+        // Get dungeon data from gameState
+        const discoveredDungeons = gameState.dungeons.discovered || [];
+        const dungeonTemplates = gameState.dungeonTemplates || {};
         
-        // Create a panel for each dungeon
+        // Create a panel for each discovered dungeon
         const startY = height * 0.25;
         const spacing = height * 0.15;
         
-        dungeons.forEach((dungeon, index) => {
+        let dungeonCount = 0;
+        
+        // Loop through discovered dungeons
+        discoveredDungeons.forEach((dungeonId, index) => {
+            // Get dungeon template
+            const dungeon = dungeonTemplates[dungeonId];
+            
+            if (!dungeon) {
+                console.warn(`Dungeon template not found for ID: ${dungeonId}`);
+                return;
+            }
+            
+            dungeonCount++;
             const y = startY + (index * spacing);
             
             // Create dungeon panel
@@ -91,7 +111,10 @@ class DungeonSelectScene extends Phaser.Scene {
                 fill: '#ffffff'
             }).setOrigin(0, 0.5);
             
-            this.add.text(infoX, y + 15, `Level: ${dungeon.level} | Difficulty: ${dungeon.difficulty}`, {
+            // Get difficulty text based on dungeon level
+            const difficultyText = this.getDifficultyText(dungeon.level);
+            
+            this.add.text(infoX, y + 15, `Level: ${dungeon.level} | Difficulty: ${difficultyText}`, {
                 fontFamily: "'VT323'",
                 fontSize: this.ui.fontSize.sm + 'px',
                 fill: '#aaaaaa'
@@ -104,15 +127,76 @@ class DungeonSelectScene extends Phaser.Scene {
                 y,
                 'ENTER',
                 () => {
-                    console.log(`Entering dungeon: ${dungeon.name}`);
-                    gameState.currentDungeon = dungeon;
-                    navigationManager.navigateTo(this, 'DungeonScene');
+                    this.enterDungeon(dungeonId);
                 },
                 {
                     width: 100,
                     height: 40
                 }
             );
+        });
+        
+        // If no dungeons are available, show a message
+        if (dungeonCount === 0) {
+            this.add.text(width * 0.5, height * 0.4, 'No dungeons available yet.\nExplore the world to discover dungeons!', {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.md + 'px',
+                fill: '#ffffff',
+                align: 'center'
+            }).setOrigin(0.5);
+        }
+    }
+    
+    /**
+     * Get difficulty text based on level
+     */
+    getDifficultyText(level) {
+        if (level <= 1) return 'Easy';
+        if (level <= 3) return 'Normal';
+        if (level <= 5) return 'Hard';
+        if (level <= 8) return 'Very Hard';
+        return 'Extreme';
+    }
+    
+    /**
+     * Enter the selected dungeon
+     */
+    enterDungeon(dungeonId) {
+        console.log(`Entering dungeon: ${dungeonId}`);
+        
+        // Get dungeon template
+        const dungeonTemplate = gameState.dungeonTemplates[dungeonId];
+        
+        if (!dungeonTemplate) {
+            console.error(`Dungeon template not found for ID: ${dungeonId}`);
+            return;
+        }
+        
+        // Create a new dungeon instance from the template
+        const totalRooms = Phaser.Math.Between(
+            dungeonTemplate.minRooms || 5, 
+            dungeonTemplate.maxRooms || 8
+        );
+        
+        // Set current dungeon in gameState
+        gameState.currentDungeon = {
+            id: dungeonId,
+            name: dungeonTemplate.name,
+            level: dungeonTemplate.level,
+            totalRooms: totalRooms,
+            currentRoom: 1,
+            enemies: dungeonTemplate.enemies,
+            bosses: dungeonTemplate.bosses,
+            treasureChance: dungeonTemplate.treasureChance || 0.3,
+            emptyRoomChance: dungeonTemplate.emptyRoomChance || 0.2
+        };
+        
+        console.log('Initialized dungeon:', gameState.currentDungeon);
+        
+        // Use dungeon entry transition
+        this.transitions.dungeonEntry(() => {
+            // Navigate to dungeon scene
+            navigationManager.navigateTo(this, 'DungeonScene');
         });
     }
     

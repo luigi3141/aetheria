@@ -285,22 +285,46 @@ class UIManager {
      * @param {number} width - Panel width
      * @param {number} height - Panel height
      * @param {object} options - Optional configuration
-     * @returns {Phaser.GameObjects.Rectangle} The panel object
+     * @returns {Object} An object containing the panel elements
      */
     createPanel(x, y, width, height, options = {}) {
-        const panel = this.scene.add.rectangle(
+        // Create the background rectangle
+        const rectangle = this.scene.add.rectangle(
             x, 
             y, 
             width, 
             height, 
-            options.color || this.colors.secondary
-        )
+            options.fillColor || this.colors.secondary,
+            options.fillAlpha || 0.8
+        ).setOrigin(0.5);
+        
+        // Create border if needed
+        let border = null;
+        if (options.borderColor !== undefined) {
+            border = this.scene.add.rectangle(
+                x,
+                y,
+                width,
+                height
+            )
+            .setStrokeStyle(
+                options.borderThickness || 2, 
+                options.borderColor
+            )
             .setOrigin(0.5)
-            .setAlpha(options.alpha || 0.8);
-            
-        if (options.stroke !== false) {
-            panel.setStrokeStyle(2, options.strokeColor || this.colors.accent);
+            .setFillStyle(0, 0); // Transparent fill
         }
+        
+        // Create panel object with proper destroy method
+        const panel = {
+            rectangle,
+            border,
+            x, y, width, height,
+            destroy: function() {
+                if (this.rectangle) this.rectangle.destroy();
+                if (this.border) this.border.destroy();
+            }
+        };
         
         // Store in elements if an id is provided
         if (options.id) {
