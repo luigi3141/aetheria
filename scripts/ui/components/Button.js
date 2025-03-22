@@ -353,3 +353,5 @@ class Button {
         this.container.destroy();
     }
 }
+
+export default Button;

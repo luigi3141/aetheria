@@ -1,3 +1,7 @@
+import UIManager from '../ui/UIManager.js';
+import Button from '../ui/components/Button.js';
+import navigationManager from '../navigation/NavigationManager.js';
+
 /**
  * StartScene - The title screen and entry point for the game
  */
@@ -58,7 +62,7 @@ class StartScene extends Phaser.Scene {
             'START GAME', 
             () => {
                 console.log('Start Game clicked');
-                this.scene.start('CharacterSelectScene');
+                navigationManager.navigateTo(this, 'CharacterSelectScene');
             },
             {
                 width: 240,
@@ -99,3 +103,5 @@ class StartScene extends Phaser.Scene {
         );
     }
 }
+
+export default StartScene;

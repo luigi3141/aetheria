@@ -29,3 +29,5 @@ const gameState = {
         completed: []
     }
 };
+
+export default gameState;

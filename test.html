@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phaser Module Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+    <script type="module">
+        console.log('Module script running');
+        console.log('Phaser version:', Phaser.VERSION);
+        
+        // Create a simple Phaser game
+        document.addEventListener('DOMContentLoaded', function() {
+            const config = {
+                type: Phaser.AUTO,
+                width: 800,
+                height: 600,
+                parent: 'game-container',
+                scene: {
+                    create: function() {
+                        this.add.text(400, 300, 'Phaser is working!', { 
+                            font: '32px Arial', 
+                            fill: '#ffffff' 
+                        }).setOrigin(0.5);
+                    }
+                }
+            };
+            
+            const game = new Phaser.Game(config);
+        });
+    </script>
+</head>
+<body>
+    <div id="game-container"></div>
+</body>
+</html>

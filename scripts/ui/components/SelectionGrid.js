@@ -166,3 +166,5 @@ class SelectionGrid {
         this.buttons = [];
     }
 }
+
+export default SelectionGrid;

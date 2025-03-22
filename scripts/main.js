@@ -1,38 +1,67 @@
-// Initialize Phaser game instance
-// Wait for the DOM to load before starting the game
-document.addEventListener('DOMContentLoaded', function() {
-    const config = {
-        type: Phaser.AUTO,
-        width: 800,
-        height: 600,
-        parent: 'game-container',
-        scene: [StartScene, CharacterSelectScene], // Add both scenes
-        backgroundColor: '#000000',
-        pixelArt: true, // Enable pixel art mode for crisp rendering
-        roundPixels: true, // Avoid pixel interpolation
-        scale: {
-            mode: Phaser.Scale.FIT,
-            autoCenter: Phaser.Scale.CENTER_BOTH,
-            // Enable responsive scaling
-            // Set minimum and maximum dimensions
-            min: {
-                width: 400,
-                height: 300
-            },
-            max: {
-                width: 1600,
-                height: 1200
-            }
-        },
-        physics: {
-            default: 'arcade',
-            arcade: {
-                gravity: { y: 0 },
-                debug: false
-            }
-        }
-    };
+// Import all scene classes
+import StartScene from './scenes/StartScene.js';
+import CharacterSelectScene from './scenes/CharacterSelectScene.js';
+import OverworldScene from './scenes/OverworldScene.js';
+import DungeonSelectScene from './scenes/DungeonSelectScene.js';
+import DungeonScene from './scenes/DungeonScene.js';
+import CombatResultScene from './scenes/CombatResultScene.js';
+import PostRunSummaryScene from './scenes/PostRunSummaryScene.js';
+import InventoryScene from './scenes/InventoryScene.js';
+import CraftingScene from './scenes/CraftingScene.js';
+import CharacterSheetScene from './scenes/CharacterSheetScene.js';
 
-    // Create the game instance
-    const game = new Phaser.Game(config);
+// Initialize Phaser game instance
+window.addEventListener('load', function() {
+    console.log('Window loaded');
+    console.log('Phaser version:', Phaser.VERSION);
+    
+    try {
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game-container',
+            scene: [
+                StartScene, 
+                CharacterSelectScene,
+                OverworldScene,
+                DungeonSelectScene,
+                DungeonScene,
+                CombatResultScene,
+                PostRunSummaryScene,
+                InventoryScene,
+                CraftingScene,
+                CharacterSheetScene
+            ],
+            backgroundColor: '#000000',
+            pixelArt: true,
+            roundPixels: true,
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH,
+                min: {
+                    width: 400,
+                    height: 300
+                },
+                max: {
+                    width: 1600,
+                    height: 1200
+                }
+            },
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            }
+        };
+
+        // Create the game instance
+        console.log('Creating Phaser game instance');
+        window.game = new Phaser.Game(config);
+        console.log('Phaser game instance created successfully');
+    } catch (error) {
+        console.error('Error initializing Phaser game:', error);
+    }
 });

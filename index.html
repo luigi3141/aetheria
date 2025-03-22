@@ -5,17 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Echoes of Aetheria</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    <!-- Phaser must be loaded before modules -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-    <!-- Game Scripts -->
-    <script src="scripts/gameState.js"></script>
-    <script src="scripts/ui/UIManager.js"></script>
-    <script src="scripts/ui/components/Button.js"></script>
-    <script src="scripts/ui/components/SelectionGrid.js"></script>
-    <script src="scripts/scenes/StartScene.js"></script>
-    <script src="scripts/scenes/CharacterSelectScene.js"></script>
-    <script src="scripts/main.js"></script>
 </head>
 <body>
     <div id="game-container"></div>
+    
+    <!-- Game Scripts - Added at the end of body for better loading -->
+    <script type="module" src="scripts/main.js"></script>
 </body>
 </html>

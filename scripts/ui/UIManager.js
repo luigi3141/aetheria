@@ -458,137 +458,129 @@ class UIManager {
      * @returns {object} The created label object
      */
     createSectionLabel(x, y, text, options = {}) {
-        const fontSize = options.fontSize || this.fontSize.sm;
-        const origin = options.origin !== undefined ? options.origin : 0.5;
-        const width = options.width || text.length * (fontSize * 0.6);
+        const fontSize = options.fontSize || this.fontSize.md;
+        const fontFamily = options.fontFamily || "'Press Start 2P'";
+        const color = options.color || this.colors.textLight;
+        const sideMarkers = options.sideMarkers !== undefined ? options.sideMarkers : false;
+        const markerWidth = options.markerWidth || 20;
+        const markerSpacing = options.markerSpacing || 10;
+        const background = options.background !== undefined ? options.background : true;
+        const animate = options.animate !== undefined ? options.animate : false;
         
         // Create a container for all label elements
         const container = this.scene.add.container(x, y);
         
-        // Create decorative background if requested
-        if (options.background !== false) {
-            // Create background
-            const bgHeight = fontSize * 1.5;
-            const bgWidth = width;
-            const bgColor = options.backgroundColor || this.colors.secondary;
-            const bgAlpha = options.backgroundAlpha || 0.7;
+        // Create background panel if enabled
+        let bg = null;
+        if (background) {
+            // Calculate text width for proper background sizing
+            const tempText = this.scene.add.text(0, 0, text, {
+                fontFamily: fontFamily,
+                fontSize: fontSize + 'px',
+                resolution: 3
+            });
+            const textWidth = tempText.width;
+            tempText.destroy();
             
-            // Create background with pixel-art style
-            const bg = this.scene.add.graphics();
-            bg.fillStyle(bgColor, bgAlpha);
-            bg.fillRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight);
+            // Create background with proper width
+            const bgWidth = textWidth + 40;
+            const bgHeight = fontSize + 16;
             
-            // Add pixel-art style border
-            bg.lineStyle(2, this.colors.accent, 1);
-            bg.strokeRect(-bgWidth/2, -bgHeight/2, bgWidth, bgHeight);
-            
-            // Add to container
+            bg = this.scene.add.rectangle(0, 0, bgWidth, bgHeight, 0x000000, 0.5)
+                .setOrigin(0.5);
+                
             container.add(bg);
-            
-            // Add decorative pixel corners if requested
-            if (options.decorativeCorners !== false) {
-                const cornerSize = 4;
-                const cornerColor = options.cornerColor || this.colors.accent;
-                
-                // Create corner decorations
-                const corners = this.scene.add.graphics();
-                corners.fillStyle(cornerColor, 1);
-                
-                // Draw pixel corners (small squares at each corner)
-                corners.fillRect(-bgWidth/2, -bgHeight/2, cornerSize, cornerSize); // Top-left
-                corners.fillRect(bgWidth/2 - cornerSize, -bgHeight/2, cornerSize, cornerSize); // Top-right
-                corners.fillRect(-bgWidth/2, bgHeight/2 - cornerSize, cornerSize, cornerSize); // Bottom-left
-                corners.fillRect(bgWidth/2 - cornerSize, bgHeight/2 - cornerSize, cornerSize, cornerSize); // Bottom-right
-                
-                // Add to container
-                container.add(corners);
-            }
         }
         
-        // Create the text
-        const label = this.scene.add.text(0, 0, text, {
-            fontFamily: options.fontFamily || "'Press Start 2P'",
+        // Create text
+        const textObj = this.scene.add.text(0, 0, text, {
+            fontFamily: fontFamily,
             fontSize: fontSize + 'px',
-            fill: options.color || '#ffffff',
+            fill: color,
             align: 'center',
             resolution: 3
         }).setOrigin(0.5);
         
-        // Add to container
-        container.add(label);
+        container.add(textObj);
         
-        // Add decorative side markers if requested
-        if (options.sideMarkers !== false) {
-            const markerColor = options.markerColor || this.colors.accent;
-            const markerSize = options.markerSize || 8;
-            const markerSpacing = options.markerSpacing || (width / 2) + markerSize;
+        // Add side markers if enabled
+        let leftMarker = null;
+        let rightMarker = null;
+        
+        if (sideMarkers) {
+            // Calculate position for markers
+            const textWidth = textObj.width;
+            const markerX = (textWidth / 2) + markerSpacing;
             
-            // Create markers
-            const markers = this.scene.add.graphics();
-            markers.fillStyle(markerColor, 1);
+            // Create left marker
+            leftMarker = this.scene.add.graphics();
+            leftMarker.lineStyle(2, this.colors.accent, 1);
+            leftMarker.lineBetween(-markerX, 0, -markerX - markerWidth, 0);
             
-            // Draw left marker (small triangle or pixel-art arrow)
-            markers.beginPath();
-            markers.moveTo(-markerSpacing, 0);
-            markers.lineTo(-markerSpacing + markerSize, -markerSize/2);
-            markers.lineTo(-markerSpacing + markerSize, markerSize/2);
-            markers.closePath();
-            markers.fillPath();
+            // Create right marker
+            rightMarker = this.scene.add.graphics();
+            rightMarker.lineStyle(2, this.colors.accent, 1);
+            rightMarker.lineBetween(markerX, 0, markerX + markerWidth, 0);
             
-            // Draw right marker (small triangle or pixel-art arrow)
-            markers.beginPath();
-            markers.moveTo(markerSpacing, 0);
-            markers.lineTo(markerSpacing - markerSize, -markerSize/2);
-            markers.lineTo(markerSpacing - markerSize, markerSize/2);
-            markers.closePath();
-            markers.fillPath();
-            
-            // Add to container
-            container.add(markers);
+            // Add markers to container
+            container.add(leftMarker);
+            container.add(rightMarker);
         }
         
-        // Add a subtle pulsing animation if requested
-        if (options.animate !== false) {
+        // Add animation if enabled
+        if (animate) {
+            // Subtle pulsing animation
             this.scene.tweens.add({
-                targets: label,
+                targets: container,
                 scaleX: 1.05,
                 scaleY: 1.05,
-                duration: 1500,
+                duration: 1000,
                 yoyo: true,
                 repeat: -1,
                 ease: 'Sine.easeInOut'
             });
         }
         
-        // Adjust container origin
-        if (origin !== 0.5) {
-            const offsetX = (origin - 0.5) * width;
-            const offsetY = (origin - 0.5) * (fontSize * 1.5);
-            container.x += offsetX;
-            container.y += offsetY;
-        }
-        
-        // Create a composite object that includes both the container and the text
-        const result = {
+        // Create section label object with methods
+        const sectionLabel = {
             container,
-            text: label,
+            text: textObj,
+            bg,
+            leftMarker,
+            rightMarker,
             setText: (newText) => {
-                label.setText(newText);
+                textObj.setText(newText);
+                
+                // Update background size if present
+                if (bg) {
+                    const newWidth = textObj.width + 40;
+                    bg.width = newWidth;
+                }
+                
+                // Update marker positions if present
+                if (sideMarkers) {
+                    const newMarkerX = (textObj.width / 2) + markerSpacing;
+                    
+                    leftMarker.clear();
+                    leftMarker.lineStyle(2, this.colors.accent, 1);
+                    leftMarker.lineBetween(-newMarkerX, 0, -newMarkerX - markerWidth, 0);
+                    
+                    rightMarker.clear();
+                    rightMarker.lineStyle(2, this.colors.accent, 1);
+                    rightMarker.lineBetween(newMarkerX, 0, newMarkerX + markerWidth, 0);
+                }
             },
-            setVisible: (visible) => {
-                container.setVisible(visible);
-            },
-            destroy: () => {
-                container.destroy();
+            setPosition: (newX, newY) => {
+                container.setPosition(newX, newY);
             }
         };
         
         // Store in elements if an id is provided
         if (options.id) {
-            this.elements[options.id] = result;
+            this.elements[options.id] = sectionLabel;
         }
         
-        return result;
+        return sectionLabel;
     }
     
     /**
@@ -874,139 +866,7 @@ class UIManager {
     }
 
     /**
-     * Create a section label with optional decorative elements
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     * @param {string} text - Label text
-     * @param {object} options - Optional configuration
-     * @returns {object} Section label object
-     */
-    createSectionLabel(x, y, text, options = {}) {
-        const fontSize = options.fontSize || this.fontSize.md;
-        const fontFamily = options.fontFamily || "'Press Start 2P'";
-        const color = options.color || this.colors.text;
-        const sideMarkers = options.sideMarkers !== undefined ? options.sideMarkers : false;
-        const markerWidth = options.markerWidth || 20;
-        const markerSpacing = options.markerSpacing || 10;
-        const background = options.background !== undefined ? options.background : true;
-        const animate = options.animate !== undefined ? options.animate : false;
-        
-        // Create a container for all label elements
-        const container = this.scene.add.container(x, y);
-        
-        // Create background panel if enabled
-        let bg = null;
-        if (background) {
-            // Calculate text width for proper background sizing
-            const tempText = this.scene.add.text(0, 0, text, {
-                fontFamily: fontFamily,
-                fontSize: fontSize + 'px',
-                resolution: 3
-            });
-            const textWidth = tempText.width;
-            tempText.destroy();
-            
-            // Create background with proper width
-            const bgWidth = textWidth + 40;
-            const bgHeight = fontSize + 16;
-            
-            bg = this.scene.add.rectangle(0, 0, bgWidth, bgHeight, 0x000000, 0.5)
-                .setOrigin(0.5);
-                
-            container.add(bg);
-        }
-        
-        // Create text
-        const textObj = this.scene.add.text(0, 0, text, {
-            fontFamily: fontFamily,
-            fontSize: fontSize + 'px',
-            fill: color,
-            align: 'center',
-            resolution: 3
-        }).setOrigin(0.5);
-        
-        container.add(textObj);
-        
-        // Add side markers if enabled
-        let leftMarker = null;
-        let rightMarker = null;
-        
-        if (sideMarkers) {
-            const textWidth = textObj.width;
-            const markerX = (textWidth / 2) + markerSpacing;
-            
-            // Left marker
-            leftMarker = this.scene.add.graphics();
-            leftMarker.fillStyle(this.colors.accent, 1);
-            leftMarker.fillRect(-markerX - markerWidth, -2, markerWidth, 4);
-            
-            // Right marker
-            rightMarker = this.scene.add.graphics();
-            rightMarker.fillStyle(this.colors.accent, 1);
-            rightMarker.fillRect(markerX, -2, markerWidth, 4);
-            
-            container.add(leftMarker);
-            container.add(rightMarker);
-        }
-        
-        // Add subtle animation if enabled
-        if (animate) {
-            this.scene.tweens.add({
-                targets: container,
-                scaleX: 1.05,
-                scaleY: 1.05,
-                duration: 1500,
-                yoyo: true,
-                repeat: -1,
-                ease: 'Sine.easeInOut'
-            });
-        }
-        
-        // Create section label object with methods
-        const sectionLabel = {
-            container,
-            bg,
-            text: textObj,
-            leftMarker,
-            rightMarker,
-            setText: (newText) => {
-                textObj.setText(newText);
-                
-                // Update background size if it exists
-                if (bg) {
-                    const newWidth = textObj.width + 40;
-                    bg.width = newWidth;
-                }
-                
-                // Update marker positions if they exist
-                if (sideMarkers) {
-                    const newTextWidth = textObj.width;
-                    const newMarkerX = (newTextWidth / 2) + markerSpacing;
-                    
-                    leftMarker.clear();
-                    leftMarker.fillStyle(this.colors.accent, 1);
-                    leftMarker.fillRect(-newMarkerX - markerWidth, -2, markerWidth, 4);
-                    
-                    rightMarker.clear();
-                    rightMarker.fillStyle(this.colors.accent, 1);
-                    rightMarker.fillRect(newMarkerX, -2, markerWidth, 4);
-                }
-            },
-            setPosition: (newX, newY) => {
-                container.setPosition(newX, newY);
-            }
-        };
-        
-        // Store in elements if an id is provided
-        if (options.id) {
-            this.elements[options.id] = sectionLabel;
-        }
-        
-        return sectionLabel;
-    }
-    
-    /**
-     * Add decorative pixel corners to the screen
+     * Add decorative corners to the screen
      * @param {object} options - Optional configuration
      * @returns {object} Screen corners object
      */
@@ -1092,3 +952,5 @@ class UIManager {
         return screenCorners;
     }
 }
+
+export default UIManager;

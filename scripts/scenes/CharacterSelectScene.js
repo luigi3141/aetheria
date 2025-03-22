@@ -1,3 +1,9 @@
+import UIManager from '../ui/UIManager.js';
+import Button from '../ui/components/Button.js';
+import SelectionGrid from '../ui/components/SelectionGrid.js';
+import gameState from '../gameState.js';
+import navigationManager from '../navigation/NavigationManager.js';
+
 /**
  * CharacterSelectScene - Scene for character creation and customization
  */
@@ -282,7 +288,7 @@ class CharacterSelectScene extends Phaser.Scene {
             'BACK',
             () => {
                 console.log('Back button clicked');
-                this.scene.start('StartScene');
+                navigationManager.navigateTo(this, 'StartScene');
             },
             {
                 width: 160,
@@ -303,11 +309,9 @@ class CharacterSelectScene extends Phaser.Scene {
                 gameState.player.class = this.classGrid.getSelectedItem().toLowerCase();
                 gameState.player.race = this.raceGrid.getSelectedItem();
                 
-                // In the future, transition to the game world
+                // Navigate to the OverworldScene
                 console.log('Character created:', gameState.player);
-                
-                // For now, go back to start scene
-                this.scene.start('StartScene');
+                navigationManager.navigateTo(this, 'OverworldScene');
             },
             {
                 width: 200,
@@ -454,3 +458,5 @@ class CharacterSelectScene extends Phaser.Scene {
         }
     }
 }
+
+export default CharacterSelectScene;
