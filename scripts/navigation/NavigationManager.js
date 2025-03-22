@@ -20,6 +20,7 @@ class NavigationManager {
             { from: "InventoryScene", to: "CraftingScene" },
             { from: "InventoryScene", to: "OverworldScene" },
             { from: "CraftingScene", to: "OverworldScene" },
+            { from: "CraftingScene", to: "InventoryScene" },
             { from: "CharacterSheetScene", to: "OverworldScene" }
         ];
     }

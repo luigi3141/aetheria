@@ -345,6 +345,36 @@ class Button {
     }
     
     /**
+     * Set the active state of the button
+     * @param {boolean} isActive - Whether the button is active
+     * @returns {Button} This button for chaining
+     */
+    setActive(isActive) {
+        if (isActive) {
+            this.bg.fillColor = this.activeColor;
+            // Add a thicker stroke to indicate active state
+            this.bg.setStrokeStyle(3, this.strokeColor);
+            // Store the active state
+            this.isActive = true;
+        } else {
+            this.bg.fillColor = this.fillColor;
+            // Reset stroke to normal
+            this.bg.setStrokeStyle(2, this.strokeColor);
+            // Update active state
+            this.isActive = false;
+        }
+        return this;
+    }
+    
+    /**
+     * Check if the button is active
+     * @returns {boolean} Whether the button is active
+     */
+    isActive() {
+        return this.isActive || false;
+    }
+    
+    /**
      * Destroy the button
      */
     destroy() {

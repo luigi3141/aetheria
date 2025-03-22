@@ -57,7 +57,7 @@ class CharacterSelectScene extends Phaser.Scene {
         this.createMainLayout();
         
         // Create the bottom buttons
-        this.createBottomButtons();
+        this.createNavigationButtons();
         
         // Initialize with default selections
         this.updateCharacterPreview();
@@ -131,7 +131,7 @@ class CharacterSelectScene extends Phaser.Scene {
         this.statsText = this.ui.createSectionLabel(
             x,
             y + this.ui.spacing.xl * 2,
-            'STATS\nSTR: 10  DEX: 10\nINT: 10  CON: 10',
+            'STATS\nSTR: 10  AGI: 10\nINT: 10  CON: 10',
             { 
                 fontSize: this.ui.fontSize.xs,
                 fontFamily: "'VT323'",
@@ -274,14 +274,14 @@ class CharacterSelectScene extends Phaser.Scene {
     }
     
     /**
-     * Create the bottom buttons
+     * Create the bottom navigation buttons
      */
-    createBottomButtons() {
+    createNavigationButtons() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Create back button
-        this.backButton = new Button(
+        // Back button to return to the start screen
+        const backButton = new Button(
             this,
             width * 0.25,
             height * 0.85,
@@ -291,12 +291,12 @@ class CharacterSelectScene extends Phaser.Scene {
                 navigationManager.navigateTo(this, 'StartScene');
             },
             {
-                width: 160,
+                width: 120,
                 height: 50
             }
         );
         
-        // Create start game button
+        // Start game button to finalize character and start the game
         this.startButton = new Button(
             this,
             width * 0.75,
@@ -304,10 +304,85 @@ class CharacterSelectScene extends Phaser.Scene {
             'START GAME',
             () => {
                 console.log('Start game button clicked');
+                
+                // Initialize player object if it doesn't exist
+                if (!gameState.player) {
+                    gameState.player = {};
+                }
+                
+                // Get character info
+                const playerName = this.nameInput.getValue() || 'Adventurer';
+                const playerClass = this.classGrid.getSelectedItem().toLowerCase();
+                const playerRace = this.raceGrid.getSelectedItem();
+                
+                // Generate stats based on class and race
+                let str = 10, agi = 10, int = 10, con = 10;
+                
+                // Adjust stats based on class
+                switch (playerClass) {
+                    case 'warrior':
+                        str += 3; con += 2;
+                        break;
+                    case 'mage':
+                        int += 4; agi += 1;
+                        break;
+                    case 'rogue':
+                        agi += 4; str += 1;
+                        break;
+                    case 'cleric':
+                        int += 2; con += 3;
+                        break;
+                    case 'ranger':
+                        agi += 3; str += 2;
+                        break;
+                    case 'bard':
+                        agi += 2; int += 3;
+                        break;
+                }
+                
+                // Adjust stats based on race
+                switch (playerRace.toLowerCase()) {
+                    case 'human':
+                        str += 1; agi += 1; int += 1; con += 1;
+                        break;
+                    case 'elf':
+                        agi += 2; int += 2; con -= 1;
+                        break;
+                    case 'dwarf':
+                        con += 3; str += 1; agi -= 1;
+                        break;
+                    case 'halfling':
+                        agi += 3; int += 1; str -= 1;
+                        break;
+                    case 'orc':
+                        str += 3; con += 2; int -= 2;
+                        break;
+                    case 'dragonborn':
+                        str += 2; int += 2; con += 1;
+                        break;
+                }
+                
+                // Calculate derived stats
+                const maxHealth = 50 + (con * 5);
+                const maxMana = 20 + (int * 3);
+                
                 // Save character data to gameState
-                gameState.player.name = this.nameInput.getValue();
-                gameState.player.class = this.classGrid.getSelectedItem().toLowerCase();
-                gameState.player.race = this.raceGrid.getSelectedItem();
+                gameState.player.name = playerName;
+                gameState.player.class = playerClass;
+                gameState.player.race = playerRace;
+                gameState.player.level = 1;
+                gameState.player.experience = 0;
+                gameState.player.experienceToNextLevel = 100;
+                gameState.player.health = maxHealth;
+                gameState.player.maxHealth = maxHealth;
+                gameState.player.mana = maxMana;
+                gameState.player.maxMana = maxMana;
+                
+                // Save stats to gameState
+                gameState.player.strength = str;
+                gameState.player.agility = agi;
+                gameState.player.intelligence = int;
+                gameState.player.constitution = con;
                 
                 // Navigate to the OverworldScene
                 console.log('Character created:', gameState.player);
@@ -406,7 +481,7 @@ class CharacterSelectScene extends Phaser.Scene {
         }
         
         // Generate some fake stats based on class and race
-        let str = 10, dex = 10, int = 10, con = 10;
+        let str = 10, agi = 10, int = 10, con = 10;
         
         // Adjust stats based on class
         switch (playerClass) {
@@ -414,35 +489,35 @@ class CharacterSelectScene extends Phaser.Scene {
                 str += 3; con += 2;
                 break;
             case 'mage':
-                int += 4; dex += 1;
+                int += 4; agi += 1;
                 break;
             case 'rogue':
-                dex += 4; str += 1;
+                agi += 4; str += 1;
                 break;
             case 'cleric':
                 int += 2; con += 3;
                 break;
             case 'ranger':
-                dex += 3; str += 2;
+                agi += 3; str += 2;
                 break;
             case 'bard':
-                dex += 2; int += 3;
+                agi += 2; int += 3;
                 break;
         }
         
         // Adjust stats based on race
         switch (playerRace) {
             case 'human':
-                str += 1; dex += 1; int += 1; con += 1;
+                str += 1; agi += 1; int += 1; con += 1;
                 break;
             case 'elf':
-                dex += 2; int += 2; con -= 1;
+                agi += 2; int += 2; con -= 1;
                 break;
             case 'dwarf':
-                con += 3; str += 1; dex -= 1;
+                con += 3; str += 1; agi -= 1;
                 break;
             case 'halfling':
-                dex += 3; con += 1; str -= 1;
+                agi += 3; int += 1; str -= 1;
                 break;
             case 'orc':
                 str += 3; con += 2; int -= 2;
@@ -454,7 +529,7 @@ class CharacterSelectScene extends Phaser.Scene {
         
         // Update stats text
         if (this.statsText) {
-            this.statsText.setText(`STATS\nSTR: ${str}  DEX: ${dex}\nINT: ${int}  CON: ${con}`);
+            this.statsText.setText(`STATS\nSTR: ${str}  AGI: ${agi}\nINT: ${int}  CON: ${con}`);
         }
     }
 }

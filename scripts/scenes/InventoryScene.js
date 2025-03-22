@@ -108,7 +108,8 @@ class InventoryScene extends Phaser.Scene {
         const height = this.cameras.main.height;
         
         // Create a panel for the inventory
-        const inventoryPanel = this.ui.createPanel(
+        this.ui.createPanel(
+            this,
             width * 0.35,
             height * 0.45,
             width * 0.6,
@@ -121,15 +122,16 @@ class InventoryScene extends Phaser.Scene {
             }
         );
         
-        // Sample inventory items - in a real implementation, this would come from gameState
-        const inventoryItems = gameState.inventory || [
-            { name: 'Iron Sword', type: 'Weapon', rarity: 'Common', stats: '+5 Attack' },
-            { name: 'Leather Armor', type: 'Armor', rarity: 'Common', stats: '+10 Defense' },
-            { name: 'Health Potion', type: 'Potion', rarity: 'Common', stats: 'Restores 50 HP' },
-            { name: 'Magic Amulet', type: 'Accessory', rarity: 'Rare', stats: '+10 Magic' },
-            { name: 'Iron Ore', type: 'Material', rarity: 'Common', stats: 'Crafting material' },
-            { name: 'Fire Crystal', type: 'Material', rarity: 'Uncommon', stats: 'Crafting material' }
-        ];
+        // Get inventory items from gameState or use sample data if empty
+        const inventoryItems = gameState.inventory.items.length > 0 ? 
+            gameState.inventory.items : 
+            [
+                { name: 'Health Potion', type: 'Consumable', rarity: 'Common', stats: '+50 HP' },
+                { name: 'Mana Potion', type: 'Consumable', rarity: 'Common', stats: '+30 MP' },
+                { name: 'Iron Sword', type: 'Weapon', rarity: 'Common', stats: '+5 ATK' },
+                { name: 'Leather Armor', type: 'Armor', rarity: 'Common', stats: '+3 DEF' },
+                { name: 'Fire Crystal', type: 'Material', rarity: 'Uncommon', stats: 'Crafting material' }
+            ];
         
         // Create a grid layout for the items
         const gridCols = 4;
@@ -139,68 +141,52 @@ class InventoryScene extends Phaser.Scene {
         const startY = height * 0.25;
         
         // Draw grid cells and items
-        inventoryItems.forEach((item, index) => {
-            const col = index % gridCols;
-            const row = Math.floor(index / gridCols);
-            
-            const cellX = startX + col * (cellSize + 10);
-            const cellY = startY + row * (cellSize + 10);
-            
-            // Create item cell
-            const cell = this.add.rectangle(
-                cellX + cellSize/2,
-                cellY + cellSize/2,
-                cellSize,
-                cellSize,
-                0x222233
-            ).setStrokeStyle(1, 0x3399ff);
-            
-            // Add item icon
-            const itemIcon = this.add.image(
-                cellX + cellSize/2,
-                cellY + cellSize/2,
-                'item-icon'
-            ).setDisplaySize(cellSize * 0.7, cellSize * 0.7);
-            
-            // Set tint based on rarity
-            switch (item.rarity) {
-                case 'Common':
-                    itemIcon.setTint(0xffffff);
-                    break;
-                case 'Uncommon':
-                    itemIcon.setTint(0x00ff00);
-                    break;
-                case 'Rare':
-                    itemIcon.setTint(0x0099ff);
-                    break;
-                case 'Epic':
-                    itemIcon.setTint(0x9900ff);
-                    break;
-                case 'Legendary':
-                    itemIcon.setTint(0xff9900);
-                    break;
-            }
-            
-            // Make the item interactive
-            itemIcon.setInteractive();
-            
-            // Add hover effect
-            itemIcon.on('pointerover', () => {
-                cell.setStrokeStyle(2, 0xffcc00);
-                this.showItemTooltip(item, cellX + cellSize/2, cellY + cellSize/2);
+        if (Array.isArray(inventoryItems)) {
+            inventoryItems.forEach((item, index) => {
+                const col = index % gridCols;
+                const row = Math.floor(index / gridCols);
+                
+                const cellX = startX + col * (cellSize + 10);
+                const cellY = startY + row * (cellSize + 10);
+                
+                // Create item cell
+                const cell = this.add.rectangle(
+                    cellX + cellSize/2,
+                    cellY + cellSize/2,
+                    cellSize,
+                    cellSize,
+                    0x222233
+                ).setStrokeStyle(1, 0x3399ff);
+                
+                // Add item icon
+                const itemIcon = this.add.image(
+                    cellX + cellSize/2,
+                    cellY + cellSize/2,
+                    'item-icon'
+                ).setDisplaySize(50, 50);
+                
+                // Add item name as tooltip
+                itemIcon.setInteractive({ useHandCursor: true });
+                
+                // Show tooltip on hover
+                itemIcon.on('pointerover', () => {
+                    this.showItemTooltip(item, cellX + cellSize/2, cellY + cellSize/2);
+                });
+                
+                // Hide tooltip when not hovering
+                itemIcon.on('pointerout', () => {
+                    this.hideItemTooltip();
+                });
             });
-            
-            itemIcon.on('pointerout', () => {
-                cell.setStrokeStyle(1, 0x3399ff);
-                this.hideItemTooltip();
-            });
-            
-            // Add click handler
-            itemIcon.on('pointerdown', () => {
-                console.log(`Item clicked: ${item.name}`);
-                // In a real implementation, this would show item actions
-            });
-        });
+        } else {
+            // Display a message if inventory is empty or not an array
+            this.add.text(width * 0.35, height * 0.45, 'Your inventory is empty', {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.md + 'px',
+                fill: '#ffffff',
+                align: 'center'
+            }).setOrigin(0.5);
+        }
     }
     
     /**
@@ -390,6 +376,9 @@ class InventoryScene extends Phaser.Scene {
                 height: 50
             }
         );
+        
+        // Add shine effect to make the button more noticeable
+        backButton.addShineEffect();
         
         // Create crafting button
         const craftingButton = new Button(

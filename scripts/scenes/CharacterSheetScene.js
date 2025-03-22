@@ -1,7 +1,7 @@
-import UIManager from '../ui/UIManager.js';
 import Button from '../ui/components/Button.js';
 import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
+import UIManager from '../ui/UIManager.js';
 
 /**
  * CharacterSheetScene - Scene for viewing and managing character stats and skills
@@ -14,94 +14,77 @@ class CharacterSheetScene extends Phaser.Scene {
     preload() {
         // Load character sheet assets
         this.load.image('character-bg', 'https://labs.phaser.io/assets/skies/space1.png');
-        this.load.image('character-portrait', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('skill-icon', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        
+        // Load class-specific character portraits if they don't exist
+        if (!this.textures.exists('warrior')) {
+            this.load.image('warrior', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        }
+        if (!this.textures.exists('mage')) {
+            this.load.image('mage', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        }
+        if (!this.textures.exists('rogue')) {
+            this.load.image('rogue', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        }
+        if (!this.textures.exists('cleric')) {
+            this.load.image('cleric', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        }
+        if (!this.textures.exists('ranger')) {
+            this.load.image('ranger', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        }
+        if (!this.textures.exists('bard')) {
+            this.load.image('bard', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        }
     }
 
     create() {
+        console.log('CharacterSheetScene created');
+        
+        // Initialize UI manager
+        this.ui = new UIManager(this);
+        
+        // Create the scene background
+        this.createBackground();
+        
+        // Create the scene title
+        this.createTitle();
+        
+        // Create character info section
+        this.createCharacterInfo();
+        
+        // Create stats display
+        this.createStatsDisplay();
+        
+        // Create back button
+        this.createBackButton();
+    }
+    
+    /**
+     * Create the scene background
+     */
+    createBackground() {
         // Get screen dimensions
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Create UI Manager
-        this.ui = new UIManager(this);
-        
         // Add background
         this.add.image(width/2, height/2, 'character-bg').setDisplaySize(width, height);
-
+        
         // Add decorative corners
         this.ui.addScreenCorners();
+    }
+    
+    /**
+     * Create the scene title
+     */
+    createTitle() {
+        // Get screen dimensions
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
         
         // Create the title
         this.ui.createTitle(width/2, height * 0.08, 'Character Sheet', {
             fontSize: this.ui.fontSize.lg
         });
-        
-        // Create tabs for different character sheet sections
-        this.createCharacterTabs();
-        
-        // Create the character portrait and basic info
-        this.createCharacterInfo();
-        
-        // Create the stats display
-        this.createStatsDisplay();
-        
-        // Create the skills display
-        this.createSkillsDisplay();
-        
-        // Create navigation buttons
-        this.createNavigationButtons();
-    }
-    
-    /**
-     * Create tabs for different character sheet sections
-     */
-    createCharacterTabs() {
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
-        
-        const tabY = height * 0.15;
-        const tabWidth = 120;
-        const tabHeight = 40;
-        const tabSpacing = 10;
-        
-        // Create tabs
-        const tabs = ['Stats', 'Skills', 'Abilities', 'Biography'];
-        
-        tabs.forEach((tabName, index) => {
-            const tabX = width * 0.2 + (index * (tabWidth + tabSpacing));
-            
-            // Create tab button
-            const tabButton = new Button(
-                this,
-                tabX,
-                tabY,
-                tabName,
-                () => {
-                    console.log(`Tab clicked: ${tabName}`);
-                    this.setActiveTab(tabName);
-                },
-                {
-                    width: tabWidth,
-                    height: tabHeight,
-                    fontSize: this.ui.fontSize.sm
-                }
-            );
-            
-            // Make the first tab active by default
-            if (index === 0) {
-                tabButton.setActive(true);
-            }
-        });
-    }
-    
-    /**
-     * Set the active character sheet tab
-     * @param {string} tabName - Name of the tab to activate
-     */
-    setActiveTab(tabName) {
-        // In a real implementation, this would show/hide different sections
-        console.log(`Setting active tab: ${tabName}`);
     }
     
     /**
@@ -111,12 +94,13 @@ class CharacterSheetScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Create a panel for the character portrait
-        const portraitPanel = this.ui.createPanel(
-            width * 0.2,
+        // Create character info container
+        this.ui.createPanel(
+            this,
+            width * 0.25,
             height * 0.35,
-            width * 0.3,
-            height * 0.3,
+            width * 0.4,
+            height * 0.4,
             {
                 fillColor: 0x111122,
                 fillAlpha: 0.7,
@@ -125,15 +109,33 @@ class CharacterSheetScene extends Phaser.Scene {
             }
         );
         
-        // Add character portrait
+        // Add character portrait - use the character's class sprite if available
+        const characterClass = gameState.player?.class || 'warrior';
+        let portraitKey = characterClass;
+        
+        // Fallback to a default if the texture doesn't exist
+        if (!this.textures.exists(portraitKey)) {
+            portraitKey = 'warrior';
+        }
+        
+        // Create the portrait
         const portrait = this.add.image(
-            width * 0.2,
-            height * 0.35,
-            'character-portrait'
+            width * 0.25,
+            height * 0.3,
+            portraitKey
         ).setDisplaySize(100, 100);
         
-        // Add a glow effect to the portrait
-        portrait.preFX.addGlow(0x3399ff, 4);
+        // Add a simple glow effect with a background circle
+        const glowCircle = this.add.circle(
+            width * 0.25,
+            height * 0.3,
+            60,
+            0x3399ff,
+            0.3
+        );
+        
+        // Ensure the circle is behind the portrait
+        glowCircle.setDepth(portrait.depth - 1);
         
         // Get character info from gameState
         const playerName = gameState.player?.name || 'Unnamed Hero';
@@ -142,7 +144,7 @@ class CharacterSheetScene extends Phaser.Scene {
         const playerLevel = gameState.player?.level || 1;
         
         // Add character name
-        this.add.text(width * 0.2, height * 0.25, playerName, {
+        this.add.text(width * 0.25, height * 0.2, playerName, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.lg + 'px',
             fill: '#ffffff',
@@ -150,40 +152,36 @@ class CharacterSheetScene extends Phaser.Scene {
         }).setOrigin(0.5);
         
         // Add character class and race
-        this.add.text(width * 0.2, height * 0.45, `${playerRace} ${playerClass}`, {
+        this.add.text(width * 0.25, height * 0.4, `${playerRace} ${playerClass}`, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.md + 'px',
             fill: '#aaaaaa',
             align: 'center'
         }).setOrigin(0.5);
         
-        // Add level display
-        const levelText = this.add.text(width * 0.3, height * 0.28, `Level ${playerLevel}`, {
+        // Add level
+        this.add.text(width * 0.25, height * 0.45, `Level ${playerLevel}`, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.md + 'px',
-            fill: '#ffcc00',
-            align: 'center',
-            backgroundColor: '#222244',
-            padding: { x: 10, y: 5 }
+            fill: '#ffff00',
+            align: 'center'
         }).setOrigin(0.5);
-        
-        // Add a border to the level text
-        levelText.setStroke('#000000', 2);
     }
     
     /**
-     * Create the stats display
+     * Create stats display
      */
     createStatsDisplay() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
         // Create a panel for the stats
-        const statsPanel = this.ui.createPanel(
-            width * 0.6,
+        this.ui.createPanel(
+            this,
+            width * 0.7,
             height * 0.35,
-            width * 0.3,
-            height * 0.3,
+            width * 0.4,
+            height * 0.4,
             {
                 fillColor: 0x111122,
                 fillAlpha: 0.7,
@@ -193,296 +191,97 @@ class CharacterSheetScene extends Phaser.Scene {
         );
         
         // Add stats title
-        this.add.text(width * 0.6, height * 0.25, 'CHARACTER STATS', {
+        this.add.text(width * 0.7, height * 0.2, 'CHARACTER STATS', {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.md + 'px',
             fill: '#ffffff',
             align: 'center'
         }).setOrigin(0.5);
         
-        // Get character stats from gameState
-        const stats = gameState.player?.stats || {
-            strength: 10,
-            dexterity: 8,
-            intelligence: 12,
-            vitality: 9,
-            luck: 7
-        };
+        // Get player stats from gameState
+        const player = gameState.player || {};
         
-        // Define stat labels and descriptions
-        const statInfo = {
-            strength: { label: 'Strength', desc: 'Increases physical damage and carrying capacity' },
-            dexterity: { label: 'Dexterity', desc: 'Improves accuracy, evasion, and critical hit chance' },
-            intelligence: { label: 'Intelligence', desc: 'Enhances magical abilities and spell effectiveness' },
-            vitality: { label: 'Vitality', desc: 'Boosts health points and physical resistance' },
-            luck: { label: 'Luck', desc: 'Affects critical hits, item drops, and random events' }
-        };
+        // Define the primary stats to display
+        const primaryStats = [
+            { name: 'Strength', value: player.strength || 10 },
+            { name: 'Agility', value: player.agility || 10 },
+            { name: 'Intelligence', value: player.intelligence || 10 },
+            { name: 'Constitution', value: player.constitution || 10 }
+        ];
         
-        // Display the stats
-        const startY = height * 0.28;
-        const spacing = height * 0.05;
+        // Define the secondary stats to display
+        const secondaryStats = [
+            { name: 'Health', value: `${player.health || 100}/${player.maxHealth || 100}` },
+            { name: 'Mana', value: `${player.mana || 50}/${player.maxMana || 50}` },
+            { name: 'Experience', value: `${player.experience || 0}/${player.experienceToNextLevel || 100}` }
+        ];
         
-        let index = 0;
-        for (const [statKey, statValue] of Object.entries(stats)) {
-            const y = startY + (index * spacing);
+        // Display primary stats
+        primaryStats.forEach((stat, index) => {
+            const statY = height * 0.25 + (index * 30);
             
-            // Add stat label
-            this.add.text(width * 0.5, y, statInfo[statKey].label + ':', {
+            // Stat name
+            this.add.text(width * 0.6, statY, stat.name, {
                 fontFamily: "'VT323'",
                 fontSize: this.ui.fontSize.md + 'px',
-                fill: '#ffffff',
-                align: 'right'
-            }).setOrigin(1, 0.5);
-            
-            // Add stat value
-            const valueText = this.add.text(width * 0.52, y, statValue.toString(), {
-                fontFamily: "'VT323'",
-                fontSize: this.ui.fontSize.md + 'px',
-                fill: '#ffcc00',
+                fill: '#aaaaaa',
                 align: 'left'
             }).setOrigin(0, 0.5);
             
-            // Add stat bar
-            const barWidth = 100;
-            const barHeight = 10;
-            const barX = width * 0.55;
-            
-            // Background bar
-            this.add.rectangle(
-                barX + barWidth/2,
-                y,
-                barWidth,
-                barHeight,
-                0x222233
-            );
-            
-            // Filled bar (scaled based on stat value, assuming max is 20)
-            const fillWidth = (statValue / 20) * barWidth;
-            this.add.rectangle(
-                barX + fillWidth/2,
-                y,
-                fillWidth,
-                barHeight,
-                0x3399ff
-            ).setOrigin(0, 0.5);
-            
-            // Add increase button
-            const increaseButton = new Button(
-                this,
-                width * 0.7,
-                y,
-                '+',
-                () => {
-                    console.log(`Increasing stat: ${statKey}`);
-                    this.increaseStat(statKey);
-                },
-                {
-                    width: 30,
-                    height: 30,
-                    fontSize: this.ui.fontSize.sm
-                }
-            );
-            
-            // Show stat description on hover
-            valueText.setInteractive();
-            valueText.on('pointerover', () => {
-                this.statTooltip = this.add.text(width * 0.6, y + 15, statInfo[statKey].desc, {
-                    fontFamily: "'VT323'",
-                    fontSize: this.ui.fontSize.sm + 'px',
-                    fill: '#aaaaaa',
-                    backgroundColor: '#111122',
-                    padding: { x: 5, y: 2 }
-                }).setOrigin(0.5);
-            });
-            
-            valueText.on('pointerout', () => {
-                if (this.statTooltip) {
-                    this.statTooltip.destroy();
-                    this.statTooltip = null;
-                }
-            });
-            
-            index++;
-        }
-        
-        // Add available stat points
-        const availablePoints = gameState.player?.statPoints || 3;
-        
-        this.add.text(width * 0.6, height * 0.45, `Available Points: ${availablePoints}`, {
-            fontFamily: "'VT323'",
-            fontSize: this.ui.fontSize.md + 'px',
-            fill: '#ffffff',
-            align: 'center'
-        }).setOrigin(0.5);
-    }
-    
-    /**
-     * Increase a character stat
-     * @param {string} statKey - The stat to increase
-     */
-    increaseStat(statKey) {
-        // Check if player has available stat points
-        if (!gameState.player) gameState.player = {};
-        if (!gameState.player.stats) gameState.player.stats = {};
-        
-        const availablePoints = gameState.player.statPoints || 0;
-        
-        if (availablePoints > 0) {
-            // Increase the stat
-            gameState.player.stats[statKey] = (gameState.player.stats[statKey] || 0) + 1;
-            
-            // Decrease available points
-            gameState.player.statPoints = availablePoints - 1;
-            
-            // Refresh the scene to show updated stats
-            this.scene.restart();
-        }
-    }
-    
-    /**
-     * Create the skills display
-     */
-    createSkillsDisplay() {
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
-        
-        // Create a panel for the skills
-        const skillsPanel = this.ui.createPanel(
-            width * 0.5,
-            height * 0.7,
-            width * 0.8,
-            height * 0.2,
-            {
-                fillColor: 0x111122,
-                fillAlpha: 0.7,
-                borderColor: 0x9966ff,
-                borderThickness: 2
-            }
-        );
-        
-        // Add skills title
-        this.add.text(width * 0.5, height * 0.6, 'SKILLS & ABILITIES', {
-            fontFamily: "'VT323'",
-            fontSize: this.ui.fontSize.md + 'px',
-            fill: '#ffffff',
-            align: 'center'
-        }).setOrigin(0.5);
-        
-        // Sample skills - in a real implementation, this would come from gameState and be filtered by class
-        const skills = [
-            { name: 'Fireball', type: 'Offensive', description: 'Launches a ball of fire at enemies', level: 2 },
-            { name: 'Healing Touch', type: 'Support', description: 'Restores health to a single target', level: 1 },
-            { name: 'Shield Bash', type: 'Offensive', description: 'Stuns an enemy with your shield', level: 3 },
-            { name: 'Stealth', type: 'Utility', description: 'Become invisible to enemies for a short time', level: 1 }
-        ];
-        
-        // Create a grid layout for the skills
-        const gridCols = 4;
-        const gridRows = Math.ceil(skills.length / gridCols);
-        const cellSize = 80;
-        const startX = width * 0.2;
-        const startY = height * 0.65;
-        
-        // Draw grid cells and skills
-        skills.forEach((skill, index) => {
-            const col = index % gridCols;
-            const row = Math.floor(index / gridCols);
-            
-            const cellX = startX + col * (cellSize + 20);
-            const cellY = startY + row * (cellSize + 10);
-            
-            // Create skill cell
-            const cell = this.add.rectangle(
-                cellX + cellSize/2,
-                cellY + cellSize/2,
-                cellSize,
-                cellSize,
-                0x222233
-            ).setStrokeStyle(1, 0x9966ff);
-            
-            // Add skill icon
-            const skillIcon = this.add.image(
-                cellX + cellSize/2,
-                cellY + cellSize/2 - 10,
-                'skill-icon'
-            ).setDisplaySize(cellSize * 0.6, cellSize * 0.6);
-            
-            // Add skill name
-            this.add.text(cellX + cellSize/2, cellY + cellSize - 20, skill.name, {
+            // Stat value
+            this.add.text(width * 0.8, statY, stat.value.toString(), {
                 fontFamily: "'VT323'",
-                fontSize: this.ui.fontSize.sm + 'px',
+                fontSize: this.ui.fontSize.md + 'px',
                 fill: '#ffffff',
                 align: 'center'
             }).setOrigin(0.5);
+        });
+        
+        // Display secondary stats title
+        this.add.text(width * 0.7, height * 0.4, 'RESOURCES', {
+            fontFamily: "'VT323'",
+            fontSize: this.ui.fontSize.md + 'px',
+            fill: '#ffffff',
+            align: 'center'
+        }).setOrigin(0.5);
+        
+        // Display secondary stats
+        secondaryStats.forEach((stat, index) => {
+            const statY = height * 0.45 + (index * 30);
             
-            // Add skill level
-            this.add.text(cellX + cellSize - 10, cellY + 10, `Lv ${skill.level}`, {
+            // Stat name
+            this.add.text(width * 0.6, statY, stat.name, {
                 fontFamily: "'VT323'",
-                fontSize: this.ui.fontSize.sm + 'px',
-                fill: '#ffcc00',
-                align: 'right'
-            }).setOrigin(1, 0);
+                fontSize: this.ui.fontSize.md + 'px',
+                fill: '#aaaaaa',
+                align: 'left'
+            }).setOrigin(0, 0.5);
             
-            // Make the skill interactive
-            skillIcon.setInteractive();
-            
-            // Add hover effect
-            skillIcon.on('pointerover', () => {
-                cell.setStrokeStyle(2, 0xffcc00);
-                
-                // Show skill tooltip
-                this.skillTooltip = this.ui.createPanel(
-                    cellX + cellSize/2,
-                    cellY - 40,
-                    200,
-                    60,
-                    {
-                        fillColor: 0x111122,
-                        fillAlpha: 0.9,
-                        borderColor: 0xffcc00,
-                        borderThickness: 2
-                    }
-                );
-                
-                // Add skill description
-                this.skillTooltipText = this.add.text(cellX + cellSize/2, cellY - 40, 
-                    `${skill.type}\n${skill.description}`, {
-                    fontFamily: "'VT323'",
-                    fontSize: this.ui.fontSize.sm + 'px',
-                    fill: '#ffffff',
-                    align: 'center'
-                }).setOrigin(0.5);
-            });
-            
-            skillIcon.on('pointerout', () => {
-                cell.setStrokeStyle(1, 0x9966ff);
-                
-                // Hide skill tooltip
-                if (this.skillTooltip) {
-                    this.skillTooltip.destroy();
-                    this.skillTooltipText.destroy();
-                    this.skillTooltip = null;
-                    this.skillTooltipText = null;
-                }
-            });
+            // Stat value
+            this.add.text(width * 0.8, statY, stat.value.toString(), {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.md + 'px',
+                fill: '#ffffff',
+                align: 'center'
+            }).setOrigin(0.5);
         });
     }
     
     /**
-     * Create navigation buttons
+     * Create back button
      */
-    createNavigationButtons() {
+    createBackButton() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Create back button
+        // Back button to return to the overworld
         const backButton = new Button(
             this,
-            width * 0.3,
-            height * 0.9,
-            'BACK TO TOWN',
+            width * 0.5,
+            height * 0.85,
+            'RETURN TO GAME',
             () => {
-                console.log('Back to town clicked');
+                console.log('Back button clicked');
                 navigationManager.navigateTo(this, 'OverworldScene');
             },
             {
@@ -491,21 +290,8 @@ class CharacterSheetScene extends Phaser.Scene {
             }
         );
         
-        // Create inventory button
-        const inventoryButton = new Button(
-            this,
-            width * 0.7,
-            height * 0.9,
-            'GO TO INVENTORY',
-            () => {
-                console.log('Go to inventory clicked');
-                navigationManager.navigateTo(this, 'InventoryScene');
-            },
-            {
-                width: 200,
-                height: 50
-            }
-        );
+        // Add shine effect to make the button more noticeable
+        backButton.addShineEffect();
     }
 }
 
