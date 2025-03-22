@@ -1,0 +1,61 @@
+/* Import pixel-art themed fonts */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+/* Define custom font variables */
+:root {
+    --title-font: 'Press Start 2P', cursive;
+    --body-font: 'VT323', monospace;
+    
+    /* Game color palette */
+    --primary-color: #4a6fb2;
+    --primary-dark: #3a5fa2;
+    --primary-light: #5a7fc2;
+    --accent-color: #ffd700;
+    --background-dark: #111111;
+    --background-light: #333333;
+    --text-light: #ffffff;
+    --text-highlight: #ffd700;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--background-dark);
+    overflow: hidden;
+    font-family: var(--body-font);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+}
+
+#game-container {
+    width: 100%;
+    height: 100%;
+    max-width: 1600px;
+    max-height: 1200px;
+    margin: 0 auto;
+    position: relative;
+    background-color: var(--background-light);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Media query for mobile devices */
+@media (max-width: 768px) {
+    body {
+        height: 100%;
+    }
+    
+    #game-container {
+        height: 100vh;
+    }
+}
+
+/* Ensure canvas is responsive */
+canvas {
+    display: block;
+    margin: 0 auto;
+    image-rendering: pixelated; /* Helps with pixel art sharpness */
+}
