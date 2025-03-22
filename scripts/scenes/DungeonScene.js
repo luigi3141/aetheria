@@ -16,8 +16,8 @@ class DungeonScene extends Phaser.Scene {
     preload() {
         // Load dungeon assets
         this.load.image('dungeon-bg', 'https://labs.phaser.io/assets/skies/space3.png');
-        this.load.image('player-icon', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('enemy-icon', 'https://labs.phaser.io/assets/sprites/phaser-enemy.png');
+        this.load.image('player-icon', 'assets/sprites/i1.png');
+        this.load.image('enemy-icon', 'assets/sprites/i2.png');
         
         // Load transition assets
         this.load.spritesheet('door', 'https://labs.phaser.io/assets/sprites/metalslug_mummy37x45.png', { 
@@ -25,7 +25,7 @@ class DungeonScene extends Phaser.Scene {
             frameHeight: 45 
         });
         this.load.audio('door-open', 'assets/audio/door_open.wav');
-        this.load.audio('combat-start', 'assets/audio/combat_start.wav');
+        this.load.audio('combat-start', 'assets/audio/sword.wav');
         
         // Load enemy sprites - placeholders
         this.load.image('wolf-sprite', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
@@ -827,7 +827,23 @@ class DungeonScene extends Phaser.Scene {
             'COMBAT',
             () => {
                 console.log('Combat button clicked');
-                navigationManager.navigateTo(this, 'CombatResultScene');
+                // Set up a mock combat result for testing
+                gameState.combatResult = {
+                    outcome: 'victory',
+                    enemies: [
+                        { name: 'Forest Goblin', level: 1, health: 0, maxHealth: 30 }
+                    ],
+                    loot: { 
+                        gold: Math.floor(Math.random() * 20) + 10, 
+                        items: [], 
+                        experience: Math.floor(Math.random() * 15) + 5 
+                    }
+                };
+                
+                // Use fade transition to combat result scene
+                this.transitions.fade(() => {
+                    navigationManager.navigateTo(this, 'CombatResultScene');
+                });
             },
             {
                 width: 160,
@@ -843,8 +859,17 @@ class DungeonScene extends Phaser.Scene {
             'RETREAT',
             () => {
                 console.log('Retreat button clicked');
-                // When retreating, we go to the combat result scene with a condition
-                navigationManager.navigateTo(this, 'CombatResultScene', {}, 'Retreat with Loot');
+                // Set up combat result for retreat
+                gameState.combatResult = {
+                    outcome: 'retreat',
+                    enemies: [],
+                    loot: { gold: 0, items: [], experience: 0 }
+                };
+                
+                // Use fade transition to combat result scene
+                this.transitions.fade(() => {
+                    navigationManager.navigateTo(this, 'CombatResultScene');
+                });
             },
             {
                 width: 160,

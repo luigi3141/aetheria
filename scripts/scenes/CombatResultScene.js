@@ -40,36 +40,49 @@ class CombatResultScene extends Phaser.Scene {
         // Add decorative corners
         this.ui.addScreenCorners();
         
-        // Determine if this is a victory or retreat
-        const isRetreat = this.scene.settings.data?.condition === 'Retreat with Loot';
+        // Get combat result data from gameState
+        const combatResult = gameState.combatResult || {};
+        const isRetreat = combatResult.outcome === 'retreat';
+        const isVictory = combatResult.outcome === 'victory';
+        const isDefeat = combatResult.outcome === 'defeat';
         
-        // Create the title
-        this.ui.createTitle(width/2, height * 0.08, isRetreat ? 'Retreat Successful' : 'Victory!', {
+        // Create the title based on outcome
+        let titleText = 'Victory!';
+        if (isRetreat) {
+            titleText = 'Retreat Successful';
+        } else if (isDefeat) {
+            titleText = 'Defeat';
+        }
+        
+        this.ui.createTitle(width/2, height * 0.08, titleText, {
             fontSize: this.ui.fontSize.lg
         });
         
         // Create the combat results display
-        this.createCombatResults(isRetreat);
+        this.createCombatResults();
         
-        // Create the loot display
-        this.createLootDisplay();
+        // Create the loot display if there is loot
+        if (combatResult.loot && (isVictory || isRetreat)) {
+            this.createLootDisplay();
+        }
         
         // Create navigation buttons
-        this.createNavigationButtons(isRetreat);
+        this.createNavigationButtons();
     }
     
     /**
      * Create the combat results display
-     * @param {boolean} isRetreat - Whether this is a retreat or victory
      */
-    createCombatResults(isRetreat) {
+    createCombatResults() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Get data from scene settings
-        const data = this.scene.settings.data || {};
-        const enemies = data.enemies || [];
-        const loot = data.loot || { gold: 0, items: [], experience: 0 };
+        // Get combat result data
+        const combatResult = gameState.combatResult || {};
+        const enemies = combatResult.enemies || [];
+        const isRetreat = combatResult.outcome === 'retreat';
+        const isVictory = combatResult.outcome === 'victory';
+        const isDefeat = combatResult.outcome === 'defeat';
         
         // Create a panel for the results
         const panel = this.ui.createPanel(
@@ -88,9 +101,13 @@ class CombatResultScene extends Phaser.Scene {
         // Create title for the results
         let resultTitle;
         if (isRetreat) {
-            resultTitle = 'You managed to escape with some loot!';
-        } else {
+            resultTitle = 'You managed to escape safely!';
+        } else if (isVictory) {
             resultTitle = `You defeated ${enemies.length} ${enemies.length === 1 ? 'enemy' : 'enemies'}!`;
+        } else if (isDefeat) {
+            resultTitle = 'You were defeated in battle!';
+        } else {
+            resultTitle = 'Battle concluded.';
         }
         
         this.add.text(width/2, height * 0.2, resultTitle, {
@@ -101,23 +118,27 @@ class CombatResultScene extends Phaser.Scene {
         }).setOrigin(0.5);
         
         // Add experience gained
-        this.add.text(width/2, height * 0.27, `Experience gained: ${loot.experience}`, {
-            fontFamily: "'VT323'",
-            fontSize: this.ui.fontSize.md + 'px',
-            fill: '#00ff00',
-            align: 'center'
-        }).setOrigin(0.5);
-        
-        // Add gold gained
-        this.add.text(width/2, height * 0.32, `Gold gained: ${loot.gold}`, {
-            fontFamily: "'VT323'",
-            fontSize: this.ui.fontSize.md + 'px',
-            fill: '#ffff00',
-            align: 'center'
-        }).setOrigin(0.5);
+        if (combatResult.loot) {
+            this.add.text(width/2, height * 0.27, `Experience gained: ${combatResult.loot.experience}`, {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.md + 'px',
+                fill: '#00ff00',
+                align: 'center'
+            }).setOrigin(0.5);
+            
+            // Add gold gained
+            this.add.text(width/2, height * 0.32, `Gold gained: ${combatResult.loot.gold}`, {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.md + 'px',
+                fill: '#ffff00',
+                align: 'center'
+            }).setOrigin(0.5);
+        }
         
         // Update player stats
-        this.updatePlayerStats(loot);
+        if (combatResult.loot) {
+            this.updatePlayerStats(combatResult.loot);
+        }
     }
     
     /**
@@ -128,8 +149,8 @@ class CombatResultScene extends Phaser.Scene {
         const height = this.cameras.main.height;
         
         // Get loot data
-        const data = this.scene.settings.data || {};
-        const loot = data.loot || { gold: 0, items: [], experience: 0 };
+        const combatResult = gameState.combatResult || {};
+        const loot = combatResult.loot || { gold: 0, items: [], experience: 0 };
         
         // Create a panel for the loot
         const panel = this.ui.createPanel(
@@ -191,9 +212,6 @@ class CombatResultScene extends Phaser.Scene {
                 align: 'center'
             }).setOrigin(0.5);
         }
-        
-        // Add continue button
-        this.createContinueButton();
     }
     
     /**
@@ -278,83 +296,52 @@ class CombatResultScene extends Phaser.Scene {
     }
     
     /**
-     * Create the continue button
+     * Create navigation buttons
      */
-    createContinueButton() {
+    createNavigationButtons() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
+        
+        // Get combat result data
+        const combatResult = gameState.combatResult || {};
+        const isRetreat = combatResult.outcome === 'retreat';
+        const isDefeat = combatResult.outcome === 'defeat';
         
         // Create continue button
         const continueButton = new Button(
             this,
-            width/2,
+            width * 0.35,
             height * 0.85,
-            'CONTINUE',
+            'Continue Exploring',
             () => {
-                this.handleContinue();
+                this.transitions.fade(() => {
+                    navigationManager.navigateTo(this, 'DungeonScene', {}, 'Next Level');
+                });
             },
             {
-                width: 180,
-                height: 60,
-                backgroundColor: 0x3366cc
+                width: 200,
+                height: 50,
+                backgroundColor: 0x3366aa
             }
         );
-    }
-    
-    /**
-     * Handle continue button click
-     */
-    handleContinue() {
-        console.log('Continuing to dungeon...');
         
-        // Use fade transition to return to dungeon
-        this.transitions.fade(() => {
-            // Return to dungeon scene
-            navigationManager.navigateTo(this, 'DungeonScene');
-        });
-    }
-    
-    /**
-     * Create navigation buttons
-     * @param {boolean} isRetreat - Whether this is a retreat or victory
-     */
-    createNavigationButtons(isRetreat) {
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
-        
-        if (isRetreat) {
-            // If retreating, show button to return to town
-            const returnButton = new Button(
-                this,
-                width * 0.5,
-                height * 0.85,
-                'RETURN TO TOWN',
-                () => {
-                    console.log('Returning to town');
-                    navigationManager.navigateTo(this, 'PostRunSummaryScene', {}, 'Retreat with Loot');
-                },
-                {
-                    width: 240,
-                    height: 50
-                }
-            );
-        } else {
-            // If victorious, show button to continue to next level
-            const continueButton = new Button(
-                this,
-                width * 0.5,
-                height * 0.85,
-                'CONTINUE TO NEXT LEVEL',
-                () => {
-                    console.log('Continuing to next level');
-                    navigationManager.navigateTo(this, 'DungeonScene', {}, 'Next Level');
-                },
-                {
-                    width: 280,
-                    height: 50
-                }
-            );
-        }
+        // Create return to overworld button
+        const returnButton = new Button(
+            this,
+            width * 0.65,
+            height * 0.85,
+            'Return to Town',
+            () => {
+                this.transitions.fade(() => {
+                    navigationManager.navigateTo(this, 'OverworldScene');
+                });
+            },
+            {
+                width: 200,
+                height: 50,
+                backgroundColor: 0x336633
+            }
+        );
     }
 }
 

@@ -23,7 +23,7 @@ class DungeonSelectScene extends Phaser.Scene {
             frameHeight: 45 
         });
         this.load.audio('door-open', 'assets/audio/door_open.wav');
-        this.load.audio('combat-start', 'assets/audio/combat_start.wav');
+        this.load.audio('combat-start', 'assets/audio/sword.wav');
     }
 
     create() {

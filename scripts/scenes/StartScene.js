@@ -12,8 +12,7 @@ class StartScene extends Phaser.Scene {
 
     preload() {
         // Preload assets like images, spritesheets, and audio
-        // Since we don't have actual assets yet, we'll use placeholders
-        this.load.image('background', 'https://labs.phaser.io/assets/skies/space3.png');
+        this.load.image('background', 'assets/sprites/title-background.png');
     }
 
     create() {
