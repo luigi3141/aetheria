@@ -967,17 +967,18 @@ class DungeonScene extends Phaser.Scene {
             }
         );
         
-        // Ensure player health values are consistent using HealthManager
+        // Ensure player health and mana values are consistent using HealthManager
         HealthManager.validatePlayerHealth();
         
         // Add player stats text
         const playerName = gameState.player.name || 'Adventurer';
         const playerHealth = gameState.player.health;
         const playerMaxHealth = gameState.player.maxHealth;
-        const playerMana = gameState.player.mana || 50;
+        const playerMana = gameState.player.mana;
+        const playerMaxMana = gameState.player.maxMana;
         
         // Store the text element so we can update it later
-        this.playerStatsText = this.add.text(width * 0.85, height * 0.2, `${playerName}\nHP: ${playerHealth}/${playerMaxHealth}\nMP: ${playerMana}/50`, {
+        this.playerStatsText = this.add.text(width * 0.85, height * 0.2, `${playerName}\nHP: ${playerHealth}/${playerMaxHealth}\nMP: ${playerMana}/${playerMaxMana}`, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.sm + 'px',
             fill: '#ffffff',

@@ -51,7 +51,7 @@ class OverworldScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Ensure player health values are consistent
+        // Ensure player health and mana values are consistent
         HealthManager.validatePlayerHealth();
         
         // Create player avatar
@@ -85,8 +85,8 @@ class OverworldScene extends Phaser.Scene {
         const playerClass = gameState.player.class || 'Warrior';
         const playerLevel = gameState.player.level || 1;
         
-        // Display player stats including health
-        const playerStats = `${playerName}\n${playerRace} ${playerClass}\nLevel ${playerLevel}\nHP: ${gameState.player.health}/${gameState.player.maxHealth}`;
+        // Display player stats including health and mana
+        const playerStats = `${playerName}\n${playerRace} ${playerClass}\nLevel ${playerLevel}\nHP: ${gameState.player.health}/${gameState.player.maxHealth}\nMP: ${gameState.player.mana}/${gameState.player.maxMana}`;
         
         const playerInfo = this.ui.createSectionLabel(
             infoX,

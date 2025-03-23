@@ -15,6 +15,32 @@ class EncounterScene extends Phaser.Scene {
         super({ key: 'EncounterScene' });
     }
 
+    /**
+     * Initialize scene - this runs before create() and can be used to reset state
+     */
+    init() {
+        // Reset all combat flags and state
+        this.victoryHandled = false;
+        this.victoryTransitionStarted = false;
+        this.combatEnded = false;
+        
+        // Clear any existing timers or tweens
+        if (this.tweens) {
+            this.tweens.killAll();
+        }
+        
+        if (this.time && this.time.removeAllEvents) {
+            this.time.removeAllEvents();
+        }
+        
+        // Reset UI elements references
+        this.actionButtons = null;
+        this.combatLogContainer = null;
+        this.combatLogText = null;
+        
+        console.log('EncounterScene initialized with fresh state');
+    }
+
     preload() {
         // Load encounter assets
         this.load.image('combat-bg', 'assets/sprites/backgrounds/combat-bg.png');
@@ -49,17 +75,12 @@ class EncounterScene extends Phaser.Scene {
         this.ui = new UIManager(this);
         this.transitions = new TransitionManager(this);
         
-        // Reset combat flags
-        this.combatEnded = false;
-        this.victoryHandled = false;
-        
         // Initialize combat state
         this.combatState = {
             turn: 'player',
             round: 1,
-            playerDefending: false,
-            enemyDefending: false,
             log: [],
+            enemyDefeated: false,
             activeStatusEffects: {
                 player: [],
                 enemies: []
@@ -80,6 +101,9 @@ class EncounterScene extends Phaser.Scene {
         const combatData = gameState.combatData || {};
         this.enemies = combatData.enemies || [];
         this.isBoss = combatData.isBoss || false;
+        
+        // Ensure player stats are properly initialized
+        HealthManager.validatePlayerHealth();
         
         // Create the combat UI
         this.createCombatUI();
@@ -250,6 +274,41 @@ class EncounterScene extends Phaser.Scene {
     }
     
     /**
+     * Update a mana bar
+     * @param {object} manaBar - The mana bar object
+     * @param {number} currentMana - Current mana value
+     * @param {number} maxMana - Maximum mana value
+     */
+    updateManaBar(manaBar, currentMana, maxMana) {
+        if (!manaBar || !manaBar.bar) return;
+        
+        // Ensure values are valid numbers
+        currentMana = Number(currentMana) || 0;
+        maxMana = Number(maxMana) || 1;
+        
+        // Ensure mana doesn't exceed maximum
+        currentMana = Math.max(0, Math.min(currentMana, maxMana));
+        
+        // Calculate percentage
+        const percentage = maxMana > 0 ? currentMana / maxMana : 0;
+        
+        // Clear previous graphics
+        manaBar.bar.clear();
+        
+        // Draw new mana bar
+        manaBar.bar.fillStyle(manaBar.color, 1);
+        manaBar.bar.fillRect(
+            manaBar.x, 
+            manaBar.y, 
+            manaBar.width * percentage, 
+            manaBar.height
+        );
+        
+        // Log the update for debugging
+        console.log(`Updating mana bar: ${currentMana}/${maxMana} (${Math.round(percentage * 100)}%)`);
+    }
+    
+    /**
      * Create the combat UI for turn-based combat
      */
     createCombatUI() {
@@ -307,7 +366,7 @@ class EncounterScene extends Phaser.Scene {
         this.updateHealthBar(this.playerHealthBar, playerHealth, playerMaxHealth);
         
         // Add player mana bar
-        const playerMana = gameState.player.mana || 100;
+        const playerMana = gameState.player.mana !== undefined ? gameState.player.mana : 100;
         const playerMaxMana = gameState.player.maxMana || 100;
         this.playerManaText = this.add.text(width * 0.25, height * 0.35, `MP: ${playerMana}/${playerMaxMana}`, {
             fontFamily: "'VT323'",
@@ -365,6 +424,28 @@ class EncounterScene extends Phaser.Scene {
      * Create a health bar
      */
     makeHealthBar(x, y, width, height, color) {
+        // Create the bar
+        const bar = this.add.graphics();
+        
+        // Create border
+        const border = this.add.graphics();
+        border.lineStyle(2, 0xffffff, 1);
+        border.strokeRect(x - width/2, y - height/2, width, height);
+        
+        return {
+            bar: bar,
+            x: x - width/2,
+            y: y - height/2,
+            width: width,
+            height: height,
+            color: color
+        };
+    }
+    
+    /**
+     * Create a mana bar
+     */
+    makeManaBar(x, y, width, height, color) {
         // Create the bar
         const bar = this.add.graphics();
         
@@ -721,7 +802,7 @@ class EncounterScene extends Phaser.Scene {
         this.updateHealthBar(this.playerHealthBar, playerHealth, playerMaxHealth);
         
         // Add player mana bar
-        const playerMana = gameState.player.mana || 100;
+        const playerMana = gameState.player.mana !== undefined ? gameState.player.mana : 100;
         const playerMaxMana = gameState.player.maxMana || 100;
         this.playerManaText = this.add.text(width * 0.25, height * 0.35, `MP: ${playerMana}/${playerMaxMana}`, {
             fontFamily: "'VT323'",
@@ -776,46 +857,13 @@ class EncounterScene extends Phaser.Scene {
     }
     
     /**
-     * Create a mana bar
-     */
-    makeManaBar(x, y, width, height, color) {
-        // Create the bar
-        const bar = this.add.graphics();
-        
-        // Create border
-        const border = this.add.graphics();
-        border.lineStyle(2, 0xffffff, 1);
-        border.strokeRect(x - width/2, y - height/2, width, height);
-        
-        return {
-            bar: bar,
-            x: x - width/2,
-            y: y - height/2,
-            width: width,
-            height: height,
-            color: color
-        };
-    }
-    
-    /**
-     * Update a mana bar
-     */
-    updateManaBar(bar, value, maxValue) {
-        const percentage = Math.max(0, Math.min(value / maxValue, 1));
-        
-        bar.bar.clear();
-        bar.bar.fillStyle(bar.color, 1);
-        bar.bar.fillRect(bar.x, bar.y, bar.width * percentage, bar.height);
-    }
-    
-    /**
-     * Create combat action buttons for turn-based combat
+     * Create combat action buttons
      */
     createCombatActionButtons() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Create action buttons container
+        // Create container for action buttons
         this.actionButtons = {};
         
         // Create attack button
@@ -829,24 +877,24 @@ class EncounterScene extends Phaser.Scene {
             },
             {
                 width: 120,
-                height: 50,
+                height: 40,
                 backgroundColor: 0xaa0000
             }
         );
         
-        // Create ability button (special attack)
+        // Create special ability button
         this.actionButtons.ability = new Button(
             this,
             width * 0.5,
             height * 0.8,
-            'USE ABILITY',
+            'SPECIAL',
             () => {
                 this.playerUseSpecialAbility();
             },
             {
                 width: 120,
-                height: 50,
-                backgroundColor: 0x0066aa
+                height: 40,
+                backgroundColor: 0x9900cc
             }
         );
         
@@ -861,16 +909,41 @@ class EncounterScene extends Phaser.Scene {
             },
             {
                 width: 120,
-                height: 50,
+                height: 40,
                 backgroundColor: 0x555555
             }
         );
+        
+        // Create item button (if inventory system is implemented)
+        if (gameState.player.inventory && gameState.player.inventory.items && gameState.player.inventory.items.length > 0) {
+            this.actionButtons.item = new Button(
+                this,
+                width * 0.9,
+                height * 0.8,
+                'ITEM',
+                () => {
+                    // Show item menu
+                    this.showItemMenu();
+                },
+                {
+                    width: 120,
+                    height: 40,
+                    backgroundColor: 0x339933
+                }
+            );
+        }
     }
-    
+
     /**
      * Handle player attack action
      */
     playerAttack() {
+        // Check if combat is already over
+        if (this.combatState.enemyDefeated || this.victoryHandled || this.combatEnded) {
+            console.log("Combat already ended, ignoring attack");
+            return;
+        }
+        
         // Disable action buttons during animation
         this.updateActionButtons(false);
         
@@ -881,6 +954,13 @@ class EncounterScene extends Phaser.Scene {
         
         // Select target (for now just pick first enemy)
         const target = this.enemies[0];
+        
+        // Check if target is already defeated
+        if (target.defeated || target.health <= 0) {
+            console.log("Target already defeated, ignoring attack");
+            this.updateActionButtons(true);
+            return;
+        }
         
         // Calculate base damage
         let damage = Math.floor(playerStr * 0.8) + Math.floor(Math.random() * 6) + 1;
@@ -982,7 +1062,9 @@ class EncounterScene extends Phaser.Scene {
             this.playerManaText.setText(`MP: ${player.mana}/${player.maxMana || 100}`);
         }
         if (this.playerManaBar) {
-            this.updateManaBar(this.playerManaBar, gameState.player.mana, gameState.player.maxMana || 100);
+            const mana = gameState.player.mana !== undefined ? gameState.player.mana : 0;
+            const maxMana = gameState.player.maxMana || 100;
+            this.updateManaBar(this.playerManaBar, mana, maxMana);
         }
     }
     
@@ -1358,12 +1440,6 @@ class EncounterScene extends Phaser.Scene {
         const enemyLevel = enemy.level || 1;
         damage += Math.floor(enemyLevel * 0.3);
         
-        // Check if player is defending
-        if (this.combatState && this.combatState.playerDefending) {
-            damage = Math.floor(damage * 0.5);
-            this.addToCombatLog('You are defending and take reduced damage!');
-        }
-        
         // Apply damage reduction from armor if equipped
         if (player.inventory && player.inventory.equipped && player.inventory.equipped.armor) {
             const damageReduction = player.inventory.equipped.armor.defense || 0;
@@ -1397,13 +1473,17 @@ class EncounterScene extends Phaser.Scene {
      * Handle victory
      */
     handleVictory() {
+        console.log('Victory handling started');
+        
         // Check if victory has already been handled
-        if (this.victoryHandled) {
+        if ((this.victoryHandled && this.victoryTransitionStarted) || this.combatEnded) {
+            console.log('Victory already handled, skipping');
             return;
         }
         
         // Set flag to prevent multiple victory calls
         this.victoryHandled = true;
+        this.combatEnded = true;
         
         // Play victory sound
         this.safePlaySound('victory-sound');
@@ -1467,8 +1547,12 @@ class EncounterScene extends Phaser.Scene {
         // Show victory message
         this.addToCombatLog("Victory! You defeated the enemy.");
         
+        // Set transition flag to prevent multiple transitions
+        this.victoryTransitionStarted = true;
+        
         // Use fade transition to combat result scene after a short delay
         this.time.delayedCall(2000, () => {
+            console.log('Starting transition to CombatResultScene');
             this.transitions.fade(() => {
                 navigationManager.navigateTo(this, 'CombatResultScene');
             });
@@ -1545,7 +1629,7 @@ class EncounterScene extends Phaser.Scene {
             height * 0.3,
             {
                 fillColor: 0x111122,
-                fillAlpha: 0.9,
+                fillAlpha: 0.7,
                 borderColor: 0x3399ff,
                 borderThickness: 2
             }
@@ -1790,7 +1874,7 @@ class EncounterScene extends Phaser.Scene {
      */
     enemyDefeated(enemy) {
         // Check if enemy is already defeated to prevent multiple defeat processing
-        if (enemy.defeated) {
+        if (enemy.defeated || this.combatState.enemyDefeated || this.combatEnded) {
             return;
         }
         
@@ -1799,6 +1883,10 @@ class EncounterScene extends Phaser.Scene {
         
         // Mark as defeated
         enemy.defeated = true;
+        this.combatState.enemyDefeated = true;
+        this.combatEnded = true;
+        
+        console.log('Enemy defeated, combat ended');
         
         // Disable all action buttons immediately
         this.disableAllButtons();
@@ -1826,7 +1914,7 @@ class EncounterScene extends Phaser.Scene {
         
         // Immediately go to victory screen
         this.time.delayedCall(1000, () => {
-            this.handleVictory();
+            this.processVictory();
         });
     }
     
@@ -1887,12 +1975,6 @@ class EncounterScene extends Phaser.Scene {
         const enemyLevel = enemy.level || 1;
         damage += Math.floor(enemyLevel * 0.3);
         
-        // Check if player is defending
-        if (this.combatState && this.combatState.playerDefending) {
-            damage = Math.floor(damage * 0.5);
-            this.addToCombatLog('You are defending and take reduced damage!');
-        }
-        
         // Apply damage reduction from armor if equipped
         if (player.inventory && player.inventory.equipped && player.inventory.equipped.armor) {
             const damageReduction = player.inventory.equipped.armor.defense || 0;
@@ -1926,49 +2008,6 @@ class EncounterScene extends Phaser.Scene {
         
         // Call callback to continue to next enemy or end turn
         callback();
-    }
-    
-    /**
-     * Handle player defend action
-     */
-    playerDefend() {
-        // Set player as defending
-        if (!this.combatState) {
-            this.combatState = {};
-        }
-        this.combatState.playerDefending = true;
-        
-        // Play defend animation and sound
-        this.safePlaySound('defend-sound');
-        
-        // Flash the player with a blue shield effect
-        this.playerSprite.setTint(0x3399ff);
-        
-        // Create a shield effect
-        const shield = this.add.graphics();
-        shield.fillStyle(0x3399ff, 0.3);
-        shield.fillCircle(this.playerSprite.x, this.playerSprite.y, 40);
-        shield.lineStyle(2, 0x3399ff, 0.8);
-        shield.strokeCircle(this.playerSprite.x, this.playerSprite.y, 40);
-        
-        // Animate the shield
-        this.tweens.add({
-            targets: shield,
-            alpha: 0,
-            duration: 1000,
-            onComplete: () => {
-                shield.destroy();
-                this.playerSprite.clearTint();
-            }
-        });
-        
-        // Add to combat log
-        this.addToCombatLog("You take a defensive stance.");
-        
-        // Continue to enemy turn after a delay
-        this.time.delayedCall(1000, () => {
-            this.startEnemyTurn();
-        });
     }
     
     /**
@@ -2120,84 +2159,6 @@ class EncounterScene extends Phaser.Scene {
     }
     
     /**
-     * Handle player using their special ability (class-specific attack)
-     */
-    playerUseSpecialAbility() {
-        // Disable action buttons during ability execution
-        this.updateActionButtons(false);
-        
-        // Get player stats and class
-        const player = gameState.player;
-        const playerClass = player.class || 'Warrior';
-        
-        // Check if player has enough mana
-        const manaCost = 15; // Standard mana cost for special ability
-        
-        if ((player.mana || 0) < manaCost) {
-            this.addToCombatLog("Not enough mana to use special ability!");
-            
-            // Shake the ability button to indicate error
-            this.tweens.add({
-                targets: this.actionButtons.ability,
-                x: { from: this.actionButtons.ability.x - 5, to: this.actionButtons.ability.x + 5 },
-                duration: 100,
-                repeat: 3,
-                yoyo: true,
-                onComplete: () => {
-                    this.actionButtons.ability.x = this.cameras.main.width * 0.5;
-                    this.updateActionButtons(true);
-                }
-            });
-            return;
-        }
-        
-        // Deduct mana cost
-        player.mana -= manaCost;
-        
-        // Update mana display
-        if (this.playerManaText) {
-            const player = gameState.player;
-            this.playerManaText.setText(`MP: ${player.mana}/${player.maxMana || 100}`);
-        }
-        if (this.playerManaBar) {
-            this.updateManaBar(this.playerManaBar, player.mana, player.maxMana || 100);
-        }
-        
-        // Get the appropriate ability based on player class
-        let abilityId;
-        switch (playerClass) {
-            case 'Warrior':
-                abilityId = 'cleave';
-                break;
-            case 'Mage':
-                abilityId = 'fireball';
-                break;
-            case 'Rogue':
-                abilityId = 'backstab';
-                break;
-            case 'Cleric':
-                abilityId = 'smite';
-                break;
-            default:
-                abilityId = 'cleave';
-                break;
-        }
-        
-        // Get ability data
-        const ability = getAbilityData(abilityId);
-        
-        if (!ability) {
-            console.warn(`Ability not found: ${abilityId}`);
-            this.addToCombatLog("That ability isn't available.");
-            this.updateActionButtons(true);
-            return;
-        }
-        
-        // Process the ability
-        this.processPlayerDamageAbility(ability);
-    }
-    
-    /**
      * Create the player display
      */
     createPlayerDisplay() {
@@ -2207,7 +2168,7 @@ class EncounterScene extends Phaser.Scene {
         // Get player data from gameState
         const player = gameState.player;
         
-        // Ensure player health values are consistent
+        // Ensure player health and mana values are consistent
         HealthManager.validatePlayerHealth();
         
         // Create player sprite
@@ -2284,10 +2245,61 @@ class EncounterScene extends Phaser.Scene {
             }
         ).setOrigin(0.5);
         
+        // Create mana bar
+        const manaBarWidth = 200;
+        const manaBarHeight = 15;
+        const manaBarX = width * 0.25;
+        const manaBarY = height * 0.35;
+        
+        // Create mana bar background
+        const manaBarBg = this.add.rectangle(
+            manaBarX,
+            manaBarY,
+            manaBarWidth,
+            manaBarHeight,
+            0x333333
+        ).setOrigin(0.5);
+        
+        // Create mana bar foreground
+        const manaBar = this.add.graphics();
+        
+        // Draw initial mana bar - ensure we're using the correct mana values
+        const manaPercentage = Math.max(0, Math.min(player.mana / (player.maxMana || 1), 1));
+        manaBar.fillStyle(0x0066ff, 1);
+        manaBar.fillRect(
+            manaBarX - manaBarWidth / 2,
+            manaBarY - manaBarHeight / 2,
+            manaBarWidth * manaPercentage,
+            manaBarHeight
+        );
+        
+        // Add border
+        const manaBarBorder = this.add.graphics();
+        manaBarBorder.lineStyle(2, 0xffffff, 1);
+        manaBarBorder.strokeRect(
+            manaBarX - manaBarWidth / 2,
+            manaBarY - manaBarHeight / 2,
+            manaBarWidth,
+            manaBarHeight
+        );
+        
+        // Add mana text
+        const manaText = this.add.text(
+            manaBarX,
+            manaBarY,
+            `${player.mana}/${player.maxMana}`,
+            {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.sm + 'px',
+                fill: '#ffffff',
+                align: 'center'
+            }
+        ).setOrigin(0.5);
+        
         // Create status effect container
         const statusContainer = this.add.container(
             width * 0.25,
-            height * 0.35
+            height * 0.4
         );
         
         // Store display elements
@@ -2305,8 +2317,463 @@ class EncounterScene extends Phaser.Scene {
                 color: 0x00ff00
             },
             healthText: healthText,
+            manaBar: {
+                bg: manaBarBg,
+                bar: manaBar,
+                border: manaBarBorder,
+                x: manaBarX - manaBarWidth / 2,
+                y: manaBarY - manaBarHeight / 2,
+                width: manaBarWidth,
+                height: manaBarHeight,
+                color: 0x0066ff
+            },
+            manaText: manaText,
             statusContainer: statusContainer
         };
+    }
+    
+    /**
+     * Handle player using their special ability (class-specific attack)
+     */
+    playerUseSpecialAbility() {
+        // Disable action buttons during ability execution
+        this.updateActionButtons(false);
+        
+        // Get player stats and class
+        const player = gameState.player;
+        const playerClass = player.class || 'Warrior';
+        
+        // Check if player has enough mana
+        const manaCost = 15; // Standard mana cost for special ability
+        
+        if (player.mana < manaCost) {
+            this.addToCombatLog("Not enough mana to use special ability!");
+            
+            // Shake the ability button to indicate error
+            this.tweens.add({
+                targets: this.actionButtons.ability,
+                x: { from: this.actionButtons.ability.x - 5, to: this.actionButtons.ability.x + 5 },
+                duration: 100,
+                repeat: 3,
+                yoyo: true,
+                onComplete: () => {
+                    this.actionButtons.ability.x = this.cameras.main.width * 0.5;
+                    this.updateActionButtons(true);
+                }
+            });
+            return;
+        }
+        
+        // Consume mana using HealthManager
+        HealthManager.consumePlayerManaByPercentage(manaCost / player.maxMana * 100);
+        
+        // Update mana display
+        if (this.playerDisplayElements && this.playerDisplayElements.manaBar) {
+            const mana = gameState.player.mana !== undefined ? gameState.player.mana : 0;
+            const maxMana = gameState.player.maxMana || 100;
+            this.updateManaBar(
+                this.playerDisplayElements.manaBar, 
+                mana, 
+                maxMana
+            );
+            
+            // Also update the mana text
+            if (this.playerDisplayElements.manaText) {
+                this.playerDisplayElements.manaText.setText(`${mana}/${maxMana}`);
+            }
+        }
+        
+        if (this.playerManaText) {
+            const player = gameState.player;
+            this.playerManaText.setText(`MP: ${player.mana}/${player.maxMana}`);
+        }
+        if (this.playerManaBar) {
+            const mana = gameState.player.mana !== undefined ? gameState.player.mana : 0;
+            const maxMana = gameState.player.maxMana || 100;
+            this.updateManaBar(this.playerManaBar, mana, maxMana);
+        }
+        
+        // Get the appropriate ability based on player class
+        let abilityId;
+        switch (playerClass) {
+            case 'Warrior':
+                abilityId = 'cleave';
+                break;
+            case 'Mage':
+                abilityId = 'fireball';
+                break;
+            case 'Rogue':
+                abilityId = 'backstab';
+                break;
+            case 'Cleric':
+                abilityId = 'smite';
+                break;
+            default:
+                abilityId = 'cleave';
+                break;
+        }
+        
+        // Get ability data
+        const ability = getAbilityData(abilityId);
+        
+        if (!ability) {
+            console.warn(`Ability not found: ${abilityId}`);
+            this.addToCombatLog("That ability isn't available.");
+            this.updateActionButtons(true);
+            return;
+        }
+        
+        // Process the ability
+        this.processPlayerDamageAbility(ability);
+    }
+    
+    /**
+     * Show the item menu for combat
+     */
+    showItemMenu() {
+        // Disable action buttons while item menu is open
+        this.updateActionButtons(false);
+        
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        
+        // Create a panel for the item menu
+        const itemPanel = this.ui.createPanel(
+            width * 0.5,
+            height * 0.5,
+            width * 0.7,
+            height * 0.6,
+            {
+                fillColor: 0x222222,
+                fillAlpha: 0.9,
+                borderColor: 0x339933,
+                borderThickness: 2
+            }
+        );
+        
+        // Add title
+        const titleText = this.add.text(width * 0.5, height * 0.25, 'ITEMS', {
+            fontFamily: "'Press Start 2P'",
+            fontSize: this.ui.fontSize.md + 'px',
+            fill: '#ffffff'
+        }).setOrigin(0.5);
+        
+        // Get player items
+        const items = gameState.player.inventory.items || [];
+        
+        // If no items, show message
+        if (items.length === 0) {
+            const noItemsText = this.add.text(width * 0.5, height * 0.5, 'No items available', {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.md + 'px',
+                fill: '#ffffff'
+            }).setOrigin(0.5);
+            
+            // Add close button
+            const closeButton = new Button(
+                this,
+                width * 0.5,
+                height * 0.7,
+                'CLOSE',
+                () => {
+                    // Remove all item menu elements
+                    [itemPanel, titleText, noItemsText, closeButton].forEach(element => {
+                        if (element) element.destroy();
+                    });
+                    
+                    // Re-enable action buttons
+                    this.updateActionButtons(true);
+                },
+                {
+                    width: 120,
+                    height: 40,
+                    backgroundColor: 0x555555
+                }
+            );
+            
+            return;
+        }
+        
+        // Create item buttons
+        const itemButtons = [];
+        const itemElements = [];
+        
+        // Add panel and title to elements to clean up later
+        itemElements.push(itemPanel, titleText);
+        
+        // Display up to 6 items
+        const maxItems = Math.min(items.length, 6);
+        const startY = height * 0.35;
+        const itemSpacing = 50;
+        
+        for (let i = 0; i < maxItems; i++) {
+            const item = items[i];
+            const yPos = startY + (i * itemSpacing);
+            
+            // Create item button
+            const itemButton = new Button(
+                this,
+                width * 0.5,
+                yPos,
+                item.name,
+                () => {
+                    // Use the item
+                    this.useItem(item);
+                    
+                    // Remove all item menu elements
+                    itemElements.forEach(element => {
+                        if (element) element.destroy();
+                    });
+                    
+                    // Re-enable action buttons
+                    this.updateActionButtons(true);
+                },
+                {
+                    width: 200,
+                    height: 40,
+                    backgroundColor: 0x339933
+                }
+            );
+            
+            // Add description text
+            const descText = this.add.text(
+                width * 0.5,
+                yPos + 25,
+                item.description || '',
+                {
+                    fontFamily: "'VT323'",
+                    fontSize: this.ui.fontSize.sm + 'px',
+                    fill: '#cccccc'
+                }
+            ).setOrigin(0.5);
+            
+            // Add to elements array for cleanup
+            itemElements.push(itemButton, descText);
+        }
+        
+        // Add close button
+        const closeButton = new Button(
+            this,
+            width * 0.5,
+            height * 0.75,
+            'CLOSE',
+            () => {
+                // Remove all item menu elements
+                itemElements.forEach(element => {
+                    if (element) element.destroy();
+                });
+                
+                // Re-enable action buttons
+                this.updateActionButtons(true);
+            },
+            {
+                width: 120,
+                height: 40,
+                backgroundColor: 0x555555
+            }
+        );
+        
+        // Add close button to elements
+        itemElements.push(closeButton);
+    }
+
+    /**
+     * Use an item in combat
+     * @param {object} item - The item to use
+     */
+    useItem(item) {
+        console.log(`Using item: ${item.name}`);
+        
+        // Process the item based on its type
+        switch (item.type) {
+            case 'potion':
+                this.usePotion(item);
+                break;
+                
+            case 'scroll':
+                this.useScroll(item);
+                break;
+                
+            default:
+                this.addToCombatLog(`Used ${item.name}, but nothing happened.`);
+                break;
+        }
+        
+        // Remove the item from inventory
+        const itemIndex = gameState.player.inventory.items.findIndex(i => i.id === item.id);
+        if (itemIndex !== -1) {
+            gameState.player.inventory.items.splice(itemIndex, 1);
+        }
+        
+        // Continue to enemy turn after a delay
+        this.time.delayedCall(1000, () => {
+            this.startEnemyTurn();
+        });
+    }
+    
+    /**
+     * Use a potion item
+     * @param {object} potion - The potion item
+     */
+    usePotion(potion) {
+        const player = gameState.player;
+        
+        // Apply healing
+        if (potion.healAmount) {
+            const oldHealth = player.health;
+            player.health = Math.min(player.maxHealth, player.health + potion.healAmount);
+            const actualHealing = player.health - oldHealth;
+            
+            // Update health display
+            this.playerHealthText.setText(`HP: ${player.health}/${player.maxHealth}`);
+            this.updateHealthBar(this.playerHealthBar, player.health, player.maxHealth);
+            
+            // Play heal animation
+            this.playHealAnimation(this.playerSprite);
+            
+            // Add to combat log
+            this.addToCombatLog(`Used ${potion.name} and restored ${actualHealing} health!`);
+        }
+        
+        // Apply mana restoration
+        if (potion.manaAmount) {
+            const oldMana = player.mana;
+            player.mana = Math.min(player.maxMana, player.mana + potion.manaAmount);
+            const actualMana = player.mana - oldMana;
+            
+            // Update mana display
+            if (this.playerManaText) {
+                this.playerManaText.setText(`MP: ${player.mana}/${player.maxMana}`);
+            }
+            if (this.playerManaBar) {
+                const mana = gameState.player.mana !== undefined ? gameState.player.mana : 0;
+                const maxMana = gameState.player.maxMana || 100;
+                this.updateManaBar(this.playerManaBar, mana, maxMana);
+            }
+            
+            // Add to combat log
+            this.addToCombatLog(`Used ${potion.name} and restored ${actualMana} mana!`);
+        }
+    }
+    
+    /**
+     * Use a scroll item
+     * @param {object} scroll - The scroll item
+     */
+    useScroll(scroll) {
+        // Process scroll effects
+        if (scroll.effect === 'damage') {
+            // Get target (for now just pick first enemy)
+            const target = this.enemies[0];
+            
+            // Calculate damage
+            const damage = scroll.power || 20;
+            
+            // Apply damage
+            target.health = Math.max(0, target.health - damage);
+            
+            // Update enemy health display
+            if (target.displayElements) {
+                this.updateHealthBar(target.displayElements.healthBar, target.health, target.maxHealth);
+                target.displayElements.healthText.setText(`HP: ${target.health}/${target.maxHealth}`);
+            }
+            
+            // Play effect animation
+            this.playAbilityAnimation(target, {
+                name: scroll.name,
+                element: scroll.element || 'arcane'
+            });
+            
+            // Add to combat log
+            this.addToCombatLog(`Used ${scroll.name} on ${target.name} for ${damage} damage!`);
+            
+            // Check if enemy defeated
+            if (target.health <= 0) {
+                this.enemyDefeated(target);
+            }
+        } else if (scroll.effect === 'buff') {
+            // Apply buff to player
+            this.addToCombatLog(`Used ${scroll.name} and gained ${scroll.buffType || 'a buff'}!`);
+            
+            // TODO: Implement buff system
+        }
+    }
+    
+    /**
+     * Process victory and ensure transition to victory screen
+     */
+    processVictory() {
+        console.log('Processing victory and transitioning to result screen');
+        
+        // Calculate rewards based on the single enemy
+        const enemy = this.enemies[0];
+        const expGained = enemy.expValue || enemy.level * 10;
+        const goldGained = enemy.goldValue || enemy.level * 5;
+        
+        // Generate loot items
+        const lootItems = [];
+        if (enemy.loot && Array.isArray(enemy.loot)) {
+            enemy.loot.forEach(lootItem => {
+                // Check if item should drop based on chance
+                if (Math.random() <= (lootItem.chance || 0.5)) {
+                    lootItems.push(lootItem.item || lootItem);
+                }
+            });
+        }
+        
+        // Initialize player inventory if it doesn't exist
+        if (!gameState.player.inventory) {
+            gameState.player.inventory = {
+                items: [],
+                equipped: {}
+            };
+        }
+        
+        // Ensure items array exists
+        if (!gameState.player.inventory.items) {
+            gameState.player.inventory.items = [];
+        }
+        
+        // Add rewards to player
+        gameState.player.experience += expGained;
+        gameState.player.gold += goldGained;
+        
+        // Add loot items to player inventory
+        lootItems.forEach(item => {
+            gameState.player.inventory.items.push(item);
+        });
+        
+        // Check for level up
+        const didLevelUp = gameState.player.experience >= gameState.player.experienceToNextLevel;
+        
+        // Determine if this was a boss encounter
+        const isBoss = gameState.currentEncounter && gameState.currentEncounter.type === 'boss';
+        
+        // Store combat results
+        gameState.combatResult = {
+            outcome: 'victory',
+            enemy: enemy,
+            isBoss: isBoss,
+            loot: {
+                experience: expGained,
+                gold: goldGained,
+                items: lootItems
+            }
+        };
+        
+        // Show victory message
+        this.addToCombatLog("Victory! You defeated the enemy.");
+        
+        // Play victory sound
+        this.safePlaySound('victory-sound');
+        
+        // Force transition to combat result scene
+        this.time.delayedCall(1500, () => {
+            console.log('Transitioning to CombatResultScene');
+            this.transitions.fade(() => {
+                navigationManager.navigateTo(this, 'CombatResultScene');
+            });
+        });
     }
 }
 
