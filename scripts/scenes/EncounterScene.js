@@ -42,30 +42,21 @@ class EncounterScene extends Phaser.Scene {
     }
 
     preload() {
-        // Check if we're on GitHub Pages and add basePath if needed
-        let basePath = '';
+        // Detect GitHub Pages
         const isGitHubPages = window.location.hostname.includes('github.io');
+        console.log(`Running on GitHub Pages: ${isGitHubPages}`);
         
-        if (isGitHubPages) {
-            // Extract repo name from pathname (for GitHub Pages)
-            const pathParts = window.location.pathname.split('/');
-            // If not at the root, the first part after the slash would be the repo name
-            if (pathParts.length > 2) {
-                basePath = pathParts[1] + '/';
-                console.log(`Detected GitHub Pages. Using base path: ${basePath}`);
-            }
-        }
-        
-        // Helper function to prepend base path for GitHub Pages compatibility
+        // Add a consistent base path for all assets
+        // This works both locally and on GitHub Pages without modifications
         const getPath = (path) => {
-            // Only prepend if we have a base path and the path doesn't already have it
-            if (basePath && !path.startsWith(basePath)) {
-                return basePath + path;
-            }
+            // Just use the relative path as-is, which works in both environments
             return path;
         };
         
-        // Load encounter assets with correct path
+        // Debug asset loading
+        console.log(`Loading sprites from path: ${getPath('assets/sprites/enemies/wolf-sprite.png')}`);
+        
+        // Load encounter assets
         this.load.image('combat-bg', getPath('assets/sprites/backgrounds/combat-bg.png'));
         
         // Load effect sprites
@@ -116,8 +107,50 @@ class EncounterScene extends Phaser.Scene {
     }
     
     create(data) {
+        // Initialize game state if needed
+        if (!gameState.encounters) {
+            gameState.encounters = {
+                completed: [],
+                current: null
+            };
+        }
+        
+        // Store scene data
+        this.sceneData = data || {};
+        
+        // Get screen dimensions
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
+        
+        // Check for loading errors and report which sprites failed to load
+        const missingTextures = [];
+        ['wolf-sprite', 'goblin-sprite', 'skeleton-sprite', 'slime-sprite', 'default-enemy'].forEach(key => {
+            if (!this.textures.exists(key)) {
+                missingTextures.push(key);
+            }
+        });
+        
+        if (missingTextures.length > 0) {
+            console.warn(`Failed to load textures: ${missingTextures.join(', ')}`);
+        }
+        
+        // Show all available textures
+        console.log('Complete texture list:', Object.keys(this.textures.list).filter(key => 
+            !key.startsWith('__') && key !== 'displaylist'
+        ));
+        
+        // Create default-enemy texture if missing for fallback
+        if (!this.textures.exists('default-enemy')) {
+            console.log('Creating default-enemy texture as fallback');
+            // Create a simple colored rectangle as fallback
+            const graphics = this.make.graphics();
+            graphics.fillStyle(0xff0000);
+            graphics.fillRect(0, 0, 32, 32);
+            graphics.lineStyle(2, 0xffffff);
+            graphics.strokeRect(0, 0, 32, 32);
+            graphics.generateTexture('default-enemy', 32, 32);
+            graphics.destroy();
+        }
         
         // Initialize UI manager
         this.ui = new UIManager(this);
@@ -214,40 +247,46 @@ class EncounterScene extends Phaser.Scene {
             !key.startsWith('__') && key !== 'displaylist'
         ));
         
-        // Check if sprite exists in texture cache
-        if (!this.textures.exists(spriteKey)) {
-            console.warn(`Sprite key "${spriteKey}" not found in texture cache, trying alternatives...`);
-            
-            // Try using the same key without -sprite suffix
-            if (spriteKey.endsWith('-sprite') && this.textures.exists(spriteKey.replace('-sprite', ''))) {
-                spriteKey = spriteKey.replace('-sprite', '');
-                console.log(`Using modified key without -sprite suffix: ${spriteKey}`);
-            } 
-            // If that fails and we have AssetHelper, try using it
-            else if (AssetHelper && AssetHelper.getEnemySpritePath) {
-                // Extract base name (e.g., "wolf" from "wolf-sprite")
-                const baseSpriteName = spriteKey.replace('-sprite', '');
-                console.log(`Trying AssetHelper with base name: ${baseSpriteName}`);
-                
-                // Use the actual sprite key directly, since it's already loaded in preload
-                spriteKey = baseSpriteName + '-sprite';
-            }
-            // If still not found, use fallback sprite
+        // Create enemy sprite with proper error handling
+        // Use the safeAddImage or fallback to regular sprite creation with error checking
+        let enemySprite;
+        
+        if (this.safeAddImage) {
+            // Use the BaseScene's safeAddImage method if available (from architecture improvements)
+            console.log(`Using safeAddImage for "${spriteKey}"`);
+            enemySprite = this.safeAddImage(
+                width * 0.75,
+                height * 0.4,
+                spriteKey,
+                'default-enemy'
+            );
+        } else {
+            // Check if sprite exists in texture cache
             if (!this.textures.exists(spriteKey)) {
-                console.warn(`Still couldn't find sprite, using default-enemy`);
-                spriteKey = 'default-enemy';
+                console.warn(`Sprite key "${spriteKey}" not found in texture cache, trying alternatives...`);
+                
+                // Try without -sprite suffix if that exists
+                if (spriteKey.endsWith('-sprite') && this.textures.exists(spriteKey.replace('-sprite', ''))) {
+                    spriteKey = spriteKey.replace('-sprite', '');
+                    console.log(`Using key without -sprite suffix: ${spriteKey}`);
+                }
+                // If still not found, use default-enemy
+                else {
+                    console.warn(`No working sprite found, using default-enemy`);
+                    spriteKey = 'default-enemy';
+                }
             }
+            
+            // Final sprite key to use
+            console.log(`Final sprite key: "${spriteKey}"`);
+            
+            // Create enemy sprite with resolved key
+            enemySprite = this.add.sprite(
+                width * 0.75,
+                height * 0.4,
+                spriteKey
+            );
         }
-        
-        // Final sprite key to use
-        console.log(`Final sprite key: "${spriteKey}"`);
-        
-        // Create enemy sprite with resolved key
-        const enemySprite = this.add.sprite(
-            width * 0.75,
-            height * 0.4,
-            spriteKey
-        );
         
         // Double-check that the sprite was created successfully
         console.log('Enemy sprite created:', {
@@ -1583,95 +1622,59 @@ class EncounterScene extends Phaser.Scene {
     /**
      * Handle victory
      */
-    handleVictory() {
-        console.log('Victory handling started');
-        
-        // Check if victory has already been handled
-        if ((this.victoryHandled && this.victoryTransitionStarted) || this.combatEnded) {
-            console.log('Victory already handled, skipping');
-            return;
-        }
-        
-        // Set flag to prevent multiple victory calls
-        this.victoryHandled = true;
-        this.combatEnded = true;
-        
-        console.log('Enemy defeated, combat ended');
-        
-        // Disable all action buttons immediately
-        this.disableAllButtons();
-        
+    handleVictory(enemy) {
         // Play victory sound immediately
         this.safePlaySound('victory-sound', { volume: 0.7 });
         
-        // Calculate rewards based on the single enemy
-        const enemy = this.enemies[0];
-        const expGained = enemy.expValue || enemy.level * 10;
-        const goldGained = enemy.goldValue || enemy.level * 5;
+        // Show "Victory!" text as immediate feedback
+        const centerX = this.cameras.main.width / 2;
+        const centerY = this.cameras.main.height / 2 - 50;
+        const victoryText = this.add.text(centerX, centerY, 'Victory!', {
+            fontFamily: "'Press Start 2P'",
+            fontSize: '32px',
+            fill: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 6,
+            shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 2, stroke: true, fill: true }
+        }).setOrigin(0.5).setAlpha(0);
         
-        // Generate loot items
-        const lootItems = [];
-        if (enemy.loot && Array.isArray(enemy.loot)) {
-            enemy.loot.forEach(lootItem => {
-                // Check if item should drop based on chance
-                if (Math.random() <= (lootItem.chance || 0.5)) {
-                    lootItems.push(lootItem.item || lootItem);
-                }
-            });
-        }
-        
-        // Initialize player inventory if it doesn't exist
-        if (!gameState.player.inventory) {
-            gameState.player.inventory = {
-                items: [],
-                equipped: {}
-            };
-        }
-        
-        // Ensure items array exists
-        if (!gameState.player.inventory.items) {
-            gameState.player.inventory.items = [];
-        }
-        
-        // Add rewards to player
-        gameState.player.experience += expGained;
-        gameState.player.gold += goldGained;
-        
-        // Add loot items to player inventory
-        lootItems.forEach(item => {
-            gameState.player.inventory.items.push(item);
+        // Animate the victory text
+        this.tweens.add({
+            targets: victoryText,
+            alpha: 1,
+            y: centerY - 20,
+            scale: 1.2,
+            duration: 300,
+            ease: 'Power2',
+            yoyo: true,
+            hold: 400,
+            completeDelay: 200
         });
         
-        // Check for level up
-        const didLevelUp = gameState.player.experience >= gameState.player.experienceToNextLevel;
-        
-        // Determine if this was a boss encounter
-        const isBoss = gameState.currentEncounter && gameState.currentEncounter.type === 'boss';
-        
-        // Store combat results
-        gameState.combatResult = {
-            outcome: 'victory',
-            enemy: enemy,
-            isBoss: isBoss,
-            loot: {
-                experience: expGained,
-                gold: goldGained,
-                items: lootItems
-            }
-        };
-        
-        // Show victory message
-        this.addToCombatLog("Victory! You defeated the enemy.");
-        
-        // Set transition flag to prevent multiple transitions
-        this.victoryTransitionStarted = true;
-        
-        // Use fade transition to combat result scene after a short delay
-        this.time.delayedCall(2000, () => {
-            console.log('Starting transition to CombatResultScene');
-            this.transitions.fade(() => {
-                navigationManager.navigateTo(this, 'CombatResultScene');
+        // Play defeat animation with reduced duration
+        if (enemy.displayElements && enemy.displayElements.sprite) {
+            // Fade out the enemy sprite
+            this.tweens.add({
+                targets: enemy.displayElements.sprite,
+                alpha: 0,
+                y: enemy.displayElements.sprite.y + 30,
+                duration: 500, // Reduced from 800ms
+                ease: 'Power2'
             });
+            
+            // Fade out the enemy name and health text
+            if (enemy.displayElements.nameText) {
+                this.tweens.add({
+                    targets: [enemy.displayElements.nameText, enemy.displayElements.healthText],
+                    alpha: 0,
+                    duration: 500 // Reduced from 800ms
+                });
+            }
+        }
+        
+        // Process victory after a shorter delay
+        this.time.delayedCall(600, () => {
+            this.processVictory();
         });
     }
     
@@ -2010,55 +2013,73 @@ class EncounterScene extends Phaser.Scene {
         // Play victory sound immediately
         this.safePlaySound('victory-sound', { volume: 0.7 });
         
-        // Show "Victory!" text as immediate feedback
-        const centerX = this.cameras.main.width / 2;
-        const centerY = this.cameras.main.height / 2 - 50;
-        const victoryText = this.add.text(centerX, centerY, 'Victory!', {
-            fontFamily: "'Press Start 2P'",
-            fontSize: '32px',
-            fill: '#ffff00',
-            stroke: '#000000',
-            strokeThickness: 6,
-            shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 2, stroke: true, fill: true }
-        }).setOrigin(0.5).setAlpha(0);
+        // Calculate rewards based on the single enemy
+        const expGained = enemy.expValue || enemy.level * 10;
+        const goldGained = enemy.goldValue || enemy.level * 5;
         
-        // Animate the victory text
-        this.tweens.add({
-            targets: victoryText,
-            alpha: 1,
-            y: centerY - 20,
-            scale: 1.2,
-            duration: 300,
-            ease: 'Power2',
-            yoyo: true,
-            hold: 400,
-            completeDelay: 200
-        });
-        
-        // Play defeat animation with reduced duration
-        if (enemy.displayElements && enemy.displayElements.sprite) {
-            // Fade out the enemy sprite
-            this.tweens.add({
-                targets: enemy.displayElements.sprite,
-                alpha: 0,
-                y: enemy.displayElements.sprite.y + 30,
-                duration: 500, // Reduced from 800ms
-                ease: 'Power2'
+        // Generate loot items
+        const lootItems = [];
+        if (enemy.loot && Array.isArray(enemy.loot)) {
+            enemy.loot.forEach(lootItem => {
+                // Check if item should drop based on chance
+                if (Math.random() <= (lootItem.chance || 0.5)) {
+                    lootItems.push(lootItem.item || lootItem);
+                }
             });
-            
-            // Fade out the enemy name and health text
-            if (enemy.displayElements.nameText) {
-                this.tweens.add({
-                    targets: [enemy.displayElements.nameText, enemy.displayElements.healthText],
-                    alpha: 0,
-                    duration: 500 // Reduced from 800ms
-                });
-            }
         }
         
-        // Process victory after a shorter delay
-        this.time.delayedCall(600, () => {
-            this.processVictory();
+        // Initialize player inventory if it doesn't exist
+        if (!gameState.player.inventory) {
+            gameState.player.inventory = {
+                items: [],
+                equipped: {}
+            };
+        }
+        
+        // Ensure items array exists
+        if (!gameState.player.inventory.items) {
+            gameState.player.inventory.items = [];
+        }
+        
+        // Add rewards to player
+        gameState.player.experience += expGained;
+        gameState.player.gold += goldGained;
+        
+        // Add loot items to player inventory
+        lootItems.forEach(item => {
+            gameState.player.inventory.items.push(item);
+        });
+        
+        // Check for level up
+        const didLevelUp = gameState.player.experience >= gameState.player.experienceToNextLevel;
+        
+        // Determine if this was a boss encounter
+        const isBoss = gameState.currentEncounter && gameState.currentEncounter.type === 'boss';
+        
+        // Store combat results
+        gameState.combatResult = {
+            outcome: 'victory',
+            enemy: enemy,
+            isBoss: isBoss,
+            loot: {
+                experience: expGained,
+                gold: goldGained,
+                items: lootItems
+            }
+        };
+        
+        // Show victory message
+        this.addToCombatLog("Victory! You defeated the enemy.");
+        
+        // Set transition flag to prevent multiple transitions
+        this.victoryTransitionStarted = true;
+        
+        // Use fade transition to combat result scene after a short delay
+        this.time.delayedCall(2000, () => {
+            console.log('Starting transition to CombatResultScene');
+            this.transitions.fade(() => {
+                navigationManager.navigateTo(this, 'CombatResultScene');
+            });
         });
     }
     
