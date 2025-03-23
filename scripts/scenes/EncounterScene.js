@@ -58,6 +58,25 @@ class EncounterScene extends Phaser.Scene {
         this.load.image('crystal-effect', 'assets/sprites/effects/crystal.png');
         this.load.image('ghost-effect', 'assets/sprites/effects/ghost.png');
         
+        // Load enemy sprites
+        this.load.image('goblin-sprite', 'assets/sprites/enemies/goblin-sprite.png');
+        this.load.image('wolf-sprite', 'assets/sprites/enemies/wolf-sprite.png');
+        this.load.image('mushroom-sprite', 'assets/sprites/enemies/mushroom-sprite.png');
+        this.load.image('bat-sprite', 'assets/sprites/enemies/bat-sprite.png');
+        this.load.image('skeleton-sprite', 'assets/sprites/enemies/skeleton-sprite.png');
+        this.load.image('slime-sprite', 'assets/sprites/enemies/slime-sprite.png');
+        this.load.image('spider-sprite', 'assets/sprites/enemies/spider-sprite.png');
+        this.load.image('ghost-sprite', 'assets/sprites/enemies/ghost-sprite.png');
+        this.load.image('golem-sprite', 'assets/sprites/enemies/golem-sprite.png');
+        this.load.image('dragon-sprite', 'assets/sprites/enemies/dragon-sprite.png');
+        this.load.image('default-enemy', 'assets/sprites/enemies/default-enemy.png');
+        
+        // Load player sprites
+        this.load.image('default-player', 'assets/sprites/characters/default-player.png');
+        this.load.image('warrior-sprite', 'assets/sprites/characters/warrior-sprite.png');
+        this.load.image('mage-sprite', 'assets/sprites/characters/mage-sprite.png');
+        this.load.image('rogue-sprite', 'assets/sprites/characters/rogue-sprite.png');
+        this.load.image('cleric-sprite', 'assets/sprites/characters/cleric-sprite.png');
         // Load audio - only load essential sounds to prevent missing file errors
         this.load.audio('attack-sound', 'assets/audio/attack.mp3');
         this.load.audio('enemy-hit-sound', 'assets/audio/enemy-hit.mp3');
@@ -145,15 +164,71 @@ class EncounterScene extends Phaser.Scene {
         // Get the enemy
         const enemy = this.enemies[0];
         
-        // Create enemy sprite
+        // Debug enemy object
+        console.log('Enemy data:', {
+            name: enemy.name,
+            sprite: enemy.sprite,
+            level: enemy.level
+        });
+        
+        // Import AssetConfig for enemy sprites - follow architecture improvements
+        const assetConfig = this.scene.scene.sys.game.registry.get('assetConfig');
+        const AssetHelper = assetConfig ? assetConfig.AssetHelper : null;
+        console.log('AssetHelper available:', !!AssetHelper);
+        
+        // Determine sprite key to use
+        let spriteKey = enemy.sprite || 'default-enemy';
+        console.log('Initial sprite key from enemy:', spriteKey);
+        
+        // Log all available texture keys for debugging
+        console.log('Available texture keys:', Object.keys(this.textures.list).filter(key => 
+            !key.startsWith('__') && key !== 'displaylist'
+        ));
+        
+        // Check if sprite exists in texture cache
+        if (!this.textures.exists(spriteKey)) {
+            console.warn(`Sprite key "${spriteKey}" not found in texture cache, trying alternatives...`);
+            
+            // Try using the same key without -sprite suffix
+            if (spriteKey.endsWith('-sprite') && this.textures.exists(spriteKey.replace('-sprite', ''))) {
+                spriteKey = spriteKey.replace('-sprite', '');
+                console.log(`Using modified key without -sprite suffix: ${spriteKey}`);
+            } 
+            // If that fails and we have AssetHelper, try using it
+            else if (AssetHelper && AssetHelper.getEnemySpritePath) {
+                // Extract base name (e.g., "wolf" from "wolf-sprite")
+                const baseSpriteName = spriteKey.replace('-sprite', '');
+                console.log(`Trying AssetHelper with base name: ${baseSpriteName}`);
+                
+                // Use the actual sprite key directly, since it's already loaded in preload
+                spriteKey = baseSpriteName + '-sprite';
+            }
+            // If still not found, use fallback sprite
+            if (!this.textures.exists(spriteKey)) {
+                console.warn(`Still couldn't find sprite, using default-enemy`);
+                spriteKey = 'default-enemy';
+            }
+        }
+        
+        // Final sprite key to use
+        console.log(`Final sprite key: "${spriteKey}"`);
+        
+        // Create enemy sprite with resolved key
         const enemySprite = this.add.sprite(
             width * 0.75,
             height * 0.4,
-            enemy.spriteKey || 'enemy-placeholder'
+            spriteKey
         );
         
+        // Double-check that the sprite was created successfully
+        console.log('Enemy sprite created:', {
+            key: enemySprite.texture.key,
+            width: enemySprite.width,
+            height: enemySprite.height
+        });
+        
         // Scale sprite appropriately
-        const scale = enemy.scale || 1.0;
+        const scale = enemy.scale || 2.0;
         enemySprite.setScale(scale);
         
         // Add enemy name
@@ -243,6 +318,16 @@ class EncounterScene extends Phaser.Scene {
             healthText: healthText,
             statusContainer: statusContainer
         };
+        
+        // Add a slight bobbing animation to make the enemy sprite feel alive
+        this.tweens.add({
+            targets: enemySprite,
+            y: enemySprite.y + 8,
+            duration: 1500,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
     }
     
     /**
@@ -339,7 +424,7 @@ class EncounterScene extends Phaser.Scene {
         );
         
         // Add player icon
-        this.playerSprite = this.add.image(
+        this.playerSprite = this.add.sprite(
             width * 0.15, 
             height * 0.25, 
             'player-icon'
@@ -775,7 +860,7 @@ class EncounterScene extends Phaser.Scene {
         );
         
         // Add player icon
-        this.playerSprite = this.add.image(
+        this.playerSprite = this.add.sprite(
             width * 0.15, 
             height * 0.25, 
             'player-icon'
@@ -987,15 +1072,15 @@ class EncounterScene extends Phaser.Scene {
         // Apply damage
         target.health = Math.max(0, target.health - damage);
         
-        // Play attack animation and sound
-        this.playAttackAnimation(target);
-        this.safePlaySound('attack-sound');
-        
         // Update enemy health display
         if (target.displayElements) {
             this.updateHealthBar(target.displayElements.healthBar, target.health, target.maxHealth);
             target.displayElements.healthText.setText(`HP: ${target.health}/${target.maxHealth}`);
         }
+        
+        // Play attack animation and sound
+        this.playAttackAnimation(target);
+        this.safePlaySound('attack-sound');
         
         // Add to combat log
         this.addToCombatLog(`You attack ${target.name} for ${damage} damage!`);
@@ -1123,11 +1208,8 @@ class EncounterScene extends Phaser.Scene {
         
         // Apply status effect if ability has one
         if (ability.statusEffect) {
-            const chance = ability.statusEffect.chance || 1.0;
-            if (Math.random() < chance) {
-                this.applyStatusEffectToTarget(target, ability.statusEffect);
-                this.addToCombatLog(`${target.name} is afflicted with ${ability.statusEffect.type}!`);
-            }
+            this.applyStatusEffectToTarget(target, ability.statusEffect);
+            this.addToCombatLog(`${target.name} is afflicted with ${ability.statusEffect.type}!`);
         }
         
         // Play appropriate animation and sound

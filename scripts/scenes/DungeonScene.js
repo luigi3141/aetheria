@@ -29,11 +29,11 @@ class DungeonScene extends Phaser.Scene {
         this.load.audio('door-open', 'assets/audio/door_open.wav');
         this.load.audio('combat-start', 'assets/audio/sword.wav');
         
-        // Load enemy sprites - placeholders
-        this.load.image('wolf-sprite', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('bandit-sprite', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('spider-sprite', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('alpha-wolf-sprite', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        // Load enemy sprites - placeholders with dungeon- prefix to avoid collisions
+        this.load.image('dungeon-wolf-placeholder', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        this.load.image('dungeon-bandit-placeholder', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        this.load.image('dungeon-spider-placeholder', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        this.load.image('dungeon-alpha-wolf-placeholder', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
         
         // Load combat effect sprites
         this.load.image('attack-effect', 'https://labs.phaser.io/assets/particles/red.png');
