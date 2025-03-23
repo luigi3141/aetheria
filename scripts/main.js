@@ -16,6 +16,30 @@ window.addEventListener('load', function() {
     console.log('Window loaded');
     console.log('Phaser version:', Phaser.VERSION);
     
+    // Add debugging for module loading
+    console.log('Checking module imports:');
+    
+    // Create a function to check if modules are loaded
+    function checkModule(name, module) {
+        console.log(`Module ${name}: ${module ? 'Loaded successfully' : 'Failed to load'}`);
+        return module;
+    }
+    
+    // Check each module
+    const modules = {
+        StartScene: checkModule('StartScene', StartScene),
+        CharacterSelectScene: checkModule('CharacterSelectScene', CharacterSelectScene),
+        OverworldScene: checkModule('OverworldScene', OverworldScene),
+        DungeonSelectScene: checkModule('DungeonSelectScene', DungeonSelectScene),
+        DungeonScene: checkModule('DungeonScene', DungeonScene),
+        EncounterScene: checkModule('EncounterScene', EncounterScene),
+        CombatResultScene: checkModule('CombatResultScene', CombatResultScene),
+        PostRunSummaryScene: checkModule('PostRunSummaryScene', PostRunSummaryScene),
+        InventoryScene: checkModule('InventoryScene', InventoryScene),
+        CraftingScene: checkModule('CraftingScene', CraftingScene),
+        CharacterSheetScene: checkModule('CharacterSheetScene', CharacterSheetScene)
+    };
+    
     try {
         const config = {
             type: Phaser.AUTO,
@@ -23,17 +47,17 @@ window.addEventListener('load', function() {
             height: 600,
             parent: 'game-container',
             scene: [
-                StartScene, 
-                CharacterSelectScene,
-                OverworldScene,
-                DungeonSelectScene,
-                DungeonScene,
-                EncounterScene,
-                CombatResultScene,
-                PostRunSummaryScene,
-                InventoryScene,
-                CraftingScene,
-                CharacterSheetScene
+                modules.StartScene, 
+                modules.CharacterSelectScene,
+                modules.OverworldScene,
+                modules.DungeonSelectScene,
+                modules.DungeonScene,
+                modules.EncounterScene,
+                modules.CombatResultScene,
+                modules.PostRunSummaryScene,
+                modules.InventoryScene,
+                modules.CraftingScene,
+                modules.CharacterSheetScene
             ],
             backgroundColor: '#000000',
             pixelArt: true,
@@ -58,7 +82,7 @@ window.addEventListener('load', function() {
                 }
             }
         };
-
+        
         // Create the game instance
         console.log('Creating Phaser game instance');
         window.game = new Phaser.Game(config);
