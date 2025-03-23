@@ -4,6 +4,7 @@ import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import TransitionManager from '../ui/TransitionManager.js';
 import { getDungeonEnemies, getDungeonBoss, generateLoot } from '../data/enemies.js';
+import HealthManager from '../utils/HealthManager.js';
 
 /**
  * DungeonScene - Scene for exploring procedurally generated dungeons and handling combat
@@ -966,12 +967,17 @@ class DungeonScene extends Phaser.Scene {
             }
         );
         
+        // Ensure player health values are consistent using HealthManager
+        HealthManager.validatePlayerHealth();
+        
         // Add player stats text
         const playerName = gameState.player.name || 'Adventurer';
-        const playerHealth = gameState.player.health || 100;
+        const playerHealth = gameState.player.health;
+        const playerMaxHealth = gameState.player.maxHealth;
         const playerMana = gameState.player.mana || 50;
         
-        this.add.text(width * 0.85, height * 0.2, `${playerName}\nHP: ${playerHealth}/100\nMP: ${playerMana}/50`, {
+        // Store the text element so we can update it later
+        this.playerStatsText = this.add.text(width * 0.85, height * 0.2, `${playerName}\nHP: ${playerHealth}/${playerMaxHealth}\nMP: ${playerMana}/50`, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.sm + 'px',
             fill: '#ffffff',

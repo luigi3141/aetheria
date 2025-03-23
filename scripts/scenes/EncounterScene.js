@@ -5,6 +5,7 @@ import UIManager from '../ui/UIManager.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import TransitionManager from '../ui/TransitionManager.js';
 import { generateLoot, applyStatusEffect } from '../data/enemies.js';
+import HealthManager from '../utils/HealthManager.js';
 
 /**
  * EncounterScene - Scene for encountering enemies and deciding to fight or retreat
@@ -1369,16 +1370,16 @@ class EncounterScene extends Phaser.Scene {
             damage = Math.max(1, damage - damageReduction);
         }
         
-        // Apply damage
-        player.health = Math.max(0, player.health - damage);
-        
-        // Play attack animation and sound
-        this.playEnemyAttackAnimation(enemy);
-        this.safePlaySound('enemy-hit-sound');
+        // Apply damage using HealthManager
+        HealthManager.updatePlayerHealth(-damage, true);
         
         // Update player health display
         this.playerHealthText.setText(`HP: ${player.health}/${player.maxHealth}`);
         this.updateHealthBar(this.playerHealthBar, player.health, player.maxHealth);
+        
+        // Play attack animation and sound
+        this.playEnemyAttackAnimation(enemy);
+        this.safePlaySound('enemy-hit-sound');
         
         // Add to combat log
         this.addToCombatLog(`${enemy.name} attacks you for ${damage} damage!`);
@@ -1898,12 +1899,8 @@ class EncounterScene extends Phaser.Scene {
             damage = Math.max(1, damage - damageReduction);
         }
         
-        // Apply damage
-        player.health = Math.max(0, player.health - damage);
-        
-        // Play appropriate animation and sound
-        this.playEnemyAttackAnimation(enemy);
-        this.safePlaySound(`${ability.soundKey || 'enemy-attack'}-sound`);
+        // Apply damage using HealthManager
+        HealthManager.updatePlayerHealth(-damage, true);
         
         // Update player health display
         this.playerHealthText.setText(`HP: ${player.health}/${player.maxHealth}`);
@@ -1917,6 +1914,9 @@ class EncounterScene extends Phaser.Scene {
             this.applyStatusEffectToTarget(player, ability.statusEffect);
             this.addToCombatLog(`You are afflicted with ${ability.statusEffect.type}!`);
         }
+        
+        // Play sound effect
+        this.safePlaySound(`${ability.soundKey || 'enemy-attack'}-sound`);
         
         // Check if player defeated
         if (player.health <= 0) {
@@ -2195,6 +2195,118 @@ class EncounterScene extends Phaser.Scene {
         
         // Process the ability
         this.processPlayerDamageAbility(ability);
+    }
+    
+    /**
+     * Create the player display
+     */
+    createPlayerDisplay() {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        
+        // Get player data from gameState
+        const player = gameState.player;
+        
+        // Ensure player health values are consistent
+        HealthManager.validatePlayerHealth();
+        
+        // Create player sprite
+        const playerSprite = this.add.sprite(
+            width * 0.25,
+            height * 0.4,
+            player.spriteKey || 'player-placeholder'
+        );
+        
+        // Scale sprite appropriately
+        playerSprite.setScale(2);
+        
+        // Add player name
+        const nameText = this.add.text(
+            width * 0.25,
+            height * 0.25,
+            player.name || 'Adventurer',
+            {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.md + 'px',
+                fill: '#ffffff',
+                align: 'center'
+            }
+        ).setOrigin(0.5);
+        
+        // Create health bar
+        const healthBarWidth = 200;
+        const healthBarHeight = 20;
+        const healthBarX = width * 0.25;
+        const healthBarY = height * 0.3;
+        
+        // Create health bar background
+        const healthBarBg = this.add.rectangle(
+            healthBarX,
+            healthBarY,
+            healthBarWidth,
+            healthBarHeight,
+            0x333333
+        ).setOrigin(0.5);
+        
+        // Create health bar foreground
+        const healthBar = this.add.graphics();
+        
+        // Draw initial health bar
+        const healthPercentage = player.health / player.maxHealth;
+        healthBar.fillStyle(0x00ff00, 1);
+        healthBar.fillRect(
+            healthBarX - healthBarWidth / 2,
+            healthBarY - healthBarHeight / 2,
+            healthBarWidth * healthPercentage,
+            healthBarHeight
+        );
+        
+        // Add border
+        const healthBarBorder = this.add.graphics();
+        healthBarBorder.lineStyle(2, 0xffffff, 1);
+        healthBarBorder.strokeRect(
+            healthBarX - healthBarWidth / 2,
+            healthBarY - healthBarHeight / 2,
+            healthBarWidth,
+            healthBarHeight
+        );
+        
+        // Add health text
+        const healthText = this.add.text(
+            healthBarX,
+            healthBarY,
+            `${player.health}/${player.maxHealth}`,
+            {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.sm + 'px',
+                fill: '#ffffff',
+                align: 'center'
+            }
+        ).setOrigin(0.5);
+        
+        // Create status effect container
+        const statusContainer = this.add.container(
+            width * 0.25,
+            height * 0.35
+        );
+        
+        // Store display elements
+        this.playerDisplayElements = {
+            sprite: playerSprite,
+            nameText: nameText,
+            healthBar: {
+                bg: healthBarBg,
+                bar: healthBar,
+                border: healthBarBorder,
+                x: healthBarX - healthBarWidth / 2,
+                y: healthBarY - healthBarHeight / 2,
+                width: healthBarWidth,
+                height: healthBarHeight,
+                color: 0x00ff00
+            },
+            healthText: healthText,
+            statusContainer: statusContainer
+        };
     }
 }
 

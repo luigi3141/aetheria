@@ -2,6 +2,7 @@ import UIManager from '../ui/UIManager.js';
 import Button from '../ui/components/Button.js';
 import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
+import HealthManager from '../utils/HealthManager.js';
 
 /**
  * OverworldScene - The main hub world where the player can access various game features
@@ -50,6 +51,9 @@ class OverworldScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
+        // Ensure player health values are consistent
+        HealthManager.validatePlayerHealth();
+        
         // Create player avatar
         const avatarX = width * 0.15;
         const avatarY = height * 0.2;
@@ -81,10 +85,13 @@ class OverworldScene extends Phaser.Scene {
         const playerClass = gameState.player.class || 'Warrior';
         const playerLevel = gameState.player.level || 1;
         
+        // Display player stats including health
+        const playerStats = `${playerName}\n${playerRace} ${playerClass}\nLevel ${playerLevel}\nHP: ${gameState.player.health}/${gameState.player.maxHealth}`;
+        
         const playerInfo = this.ui.createSectionLabel(
             infoX,
             infoY,
-            `${playerName}\n${playerRace} ${playerClass}\nLevel ${playerLevel}`,
+            playerStats,
             {
                 fontSize: this.ui.fontSize.md,
                 background: true,
