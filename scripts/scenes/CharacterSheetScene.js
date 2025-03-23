@@ -1,46 +1,48 @@
-import Button from '../ui/components/Button.js';
 import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
-import UIManager from '../ui/UIManager.js';
+import BaseScene from './BaseScene.js';
+import { LAYOUT } from '../ui/Layout.js';
+import { ASSET_PATHS, AssetHelper } from '../config/AssetConfig.js';
+import ButtonFactory from '../ui/ButtonFactory.js';
 
 /**
  * CharacterSheetScene - Scene for viewing and managing character stats and skills
  */
-class CharacterSheetScene extends Phaser.Scene {
+class CharacterSheetScene extends BaseScene {
     constructor() {
-        super({ key: 'CharacterSheetScene' });
+        super('CharacterSheetScene');
     }
 
     preload() {
-        // Load character sheet assets
-        this.load.image('character-bg', 'https://labs.phaser.io/assets/skies/space1.png');
+        // Load character sheet background
+        this.load.image('character-bg', ASSET_PATHS.BACKGROUNDS.CHARACTER);
         
         // Load class-specific character portraits if they don't exist
         if (!this.textures.exists('warrior')) {
-            this.load.image('warrior', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+            this.load.image('warrior', ASSET_PATHS.PORTRAITS.WARRIOR);
         }
         if (!this.textures.exists('mage')) {
-            this.load.image('mage', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+            this.load.image('mage', ASSET_PATHS.PORTRAITS.MAGE);
         }
         if (!this.textures.exists('rogue')) {
-            this.load.image('rogue', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+            this.load.image('rogue', ASSET_PATHS.PORTRAITS.ROGUE);
         }
         if (!this.textures.exists('cleric')) {
-            this.load.image('cleric', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+            this.load.image('cleric', ASSET_PATHS.PORTRAITS.CLERIC);
         }
         if (!this.textures.exists('ranger')) {
-            this.load.image('ranger', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+            this.load.image('ranger', ASSET_PATHS.PORTRAITS.RANGER);
         }
         if (!this.textures.exists('bard')) {
-            this.load.image('bard', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+            this.load.image('bard', ASSET_PATHS.PORTRAITS.BARD);
         }
     }
 
     create() {
         console.log('CharacterSheetScene created');
         
-        // Initialize UI manager
-        this.ui = new UIManager(this);
+        // Initialize scene from BaseScene
+        this.initializeScene();
         
         // Create the scene background
         this.createBackground();
@@ -67,10 +69,10 @@ class CharacterSheetScene extends Phaser.Scene {
         const height = this.cameras.main.height;
         
         // Add background
-        this.add.image(width/2, height/2, 'character-bg').setDisplaySize(width, height);
-        
-        // Add decorative corners
-        this.ui.addScreenCorners();
+        this.safeAddImage(width/2, height/2, 'character-bg', {
+            displayWidth: width,
+            displayHeight: height
+        });
     }
     
     /**
@@ -82,7 +84,7 @@ class CharacterSheetScene extends Phaser.Scene {
         const height = this.cameras.main.height;
         
         // Create the title
-        this.ui.createTitle(width/2, height * 0.08, 'Character Sheet', {
+        this.ui.createTitle(width/2, height * LAYOUT.TITLE.Y, 'Character Sheet', {
             fontSize: this.ui.fontSize.lg
         });
     }
@@ -96,71 +98,51 @@ class CharacterSheetScene extends Phaser.Scene {
         
         // Create character info container
         this.ui.createPanel(
-            this,
-            width * 0.25,
-            height * 0.35,
+            width * LAYOUT.PANEL.LEFT.X,
+            height * LAYOUT.PANEL.LEFT.Y,
             width * 0.4,
-            height * 0.4,
+            height * 0.5,
             {
-                fillColor: 0x111122,
+                fillColor: 0x222233,
                 fillAlpha: 0.7,
-                borderColor: 0x3399ff,
+                borderColor: 0x9999aa,
                 borderThickness: 2
             }
         );
         
-        // Add character portrait - use the character's class sprite if available
-        const characterClass = gameState.player?.class || 'warrior';
-        let portraitKey = characterClass;
+        // Get player info from gameState
+        const player = gameState.player || {};
+        const playerClass = player.class || 'warrior';
+        const playerName = player.name || 'Adventurer';
+        const playerLevel = player.level || 1;
         
-        // Fallback to a default if the texture doesn't exist
-        if (!this.textures.exists(portraitKey)) {
-            portraitKey = 'warrior';
-        }
-        
-        // Create the portrait
-        const portrait = this.add.image(
-            width * 0.25,
-            height * 0.3,
-            portraitKey
-        ).setDisplaySize(100, 100);
-        
-        // Add a simple glow effect with a background circle
-        const glowCircle = this.add.circle(
-            width * 0.25,
-            height * 0.3,
-            60,
-            0x3399ff,
-            0.3
-        );
-        
-        // Ensure the circle is behind the portrait
-        glowCircle.setDepth(portrait.depth - 1);
-        
-        // Get character info from gameState
-        const playerName = gameState.player?.name || 'Unnamed Hero';
-        const playerClass = gameState.player?.class || 'Unknown Class';
-        const playerRace = gameState.player?.race || 'Unknown Race';
-        const playerLevel = gameState.player?.level || 1;
+        // Add character portrait based on class
+        this.safeAddImage(
+            width * 0.25, 
+            height * 0.25, 
+            playerClass,
+            { displayWidth: 128, displayHeight: 128 }
+        ).setOrigin(0.5);
         
         // Add character name
-        this.add.text(width * 0.25, height * 0.2, playerName, {
-            fontFamily: "'VT323'",
-            fontSize: this.ui.fontSize.lg + 'px',
+        this.add.text(width * 0.25, height * 0.4, playerName, {
+            fontFamily: "'Press Start 2P'",
+            fontSize: this.ui.fontSize.md + 'px',
             fill: '#ffffff',
             align: 'center'
         }).setOrigin(0.5);
         
-        // Add character class and race
-        this.add.text(width * 0.25, height * 0.4, `${playerRace} ${playerClass}`, {
+        // Add character class and level
+        this.add.text(width * 0.25, height * 0.45, `Level ${playerLevel} ${playerClass}`, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.md + 'px',
-            fill: '#aaaaaa',
+            fill: '#aaaaff',
             align: 'center'
         }).setOrigin(0.5);
         
-        // Add level
-        this.add.text(width * 0.25, height * 0.45, `Level ${playerLevel}`, {
+        // Add gold display
+        const gold = player.gold || 0;
+        this.add.text(width * 0.25, height * 0.5, `Gold: ${gold}`, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.md + 'px',
             fill: '#ffff00',
@@ -169,29 +151,28 @@ class CharacterSheetScene extends Phaser.Scene {
     }
     
     /**
-     * Create stats display
+     * Create the stats display section
      */
     createStatsDisplay() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Create a panel for the stats
+        // Create stats container
         this.ui.createPanel(
-            this,
-            width * 0.7,
-            height * 0.35,
+            width * LAYOUT.PANEL.RIGHT.X,
+            height * LAYOUT.PANEL.RIGHT.Y,
             width * 0.4,
-            height * 0.4,
+            height * 0.5,
             {
-                fillColor: 0x111122,
+                fillColor: 0x222233,
                 fillAlpha: 0.7,
-                borderColor: 0x3399ff,
+                borderColor: 0x9999aa,
                 borderThickness: 2
             }
         );
         
         // Add stats title
-        this.add.text(width * 0.7, height * 0.2, 'CHARACTER STATS', {
+        this.add.text(width * LAYOUT.STATS.X, height * 0.2, 'CHARACTER STATS', {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.md + 'px',
             fill: '#ffffff',
@@ -211,14 +192,14 @@ class CharacterSheetScene extends Phaser.Scene {
         
         // Define the secondary stats to display
         const secondaryStats = [
-            { name: 'Health', value: `${player.health || 100}/${player.maxHealth || 100}` },
-            { name: 'Mana', value: `${player.mana || 50}/${player.maxMana || 50}` },
+            { name: 'Health', value: `${player.health !== undefined ? player.health : 100}/${player.maxHealth || 100}` },
+            { name: 'Mana', value: `${player.mana !== undefined ? player.mana : 50}/${player.maxMana || 50}` },
             { name: 'Experience', value: `${player.experience || 0}/${player.experienceToNextLevel || 100}` }
         ];
         
         // Display primary stats
         primaryStats.forEach((stat, index) => {
-            const statY = height * 0.25 + (index * 30);
+            const statY = height * LAYOUT.STATS.START_Y + (index * LAYOUT.STATS.SPACING);
             
             // Stat name
             this.add.text(width * 0.6, statY, stat.name, {
@@ -238,7 +219,7 @@ class CharacterSheetScene extends Phaser.Scene {
         });
         
         // Display secondary stats title
-        this.add.text(width * 0.7, height * 0.4, 'RESOURCES', {
+        this.add.text(width * LAYOUT.STATS.X, height * 0.45, 'OTHER STATS', {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.md + 'px',
             fill: '#ffffff',
@@ -247,7 +228,7 @@ class CharacterSheetScene extends Phaser.Scene {
         
         // Display secondary stats
         secondaryStats.forEach((stat, index) => {
-            const statY = height * 0.45 + (index * 30);
+            const statY = height * 0.5 + (index * LAYOUT.STATS.SPACING);
             
             // Stat name
             this.add.text(width * 0.6, statY, stat.name, {
@@ -268,30 +249,14 @@ class CharacterSheetScene extends Phaser.Scene {
     }
     
     /**
-     * Create back button
+     * Create the back button to return to the previous scene
      */
     createBackButton() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Back button to return to the overworld
-        const backButton = new Button(
-            this,
-            width * 0.5,
-            height * 0.85,
-            'RETURN TO GAME',
-            () => {
-                console.log('Back button clicked');
-                navigationManager.navigateTo(this, 'OverworldScene');
-            },
-            {
-                width: 200,
-                height: 50
-            }
-        );
-        
-        // Add shine effect to make the button more noticeable
-        backButton.addShineEffect();
+        // Create back button using ButtonFactory
+        ButtonFactory.createBackButton(this);
     }
 }
 

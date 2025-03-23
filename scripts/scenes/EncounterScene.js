@@ -1485,8 +1485,13 @@ class EncounterScene extends Phaser.Scene {
         this.victoryHandled = true;
         this.combatEnded = true;
         
-        // Play victory sound
-        this.safePlaySound('victory-sound');
+        console.log('Enemy defeated, combat ended');
+        
+        // Disable all action buttons immediately
+        this.disableAllButtons();
+        
+        // Play victory sound immediately
+        this.safePlaySound('victory-sound', { volume: 0.7 });
         
         // Calculate rewards based on the single enemy
         const enemy = this.enemies[0];
@@ -1891,14 +1896,42 @@ class EncounterScene extends Phaser.Scene {
         // Disable all action buttons immediately
         this.disableAllButtons();
         
-        // Play defeat animation
+        // Play victory sound immediately
+        this.safePlaySound('victory-sound', { volume: 0.7 });
+        
+        // Show "Victory!" text as immediate feedback
+        const centerX = this.cameras.main.width / 2;
+        const centerY = this.cameras.main.height / 2 - 50;
+        const victoryText = this.add.text(centerX, centerY, 'Victory!', {
+            fontFamily: "'Press Start 2P'",
+            fontSize: '32px',
+            fill: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 6,
+            shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 2, stroke: true, fill: true }
+        }).setOrigin(0.5).setAlpha(0);
+        
+        // Animate the victory text
+        this.tweens.add({
+            targets: victoryText,
+            alpha: 1,
+            y: centerY - 20,
+            scale: 1.2,
+            duration: 300,
+            ease: 'Power2',
+            yoyo: true,
+            hold: 400,
+            completeDelay: 200
+        });
+        
+        // Play defeat animation with reduced duration
         if (enemy.displayElements && enemy.displayElements.sprite) {
             // Fade out the enemy sprite
             this.tweens.add({
                 targets: enemy.displayElements.sprite,
                 alpha: 0,
                 y: enemy.displayElements.sprite.y + 30,
-                duration: 800,
+                duration: 500, // Reduced from 800ms
                 ease: 'Power2'
             });
             
@@ -1907,13 +1940,13 @@ class EncounterScene extends Phaser.Scene {
                 this.tweens.add({
                     targets: [enemy.displayElements.nameText, enemy.displayElements.healthText],
                     alpha: 0,
-                    duration: 800
+                    duration: 500 // Reduced from 800ms
                 });
             }
         }
         
-        // Immediately go to victory screen
-        this.time.delayedCall(1000, () => {
+        // Process victory after a shorter delay
+        this.time.delayedCall(600, () => {
             this.processVictory();
         });
     }
@@ -2705,6 +2738,12 @@ class EncounterScene extends Phaser.Scene {
     processVictory() {
         console.log('Processing victory and transitioning to result screen');
         
+        // Prevent multiple calls to processVictory
+        if (this.victoryHandled) {
+            return;
+        }
+        this.victoryHandled = true;
+        
         // Calculate rewards based on the single enemy
         const enemy = this.enemies[0];
         const expGained = enemy.expValue || enemy.level * 10;
@@ -2761,17 +2800,18 @@ class EncounterScene extends Phaser.Scene {
             }
         };
         
-        // Show victory message
-        this.addToCombatLog("Victory! You defeated the enemy.");
+        // Show victory message in combat log (already shown in enemyDefeated)
+        // No need to play victory sound again as it's already played in enemyDefeated
         
-        // Play victory sound
-        this.safePlaySound('victory-sound');
-        
-        // Force transition to combat result scene
-        this.time.delayedCall(1500, () => {
+        // Start faster transition to combat result scene with a shorter delay
+        // Use camera fade effect for smoother transition
+        this.time.delayedCall(300, () => {
             console.log('Transitioning to CombatResultScene');
-            this.transitions.fade(() => {
-                navigationManager.navigateTo(this, 'CombatResultScene');
+            this.cameras.main.fadeOut(400, 0, 0, 0, (camera, progress) => {
+                // When fade is complete, navigate to result scene
+                if (progress === 1) {
+                    navigationManager.navigateTo(this, 'CombatResultScene');
+                }
             });
         });
     }
