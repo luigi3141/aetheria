@@ -42,48 +42,77 @@ class EncounterScene extends Phaser.Scene {
     }
 
     preload() {
-        // Load encounter assets
-        this.load.image('combat-bg', 'assets/sprites/backgrounds/combat-bg.png');
+        // Check if we're on GitHub Pages and add basePath if needed
+        let basePath = '';
+        const isGitHubPages = window.location.hostname.includes('github.io');
+        
+        if (isGitHubPages) {
+            // Extract repo name from pathname (for GitHub Pages)
+            const pathParts = window.location.pathname.split('/');
+            // If not at the root, the first part after the slash would be the repo name
+            if (pathParts.length > 2) {
+                basePath = pathParts[1] + '/';
+                console.log(`Detected GitHub Pages. Using base path: ${basePath}`);
+            }
+        }
+        
+        // Helper function to prepend base path for GitHub Pages compatibility
+        const getPath = (path) => {
+            // Only prepend if we have a base path and the path doesn't already have it
+            if (basePath && !path.startsWith(basePath)) {
+                return basePath + path;
+            }
+            return path;
+        };
+        
+        // Load encounter assets with correct path
+        this.load.image('combat-bg', getPath('assets/sprites/backgrounds/combat-bg.png'));
         
         // Load effect sprites
-        this.load.image('slash-effect', 'assets/sprites/effects/slash.png');
-        this.load.image('fire-effect', 'assets/sprites/effects/fire.png');
-        this.load.image('ice-effect', 'assets/sprites/effects/ice.png');
-        this.load.image('arcane-effect', 'assets/sprites/effects/arcane.png');
-        this.load.image('poison-effect', 'assets/sprites/effects/poison.png');
-        this.load.image('bleed-effect', 'assets/sprites/effects/bleed.png');
-        this.load.image('stun-effect', 'assets/sprites/effects/stun.png');
-        this.load.image('heal-effect', 'assets/sprites/effects/heal.png');
-        this.load.image('shield-effect', 'assets/sprites/effects/shield.png');
-        this.load.image('crystal-effect', 'assets/sprites/effects/crystal.png');
-        this.load.image('ghost-effect', 'assets/sprites/effects/ghost.png');
+        this.load.image('slash-effect', getPath('assets/sprites/effects/slash.png'));
+        this.load.image('fire-effect', getPath('assets/sprites/effects/fire.png'));
+        this.load.image('ice-effect', getPath('assets/sprites/effects/ice.png'));
+        this.load.image('arcane-effect', getPath('assets/sprites/effects/arcane.png'));
+        this.load.image('poison-effect', getPath('assets/sprites/effects/poison.png'));
+        this.load.image('bleed-effect', getPath('assets/sprites/effects/bleed.png'));
+        this.load.image('stun-effect', getPath('assets/sprites/effects/stun.png'));
+        this.load.image('heal-effect', getPath('assets/sprites/effects/heal.png'));
+        this.load.image('shield-effect', getPath('assets/sprites/effects/shield.png'));
+        this.load.image('crystal-effect', getPath('assets/sprites/effects/crystal.png'));
+        this.load.image('ghost-effect', getPath('assets/sprites/effects/ghost.png'));
         
         // Load enemy sprites
-        this.load.image('goblin-sprite', 'assets/sprites/enemies/goblin-sprite.png');
-        this.load.image('wolf-sprite', 'assets/sprites/enemies/wolf-sprite.png');
-        this.load.image('mushroom-sprite', 'assets/sprites/enemies/mushroom-sprite.png');
-        this.load.image('bat-sprite', 'assets/sprites/enemies/bat-sprite.png');
-        this.load.image('skeleton-sprite', 'assets/sprites/enemies/skeleton-sprite.png');
-        this.load.image('slime-sprite', 'assets/sprites/enemies/slime-sprite.png');
-        this.load.image('spider-sprite', 'assets/sprites/enemies/spider-sprite.png');
-        this.load.image('ghost-sprite', 'assets/sprites/enemies/ghost-sprite.png');
-        this.load.image('golem-sprite', 'assets/sprites/enemies/golem-sprite.png');
-        this.load.image('dragon-sprite', 'assets/sprites/enemies/dragon-sprite.png');
-        this.load.image('default-enemy', 'assets/sprites/enemies/default-enemy.png');
+        this.load.image('goblin-sprite', getPath('assets/sprites/enemies/goblin-sprite.png'));
+        this.load.image('wolf-sprite', getPath('assets/sprites/enemies/wolf-sprite.png'));
+        this.load.image('mushroom-sprite', getPath('assets/sprites/enemies/mushroom-sprite.png'));
+        this.load.image('bat-sprite', getPath('assets/sprites/enemies/bat-sprite.png'));
+        this.load.image('skeleton-sprite', getPath('assets/sprites/enemies/skeleton-sprite.png'));
+        this.load.image('slime-sprite', getPath('assets/sprites/enemies/slime-sprite.png'));
+        this.load.image('spider-sprite', getPath('assets/sprites/enemies/spider-sprite.png'));
+        this.load.image('ghost-sprite', getPath('assets/sprites/enemies/ghost-sprite.png'));
+        this.load.image('golem-sprite', getPath('assets/sprites/enemies/golem-sprite.png'));
+        this.load.image('dragon-sprite', getPath('assets/sprites/enemies/dragon-sprite.png'));
+        this.load.image('default-enemy', getPath('assets/sprites/enemies/default-enemy.png'));
         
         // Load player sprites
-        this.load.image('default-player', 'assets/sprites/characters/default-player.png');
-        this.load.image('warrior-sprite', 'assets/sprites/characters/warrior-sprite.png');
-        this.load.image('mage-sprite', 'assets/sprites/characters/mage-sprite.png');
-        this.load.image('rogue-sprite', 'assets/sprites/characters/rogue-sprite.png');
-        this.load.image('cleric-sprite', 'assets/sprites/characters/cleric-sprite.png');
+        this.load.image('default-player', getPath('assets/sprites/characters/default-player.png'));
+        this.load.image('warrior-sprite', getPath('assets/sprites/characters/warrior-sprite.png'));
+        this.load.image('mage-sprite', getPath('assets/sprites/characters/mage-sprite.png'));
+        this.load.image('rogue-sprite', getPath('assets/sprites/characters/rogue-sprite.png'));
+        this.load.image('cleric-sprite', getPath('assets/sprites/characters/cleric-sprite.png'));
+        
         // Load audio - only load essential sounds to prevent missing file errors
-        this.load.audio('attack-sound', 'assets/audio/attack.mp3');
-        this.load.audio('enemy-hit-sound', 'assets/audio/enemy-hit.mp3');
-        this.load.audio('player-hit-sound', 'assets/audio/player-hit.mp3');
-        this.load.audio('heal-sound', 'assets/audio/heal.mp3');
-        this.load.audio('defend-sound', 'assets/audio/defend.mp3');
-        this.load.audio('victory-sound', 'assets/audio/victory.mp3');
+        this.load.audio('attack-sound', getPath('assets/audio/attack.mp3'));
+        this.load.audio('enemy-hit-sound', getPath('assets/audio/enemy-hit.mp3'));
+        this.load.audio('player-hit-sound', getPath('assets/audio/player-hit.mp3'));
+        this.load.audio('heal-sound', getPath('assets/audio/heal.mp3'));
+        this.load.audio('defend-sound', getPath('assets/audio/defend.mp3'));
+        this.load.audio('victory-sound', getPath('assets/audio/victory.mp3'));
+        
+        // Add simple error handling that doesn't cause loops
+        this.load.on('loaderror', (fileObj) => {
+            console.warn(`Error loading asset: ${fileObj.src} - will use fallback if available`);
+        });
     }
     
     create(data) {
