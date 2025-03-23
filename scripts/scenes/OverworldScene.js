@@ -3,6 +3,7 @@ import Button from '../ui/components/Button.js';
 import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import HealthManager from '../utils/HealthManager.js';
+import { ASSET_PATHS } from '../config/AssetConfig.js';
 
 /**
  * OverworldScene - The main hub world where the player can access various game features
@@ -14,7 +15,7 @@ class OverworldScene extends Phaser.Scene {
 
     preload() {
         // Load overworld assets
-        this.load.image('overworld-bg', 'https://labs.phaser.io/assets/skies/space1.png');
+        this.load.image('overworld-bg', ASSET_PATHS.BACKGROUNDS.OVERWORLD);
         this.load.image('player-avatar', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
     }
 

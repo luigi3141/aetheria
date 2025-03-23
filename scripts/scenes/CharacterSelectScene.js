@@ -3,6 +3,7 @@ import Button from '../ui/components/Button.js';
 import SelectionGrid from '../ui/components/SelectionGrid.js';
 import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
+import { ASSET_PATHS, AssetHelper } from '../config/AssetConfig.js';
 
 /**
  * CharacterSelectScene - Scene for character creation and customization
@@ -14,16 +15,15 @@ class CharacterSelectScene extends Phaser.Scene {
 
     preload() {
         // Load character assets
-        // Since we don't have actual assets yet, we'll use placeholders
-        this.load.image('background', 'https://labs.phaser.io/assets/skies/space3.png');
+        this.load.image('background', ASSET_PATHS.BACKGROUNDS.CHARACTER);
         
-        // Load pixel art character sprites for different classes
-        this.load.image('warrior', 'https://labs.phaser.io/assets/sprites/mushroom2.png');
-        this.load.image('mage', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('rogue', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('cleric', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('ranger', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('bard', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        // Load character portraits for different classes
+        this.load.image('warrior', ASSET_PATHS.PORTRAITS.WARRIOR);
+        this.load.image('mage', ASSET_PATHS.PORTRAITS.MAGE);
+        this.load.image('rogue', ASSET_PATHS.PORTRAITS.ROGUE);
+        this.load.image('cleric', ASSET_PATHS.PORTRAITS.CLERIC);
+        this.load.image('ranger', ASSET_PATHS.PORTRAITS.RANGER);
+        this.load.image('bard', ASSET_PATHS.PORTRAITS.BARD);
         
         // Load race sprites (using same placeholders for now)
         this.load.image('human', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');

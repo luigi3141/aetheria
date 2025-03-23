@@ -51,8 +51,33 @@ export const ASSET_PATHS = {
         GHOST: 'assets/sprites/effects/ghost.png'
     },
     
+    // Enemy sprites
+    ENEMIES: {
+        GOBLIN: 'assets/sprites/enemies/goblin-sprite.png',
+        WOLF: 'assets/sprites/enemies/wolf-sprite.png',
+        MUSHROOM: 'assets/sprites/enemies/mushroom-sprite.png',
+        BAT: 'assets/sprites/enemies/bat-sprite.png',
+        SKELETON: 'assets/sprites/enemies/skeleton-sprite.png',
+        SLIME: 'assets/sprites/enemies/slime-sprite.png',
+        SPIDER: 'assets/sprites/enemies/spider-sprite.png',
+        GHOST: 'assets/sprites/enemies/ghost-sprite.png',
+        GOLEM: 'assets/sprites/enemies/golem-sprite.png',
+        DRAGON: 'assets/sprites/enemies/dragon-sprite.png',
+        DEFAULT: 'assets/sprites/enemies/default-enemy.png'
+    },
+    
+    // Player sprites
+    PLAYERS: {
+        WARRIOR: 'assets/sprites/characters/warrior-sprite.png',
+        MAGE: 'assets/sprites/characters/mage-sprite.png',
+        ROGUE: 'assets/sprites/characters/rogue-sprite.png',
+        CLERIC: 'assets/sprites/characters/cleric-sprite.png',
+        RANGER: 'assets/sprites/characters/ranger-sprite.png',
+        DEFAULT: 'assets/sprites/characters/default-player.png'
+    },
+    
     // Audio
-    AUDIO: {
+    SOUNDS: {
         ATTACK: 'assets/audio/attack.mp3',
         ENEMY_HIT: 'assets/audio/enemy-hit.mp3',
         PLAYER_HIT: 'assets/audio/player-hit.mp3',

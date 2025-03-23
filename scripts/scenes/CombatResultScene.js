@@ -3,6 +3,7 @@ import Button from '../ui/components/Button.js';
 import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import TransitionManager from '../ui/TransitionManager.js';
+import { ASSET_PATHS } from '../config/AssetConfig.js';
 
 /**
  * CombatResultScene - Scene that shows the results of combat encounters
@@ -19,7 +20,7 @@ class CombatResultScene extends Phaser.Scene {
 
     preload() {
         // Load combat result assets
-        this.load.image('combat-bg', 'https://labs.phaser.io/assets/skies/space3.png');
+        this.load.image('combat-result-bg', ASSET_PATHS.BACKGROUNDS.BATTLE_RESULT);
         this.load.image('loot-icon', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
     }
 
@@ -35,7 +36,7 @@ class CombatResultScene extends Phaser.Scene {
         this.transitions = new TransitionManager(this);
         
         // Add background
-        this.add.image(width/2, height/2, 'combat-bg').setDisplaySize(width, height);
+        this.add.image(width/2, height/2, 'combat-result-bg').setDisplaySize(width, height);
 
         // Add decorative corners
         this.ui.addScreenCorners();

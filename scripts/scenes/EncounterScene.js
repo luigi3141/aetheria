@@ -6,6 +6,7 @@ import navigationManager from '../navigation/NavigationManager.js';
 import TransitionManager from '../ui/TransitionManager.js';
 import { generateLoot, applyStatusEffect } from '../data/enemies.js';
 import HealthManager from '../utils/HealthManager.js';
+import { ASSET_PATHS, AssetHelper } from '../config/AssetConfig.js';
 
 /**
  * EncounterScene - Scene for encountering enemies and deciding to fight or retreat
@@ -56,49 +57,49 @@ class EncounterScene extends Phaser.Scene {
         // Debug asset loading
         console.log(`Loading sprites from path: ${getPath('assets/sprites/enemies/wolf-sprite.png')}`);
         
-        // Load encounter assets
-        this.load.image('combat-bg', getPath('assets/sprites/backgrounds/combat-bg.png'));
+        // Load encounter assets using AssetConfig paths
+        this.load.image('combat-bg', getPath(ASSET_PATHS.BACKGROUNDS.COMBAT));
         
-        // Load effect sprites
-        this.load.image('slash-effect', getPath('assets/sprites/effects/slash.png'));
-        this.load.image('fire-effect', getPath('assets/sprites/effects/fire.png'));
-        this.load.image('ice-effect', getPath('assets/sprites/effects/ice.png'));
-        this.load.image('arcane-effect', getPath('assets/sprites/effects/arcane.png'));
-        this.load.image('poison-effect', getPath('assets/sprites/effects/poison.png'));
-        this.load.image('bleed-effect', getPath('assets/sprites/effects/bleed.png'));
-        this.load.image('stun-effect', getPath('assets/sprites/effects/stun.png'));
-        this.load.image('heal-effect', getPath('assets/sprites/effects/heal.png'));
-        this.load.image('shield-effect', getPath('assets/sprites/effects/shield.png'));
-        this.load.image('crystal-effect', getPath('assets/sprites/effects/crystal.png'));
-        this.load.image('ghost-effect', getPath('assets/sprites/effects/ghost.png'));
+        // Load effect sprites using AssetConfig paths
+        this.load.image('slash-effect', getPath(ASSET_PATHS.EFFECTS.SLASH));
+        this.load.image('fire-effect', getPath(ASSET_PATHS.EFFECTS.FIRE));
+        this.load.image('ice-effect', getPath(ASSET_PATHS.EFFECTS.ICE));
+        this.load.image('arcane-effect', getPath(ASSET_PATHS.EFFECTS.ARCANE));
+        this.load.image('poison-effect', getPath(ASSET_PATHS.EFFECTS.POISON));
+        this.load.image('bleed-effect', getPath(ASSET_PATHS.EFFECTS.BLEED));
+        this.load.image('stun-effect', getPath(ASSET_PATHS.EFFECTS.STUN));
+        this.load.image('heal-effect', getPath(ASSET_PATHS.EFFECTS.HEAL));
+        this.load.image('shield-effect', getPath(ASSET_PATHS.EFFECTS.SHIELD));
+        this.load.image('crystal-effect', getPath(ASSET_PATHS.EFFECTS.CRYSTAL));
+        this.load.image('ghost-effect', getPath(ASSET_PATHS.EFFECTS.GHOST));
         
         // Load enemy sprites
-        this.load.image('goblin-sprite', getPath('assets/sprites/enemies/goblin-sprite.png'));
-        this.load.image('wolf-sprite', getPath('assets/sprites/enemies/wolf-sprite.png'));
-        this.load.image('mushroom-sprite', getPath('assets/sprites/enemies/mushroom-sprite.png'));
-        this.load.image('bat-sprite', getPath('assets/sprites/enemies/bat-sprite.png'));
-        this.load.image('skeleton-sprite', getPath('assets/sprites/enemies/skeleton-sprite.png'));
-        this.load.image('slime-sprite', getPath('assets/sprites/enemies/slime-sprite.png'));
-        this.load.image('spider-sprite', getPath('assets/sprites/enemies/spider-sprite.png'));
-        this.load.image('ghost-sprite', getPath('assets/sprites/enemies/ghost-sprite.png'));
-        this.load.image('golem-sprite', getPath('assets/sprites/enemies/golem-sprite.png'));
-        this.load.image('dragon-sprite', getPath('assets/sprites/enemies/dragon-sprite.png'));
-        this.load.image('default-enemy', getPath('assets/sprites/enemies/default-enemy.png'));
+        this.load.image('goblin-sprite', getPath(ASSET_PATHS.ENEMIES.GOBLIN));
+        this.load.image('wolf-sprite', getPath(ASSET_PATHS.ENEMIES.WOLF));
+        this.load.image('mushroom-sprite', getPath(ASSET_PATHS.ENEMIES.MUSHROOM));
+        this.load.image('bat-sprite', getPath(ASSET_PATHS.ENEMIES.BAT));
+        this.load.image('skeleton-sprite', getPath(ASSET_PATHS.ENEMIES.SKELETON));
+        this.load.image('slime-sprite', getPath(ASSET_PATHS.ENEMIES.SLIME));
+        this.load.image('spider-sprite', getPath(ASSET_PATHS.ENEMIES.SPIDER));
+        this.load.image('ghost-sprite', getPath(ASSET_PATHS.ENEMIES.GHOST));
+        this.load.image('golem-sprite', getPath(ASSET_PATHS.ENEMIES.GOLEM));
+        this.load.image('dragon-sprite', getPath(ASSET_PATHS.ENEMIES.DRAGON));
+        this.load.image('default-enemy', getPath(ASSET_PATHS.ENEMIES.DEFAULT));
         
         // Load player sprites
-        this.load.image('default-player', getPath('assets/sprites/characters/default-player.png'));
-        this.load.image('warrior-sprite', getPath('assets/sprites/characters/warrior-sprite.png'));
-        this.load.image('mage-sprite', getPath('assets/sprites/characters/mage-sprite.png'));
-        this.load.image('rogue-sprite', getPath('assets/sprites/characters/rogue-sprite.png'));
-        this.load.image('cleric-sprite', getPath('assets/sprites/characters/cleric-sprite.png'));
+        this.load.image('default-player', getPath(ASSET_PATHS.PLAYERS.DEFAULT));
+        this.load.image('warrior-sprite', getPath(ASSET_PATHS.PLAYERS.WARRIOR));
+        this.load.image('mage-sprite', getPath(ASSET_PATHS.PLAYERS.MAGE));
+        this.load.image('rogue-sprite', getPath(ASSET_PATHS.PLAYERS.ROGUE));
+        this.load.image('cleric-sprite', getPath(ASSET_PATHS.PLAYERS.CLERIC));
         
         // Load audio - only load essential sounds to prevent missing file errors
-        this.load.audio('attack-sound', getPath('assets/audio/attack.mp3'));
-        this.load.audio('enemy-hit-sound', getPath('assets/audio/enemy-hit.mp3'));
-        this.load.audio('player-hit-sound', getPath('assets/audio/player-hit.mp3'));
-        this.load.audio('heal-sound', getPath('assets/audio/heal.mp3'));
-        this.load.audio('defend-sound', getPath('assets/audio/defend.mp3'));
-        this.load.audio('victory-sound', getPath('assets/audio/victory.mp3'));
+        this.load.audio('attack-sound', getPath(ASSET_PATHS.SOUNDS.ATTACK));
+        this.load.audio('enemy-hit-sound', getPath(ASSET_PATHS.SOUNDS.ENEMY_HIT));
+        this.load.audio('player-hit-sound', getPath(ASSET_PATHS.SOUNDS.PLAYER_HIT));
+        this.load.audio('heal-sound', getPath(ASSET_PATHS.SOUNDS.HEAL));
+        this.load.audio('defend-sound', getPath(ASSET_PATHS.SOUNDS.DEFEND));
+        this.load.audio('victory-sound', getPath(ASSET_PATHS.SOUNDS.VICTORY));
         
         // Add simple error handling that doesn't cause loops
         this.load.on('loaderror', (fileObj) => {

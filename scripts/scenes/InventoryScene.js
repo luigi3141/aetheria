@@ -2,6 +2,7 @@ import UIManager from '../ui/UIManager.js';
 import Button from '../ui/components/Button.js';
 import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
+import { ASSET_PATHS } from '../config/AssetConfig.js';
 
 /**
  * InventoryScene - Scene for managing player's inventory and equipment
@@ -13,7 +14,7 @@ class InventoryScene extends Phaser.Scene {
 
     preload() {
         // Load inventory assets
-        this.load.image('inventory-bg', 'https://labs.phaser.io/assets/skies/space1.png');
+        this.load.image('inventory-bg', ASSET_PATHS.BACKGROUNDS.INVENTORY);
         this.load.image('item-icon', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
     }
 

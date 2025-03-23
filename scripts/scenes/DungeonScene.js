@@ -5,19 +5,26 @@ import navigationManager from '../navigation/NavigationManager.js';
 import TransitionManager from '../ui/TransitionManager.js';
 import { getDungeonEnemies, getDungeonBoss, generateLoot } from '../data/enemies.js';
 import HealthManager from '../utils/HealthManager.js';
+import { ASSET_PATHS } from '../config/AssetConfig.js';
+import BaseScene from './BaseScene.js';
 
 /**
  * DungeonScene - Scene for exploring procedurally generated dungeons and handling combat
  */
-class DungeonScene extends Phaser.Scene {
+class DungeonScene extends BaseScene {
     constructor() {
-        super({ key: 'DungeonScene' });
+        super('DungeonScene');
         this.inCombat = false;
     }
 
     preload() {
+        // Clear texture cache for dungeon-bg to ensure we load the new one
+        if (this.textures.exists('dungeon-bg')) {
+            this.textures.remove('dungeon-bg');
+        }
+        
         // Load dungeon assets
-        this.load.image('dungeon-bg', 'https://labs.phaser.io/assets/skies/space3.png');
+        this.load.image('dungeon-bg', ASSET_PATHS.BACKGROUNDS.COMBAT);
         this.load.image('player-icon', 'assets/sprites/i1.png');
         this.load.image('enemy-icon', 'assets/sprites/i2.png');
         
@@ -76,8 +83,8 @@ class DungeonScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Add background
-        this.add.image(width/2, height/2, 'dungeon-bg').setDisplaySize(width, height);
+        // Add background using the safe image loading method from BaseScene
+        this.safeAddImage(width/2, height/2, 'dungeon-bg', null, { displayWidth: width, displayHeight: height });
 
         // Add decorative corners
         this.ui.addScreenCorners();

@@ -1,6 +1,7 @@
 import UIManager from '../ui/UIManager.js';
 import Button from '../ui/components/Button.js';
 import navigationManager from '../navigation/NavigationManager.js';
+import { ASSET_PATHS } from '../config/AssetConfig.js';
 
 /**
  * StartScene - The title screen and entry point for the game
@@ -12,7 +13,7 @@ class StartScene extends Phaser.Scene {
 
     preload() {
         // Preload assets like images, spritesheets, and audio
-        this.load.image('background', 'assets/sprites/title-background.png');
+        this.load.image('title-bg', ASSET_PATHS.BACKGROUNDS.TITLE);
     }
 
     create() {
@@ -24,7 +25,7 @@ class StartScene extends Phaser.Scene {
         this.ui = new UIManager(this);
         
         // Add a background
-        this.add.image(width/2, height/2, 'background').setDisplaySize(width, height);
+        this.add.image(width/2, height/2, 'title-bg').setDisplaySize(width, height);
 
         // Add decorative corners
         this.ui.addScreenCorners();
