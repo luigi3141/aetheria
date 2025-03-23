@@ -3,6 +3,7 @@ import Button from '../ui/components/Button.js';
 import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import TransitionManager from '../ui/TransitionManager.js';
+import { getDungeonEnemies, getDungeonBoss, generateLoot } from '../data/enemies.js';
 
 /**
  * DungeonScene - Scene for exploring procedurally generated dungeons and handling combat
@@ -300,85 +301,147 @@ class DungeonScene extends Phaser.Scene {
      * Start a combat encounter
      */
     startCombatEncounter() {
-        console.log('Starting combat encounter...');
+        console.log('Starting combat encounter');
+        
+        // Check if we need to initialize the dungeon
+        if (!gameState.currentDungeon) {
+            console.error('No current dungeon found, initializing...');
+            this.initializeDungeon();
+        }
+        
+        // Get dungeon data from currentDungeon
+        const dungeon = gameState.currentDungeon;
         
         // Generate enemies based on dungeon level
-        const dungeon = gameState.currentDungeon;
-        const enemies = this.generateEnemies(dungeon.level, dungeon.enemies);
+        const enemyCount = Math.floor(Math.random() * 2) + 1;
+        const enemies = getDungeonEnemies(dungeon.id, dungeon.level, enemyCount);
         
-        // Store enemies in gameState for the encounter scene
-        gameState.currentEncounter = {
+        // Set up combat data for the encounter scene
+        gameState.combatData = {
             enemies: enemies,
-            type: 'normal',
-            roomNumber: dungeon.currentRoom
+            dungeon: dungeon
         };
         
-        // Use transition manager to handle the enemy encounter transition
-        this.transitions.enemyEncounter([], () => {
-            // Navigate to encounter scene
+        // Use fade transition
+        this.transitions.fade(() => {
             navigationManager.navigateTo(this, 'EncounterScene');
-        });
+        }, 300);
     }
     
     /**
      * Start a boss encounter
      */
     startBossEncounter() {
-        console.log('Starting boss encounter...');
+        console.log('Starting boss encounter');
         
-        // Generate boss based on dungeon level
+        // Check if we need to initialize the dungeon
+        if (!gameState.currentDungeon) {
+            console.error('No current dungeon found, initializing...');
+            this.initializeDungeon();
+        }
+        
+        // Get dungeon data
         const dungeon = gameState.currentDungeon;
-        const boss = this.generateBoss(dungeon.level, dungeon.bosses);
         
-        // Store boss in gameState for the encounter scene
-        gameState.currentEncounter = {
+        // Generate boss based on dungeon
+        const boss = getDungeonBoss(dungeon.id, dungeon.level);
+        
+        // Set up combat data for the encounter scene
+        gameState.combatData = {
             enemies: [boss],
-            type: 'boss',
-            roomNumber: dungeon.currentRoom
+            dungeon: dungeon,
+            isBoss: true
         };
         
-        // Use transition manager to handle the enemy encounter transition
-        this.transitions.enemyEncounter([], () => {
-            // Navigate to encounter scene
+        // Use fade transition with longer duration for boss
+        this.transitions.fade(() => {
             navigationManager.navigateTo(this, 'EncounterScene');
-        });
+        }, 500);
     }
     
     /**
-     * Generate enemies based on dungeon level
+     * Generate enemies for a dungeon encounter
+     * @param {string} dungeonId - The dungeon ID
+     * @param {number} dungeonLevel - The dungeon level
+     * @param {number} count - Number of enemies to generate
+     * @returns {Array} Array of enemy objects
      */
-    generateEnemies(level, enemyTypes) {
-        const enemyCount = Phaser.Math.Between(1, 3); // 1-3 enemies
-        const enemies = [];
+    generateDungeonEnemies(dungeonId, dungeonLevel, count) {
+        // Get current dungeon
+        const dungeon = gameState.currentDungeon;
         
-        for (let i = 0; i < enemyCount; i++) {
-            // Pick a random enemy type from the dungeon's enemy list
-            const enemyType = Phaser.Utils.Array.GetRandom(enemyTypes);
-            const enemyTemplate = gameState.enemyTemplates[enemyType];
+        if (!dungeon || !dungeon.enemies || dungeon.enemies.length === 0) {
+            // Return default enemies if no dungeon data
+            return [{
+                name: 'Forest Wolf',
+                level: dungeonLevel || 1,
+                health: 20 + (dungeonLevel * 5),
+                maxHealth: 20 + (dungeonLevel * 5),
+                damage: 5 + dungeonLevel,
+                defense: 2,
+                sprite: 'wolf-enemy',
+                abilities: ['bite', 'howl']
+            }];
+        }
+        
+        // Generate requested number of enemies
+        const enemies = [];
+        for (let i = 0; i < count; i++) {
+            // Get random enemy type from dungeon's enemy list
+            const enemyType = dungeon.enemies[Math.floor(Math.random() * dungeon.enemies.length)];
             
-            if (!enemyTemplate) {
-                console.error(`Enemy template not found for type: ${enemyType}`);
-                continue;
+            // Create enemy based on type
+            let enemy;
+            switch (enemyType) {
+                case 'wolf':
+                    enemy = {
+                        name: 'Forest Wolf',
+                        level: dungeonLevel,
+                        health: 20 + (dungeonLevel * 5),
+                        maxHealth: 20 + (dungeonLevel * 5),
+                        damage: 5 + dungeonLevel,
+                        defense: 2,
+                        sprite: 'wolf-enemy',
+                        abilities: ['bite', 'howl']
+                    };
+                    break;
+                case 'bandit':
+                    enemy = {
+                        name: 'Bandit',
+                        level: dungeonLevel,
+                        health: 15 + (dungeonLevel * 4),
+                        maxHealth: 15 + (dungeonLevel * 4),
+                        damage: 6 + dungeonLevel,
+                        defense: 1,
+                        sprite: 'bandit-enemy',
+                        abilities: ['slash', 'steal']
+                    };
+                    break;
+                case 'spider':
+                    enemy = {
+                        name: 'Giant Spider',
+                        level: dungeonLevel,
+                        health: 12 + (dungeonLevel * 3),
+                        maxHealth: 12 + (dungeonLevel * 3),
+                        damage: 4 + dungeonLevel,
+                        defense: 0,
+                        sprite: 'spider-enemy',
+                        abilities: ['bite', 'web']
+                    };
+                    break;
+                default:
+                    // Default enemy
+                    enemy = {
+                        name: 'Forest Creature',
+                        level: dungeonLevel,
+                        health: 15 + (dungeonLevel * 4),
+                        maxHealth: 15 + (dungeonLevel * 4),
+                        damage: 5 + dungeonLevel,
+                        defense: 1,
+                        sprite: 'enemy-icon',
+                        abilities: ['attack']
+                    };
             }
-            
-            // Create enemy instance with scaled stats based on dungeon level
-            const levelMultiplier = 1 + ((level - 1) * 0.2);
-            
-            const enemy = {
-                type: enemyType,
-                name: enemyTemplate.name,
-                health: Math.round(enemyTemplate.baseHealth * levelMultiplier),
-                maxHealth: Math.round(enemyTemplate.baseHealth * levelMultiplier),
-                damage: Math.round(enemyTemplate.baseDamage * levelMultiplier),
-                agility: enemyTemplate.agility,
-                abilities: enemyTemplate.abilities,
-                loot: enemyTemplate.loot,
-                experienceReward: Math.round(enemyTemplate.experienceReward * levelMultiplier),
-                goldReward: {
-                    min: Math.round(enemyTemplate.goldReward.min * levelMultiplier),
-                    max: Math.round(enemyTemplate.goldReward.max * levelMultiplier)
-                }
-            };
             
             enemies.push(enemy);
         }
@@ -387,55 +450,89 @@ class DungeonScene extends Phaser.Scene {
     }
     
     /**
-     * Generate a boss based on dungeon
+     * Generate a boss for a dungeon encounter
+     * @param {string} dungeonId - The dungeon ID
+     * @param {number} dungeonLevel - The dungeon level
+     * @returns {Object} Boss enemy object
      */
-    generateBoss(level, bossTypes) {
-        // Pick a random boss type from the dungeon's boss list
-        const bossType = Phaser.Utils.Array.GetRandom(bossTypes);
-        const bossTemplate = gameState.enemyTemplates[bossType];
+    generateDungeonBoss(dungeonId, dungeonLevel) {
+        // Get current dungeon
+        const dungeon = gameState.currentDungeon;
         
-        if (!bossTemplate) {
-            console.error(`Boss template not found for type: ${bossType}`);
-            // Fallback to first boss in the list
-            const fallbackBossType = bossTypes[0];
-            bossTemplate = gameState.enemyTemplates[fallbackBossType];
-            
-            // If still no template, create a generic boss
-            if (!bossTemplate) {
-                return {
-                    type: 'generic-boss',
-                    name: 'Dungeon Boss',
-                    health: 100,
-                    maxHealth: 100,
-                    damage: 20,
-                    agility: 10,
-                    abilities: ['smash', 'roar'],
-                    loot: [{ item: 'gold', chance: 1.0 }],
-                    experienceReward: 100,
-                    goldReward: { min: 50, max: 100 }
-                };
-            }
+        if (!dungeon || !dungeon.bosses || dungeon.bosses.length === 0) {
+            // Return default boss if no dungeon data
+            return {
+                name: 'Dungeon Guardian',
+                level: dungeonLevel + 2,
+                health: 50 + (dungeonLevel * 10),
+                maxHealth: 50 + (dungeonLevel * 10),
+                damage: 8 + (dungeonLevel * 2),
+                defense: 4,
+                sprite: 'boss-icon',
+                isBoss: true,
+                abilities: ['smash', 'roar', 'heal']
+            };
         }
         
-        // Create boss instance with scaled stats based on dungeon level
-        const levelMultiplier = 1.5 + ((level - 1) * 0.3); // Bosses are stronger
+        // Get random boss type from dungeon's boss list
+        const bossType = dungeon.bosses[Math.floor(Math.random() * dungeon.bosses.length)];
         
-        const boss = {
-            type: bossType,
-            name: bossTemplate.name,
-            health: Math.round(bossTemplate.baseHealth * levelMultiplier * 2), // Bosses have double health
-            maxHealth: Math.round(bossTemplate.baseHealth * levelMultiplier * 2),
-            damage: Math.round(bossTemplate.baseDamage * levelMultiplier),
-            agility: bossTemplate.agility,
-            abilities: bossTemplate.abilities,
-            loot: bossTemplate.loot,
-            experienceReward: Math.round(bossTemplate.experienceReward * levelMultiplier * 2),
-            goldReward: {
-                min: Math.round(bossTemplate.goldReward.min * levelMultiplier * 2),
-                max: Math.round(bossTemplate.goldReward.max * levelMultiplier * 2)
-            },
-            isBoss: true
-        };
+        // Create boss based on type
+        let boss;
+        switch (bossType) {
+            case 'alpha-wolf':
+                boss = {
+                    name: 'Alpha Wolf',
+                    level: dungeonLevel + 2,
+                    health: 50 + (dungeonLevel * 10),
+                    maxHealth: 50 + (dungeonLevel * 10),
+                    damage: 8 + (dungeonLevel * 2),
+                    defense: 3,
+                    sprite: 'wolf-boss',
+                    isBoss: true,
+                    abilities: ['fierce-bite', 'howl', 'call-pack']
+                };
+                break;
+            case 'bandit-chief':
+                boss = {
+                    name: 'Bandit Chief',
+                    level: dungeonLevel + 2,
+                    health: 45 + (dungeonLevel * 8),
+                    maxHealth: 45 + (dungeonLevel * 8),
+                    damage: 10 + (dungeonLevel * 2),
+                    defense: 2,
+                    sprite: 'bandit-boss',
+                    isBoss: true,
+                    abilities: ['dual-slash', 'rally', 'smoke-bomb']
+                };
+                break;
+            case 'spider-queen':
+                boss = {
+                    name: 'Spider Queen',
+                    level: dungeonLevel + 2,
+                    health: 40 + (dungeonLevel * 7),
+                    maxHealth: 40 + (dungeonLevel * 7),
+                    damage: 7 + (dungeonLevel * 2),
+                    defense: 1,
+                    sprite: 'spider-boss',
+                    isBoss: true,
+                    abilities: ['venom-bite', 'web-trap', 'spawn-spiderlings']
+                };
+                break;
+            default:
+                // Default boss
+                boss = {
+                    name: 'Dungeon Guardian',
+                    level: dungeonLevel + 2,
+                    health: 50 + (dungeonLevel * 10),
+                    maxHealth: 50 + (dungeonLevel * 10),
+                    damage: 8 + (dungeonLevel * 2),
+                    defense: 4,
+                    sprite: 'boss-icon',
+                    isBoss: true,
+                    abilities: ['smash', 'roar', 'heal']
+                };
+        }
         
         return boss;
     }
@@ -456,7 +553,7 @@ class DungeonScene extends Phaser.Scene {
             height * 0.5,
             {
                 fillColor: 0x111122,
-                fillAlpha: 0.9,
+                fillAlpha: 0.7,
                 borderColor: 0xffcc00,
                 borderThickness: 3
             }
@@ -827,23 +924,8 @@ class DungeonScene extends Phaser.Scene {
             'COMBAT',
             () => {
                 console.log('Combat button clicked');
-                // Set up a mock combat result for testing
-                gameState.combatResult = {
-                    outcome: 'victory',
-                    enemies: [
-                        { name: 'Forest Goblin', level: 1, health: 0, maxHealth: 30 }
-                    ],
-                    loot: { 
-                        gold: Math.floor(Math.random() * 20) + 10, 
-                        items: [], 
-                        experience: Math.floor(Math.random() * 15) + 5 
-                    }
-                };
-                
-                // Use fade transition to combat result scene
-                this.transitions.fade(() => {
-                    navigationManager.navigateTo(this, 'CombatResultScene');
-                });
+                // Start a proper combat encounter
+                this.startCombatEncounter();
             },
             {
                 width: 160,
@@ -859,16 +941,9 @@ class DungeonScene extends Phaser.Scene {
             'RETREAT',
             () => {
                 console.log('Retreat button clicked');
-                // Set up combat result for retreat
-                gameState.combatResult = {
-                    outcome: 'retreat',
-                    enemies: [],
-                    loot: { gold: 0, items: [], experience: 0 }
-                };
-                
-                // Use fade transition to combat result scene
+                // Return to the overworld
                 this.transitions.fade(() => {
-                    navigationManager.navigateTo(this, 'CombatResultScene');
+                    navigationManager.navigateTo(this, 'OverworldScene');
                 });
             },
             {
