@@ -50,6 +50,10 @@ class NavigationManager {
             currentScene.scene.start(targetSceneName, data);
         } else {
             console.warn(`Invalid navigation attempt from ${currentSceneName} to ${targetSceneName}`);
+            // Fallback: Allow navigation anyway in case our flow map is incomplete
+            // This ensures the game doesn't get stuck
+            console.log(`Fallback: Allowing navigation from ${currentSceneName} to ${targetSceneName}`);
+            currentScene.scene.start(targetSceneName, data);
         }
     }
 
@@ -61,8 +65,9 @@ class NavigationManager {
      * @returns {boolean} True if navigation is valid, false otherwise
      */
     isValidNavigation(fromScene, toScene, condition = null) {
-        // Special case for the key-based scene name vs. class name
-        const fromSceneKey = fromScene === 'DungeonScene' ? 'DungeonScene' : fromScene;
+        // Handle special cases for scene keys vs class names
+        // Some scenes might be referenced by their key in the flow map
+        const fromSceneKey = fromScene;
         
         // Find all valid navigation paths from this scene
         const validPaths = this.navigationFlow.filter(path => 

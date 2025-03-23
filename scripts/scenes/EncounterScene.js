@@ -1,9 +1,10 @@
-import UIManager from '../ui/UIManager.js';
 import Button from '../ui/components/Button.js';
 import gameState from '../gameState.js';
+import { getEnemyData, getAbilityData } from '../data/enemies.js';
+import UIManager from '../ui/UIManager.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import TransitionManager from '../ui/TransitionManager.js';
-import { generateLoot, getAbilityData, applyStatusEffect } from '../data/enemies.js';
+import { generateLoot, applyStatusEffect } from '../data/enemies.js';
 
 /**
  * EncounterScene - Scene for encountering enemies and deciding to fight or retreat
@@ -14,52 +15,36 @@ class EncounterScene extends Phaser.Scene {
     }
 
     preload() {
-        // Load combat-related assets
+        // Load encounter assets
         this.load.image('combat-bg', 'assets/sprites/backgrounds/combat-bg.png');
-        this.load.image('player-icon', 'assets/sprites/characters/warrior-icon.png');
-        this.load.image('enemy-icon', 'assets/sprites/enemies/goblin-sprite.png');
-        this.load.image('wolf-sprite', 'assets/sprites/enemies/wolf-sprite.png');
-        this.load.image('spider-sprite', 'assets/sprites/enemies/spider-sprite.png');
-        this.load.image('goblin-chief-sprite', 'assets/sprites/enemies/goblin-chief-sprite.png');
-        this.load.image('bandit-sprite', 'assets/sprites/enemies/bandit-sprite.png');
-        this.load.image('mushroom-sprite', 'assets/sprites/enemies/mushroom-sprite.png');
-        this.load.image('bat-sprite', 'assets/sprites/enemies/bat-sprite.png');
-        this.load.image('golem-sprite', 'assets/sprites/enemies/golem-sprite.png');
-        this.load.image('ghost-sprite', 'assets/sprites/enemies/ghost-sprite.png');
-        this.load.image('crystal-queen-sprite', 'assets/sprites/enemies/crystal-queen-sprite.png');
         
-        // Load combat effect sprites
+        // Load effect sprites
         this.load.image('slash-effect', 'assets/sprites/effects/slash.png');
-        this.load.image('heal-effect', 'assets/sprites/effects/heal.png');
-        this.load.image('defend-effect', 'assets/sprites/effects/shield.png');
+        this.load.image('fire-effect', 'assets/sprites/effects/fire.png');
+        this.load.image('ice-effect', 'assets/sprites/effects/ice.png');
+        this.load.image('arcane-effect', 'assets/sprites/effects/arcane.png');
         this.load.image('poison-effect', 'assets/sprites/effects/poison.png');
         this.load.image('bleed-effect', 'assets/sprites/effects/bleed.png');
         this.load.image('stun-effect', 'assets/sprites/effects/stun.png');
+        this.load.image('heal-effect', 'assets/sprites/effects/heal.png');
+        this.load.image('shield-effect', 'assets/sprites/effects/shield.png');
         this.load.image('crystal-effect', 'assets/sprites/effects/crystal.png');
         this.load.image('ghost-effect', 'assets/sprites/effects/ghost.png');
         
-        // Load combat sounds - make sure to load with both naming conventions for compatibility
-        // Original sound keys
-        this.load.audio('attack', 'assets/audio/attack.mp3');
-        this.load.audio('defend', 'assets/audio/defend.mp3');
-        this.load.audio('heal', 'assets/audio/heal.mp3');
-        this.load.audio('enemy-hit', 'assets/audio/enemy-hit.mp3');
-        this.load.audio('player-hit', 'assets/audio/player-hit.mp3');
-        this.load.audio('victory', 'assets/audio/victory.mp3');
-        this.load.audio('poison', 'assets/audio/poison.mp3');
-        this.load.audio('crystal', 'assets/audio/crystal.mp3');
-        this.load.audio('ghost', 'assets/audio/ghost.mp3');
-        
-        // Alternative sound keys with -sound suffix for backward compatibility
+        // Load audio
         this.load.audio('attack-sound', 'assets/audio/attack.mp3');
-        this.load.audio('defend-sound', 'assets/audio/defend.mp3');
-        this.load.audio('heal-sound', 'assets/audio/heal.mp3');
         this.load.audio('enemy-hit-sound', 'assets/audio/enemy-hit.mp3');
         this.load.audio('player-hit-sound', 'assets/audio/player-hit.mp3');
-        this.load.audio('victory-sound', 'assets/audio/victory.mp3');
+        this.load.audio('fire-sound', 'assets/audio/fire.mp3');
+        this.load.audio('ice-sound', 'assets/audio/ice.mp3');
+        this.load.audio('magic-sound', 'assets/audio/magic.mp3');
+        this.load.audio('heal-sound', 'assets/audio/heal.mp3');
         this.load.audio('poison-sound', 'assets/audio/poison.mp3');
-        this.load.audio('crystal-sound', 'assets/audio/crystal.mp3');
+        this.load.audio('bleed-sound', 'assets/audio/bleed.mp3');
+        this.load.audio('defend-sound', 'assets/audio/defend.mp3');
+        this.load.audio('victory-sound', 'assets/audio/victory.mp3');
         this.load.audio('ghost-sound', 'assets/audio/ghost.mp3');
+        this.load.audio('crystal-sound', 'assets/audio/crystal.mp3');
     }
     
     create(data) {
@@ -596,6 +581,17 @@ class EncounterScene extends Phaser.Scene {
         this.playerHealthBar = this.makeHealthBar(width * 0.25, height * 0.3, 150, 15, 0x3399ff);
         this.updateHealthBar(this.playerHealthBar, playerHealth, playerMaxHealth);
         
+        // Add player mana bar
+        const playerMana = gameState.player.mana || 100;
+        const playerMaxMana = gameState.player.maxMana || 100;
+        this.playerManaText = this.add.text(width * 0.25, height * 0.35, `MP: ${playerMana}/${playerMaxMana}`, {
+            fontFamily: "'VT323'",
+            fontSize: this.ui.fontSize.sm + 'px',
+            fill: '#ffffff'
+        }).setOrigin(0.5);
+        this.playerManaBar = this.makeManaBar(width * 0.25, height * 0.35, 150, 15, 0x0066ff);
+        this.updateManaBar(this.playerManaBar, playerMana, playerMaxMana);
+        
         // Create enemy panel
         const enemyPanel = this.ui.createPanel(
             width * 0.75,
@@ -641,27 +637,46 @@ class EncounterScene extends Phaser.Scene {
     }
     
     /**
+     * Create a mana bar
+     */
+    makeManaBar(x, y, width, height, color) {
+        // Create the bar
+        const bar = this.add.graphics();
+        
+        // Create border
+        const border = this.add.graphics();
+        border.lineStyle(2, 0xffffff, 1);
+        border.strokeRect(x - width/2, y - height/2, width, height);
+        
+        return {
+            bar: bar,
+            x: x - width/2,
+            y: y - height/2,
+            width: width,
+            height: height,
+            color: color
+        };
+    }
+    
+    /**
+     * Update a mana bar
+     */
+    updateManaBar(bar, value, maxValue) {
+        const percentage = Math.max(0, Math.min(value / maxValue, 1));
+        
+        bar.bar.clear();
+        bar.bar.fillStyle(bar.color, 1);
+        bar.bar.fillRect(bar.x, bar.y, bar.width * percentage, bar.height);
+    }
+    
+    /**
      * Create combat action buttons for turn-based combat
      */
     createCombatActionButtons() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Create action button panel
-        const actionPanel = this.ui.createPanel(
-            width * 0.5,
-            height * 0.8,
-            width * 0.8,
-            height * 0.15,
-            {
-                fillColor: 0x111122,
-                fillAlpha: 0.7,
-                borderColor: 0x3399ff,
-                borderThickness: 2
-            }
-        );
-        
-        // Store action buttons for easy access
+        // Create action buttons container
         this.actionButtons = {};
         
         // Create attack button
@@ -680,14 +695,14 @@ class EncounterScene extends Phaser.Scene {
             }
         );
         
-        // Create defend button
-        this.actionButtons.defend = new Button(
+        // Create ability button (special attack)
+        this.actionButtons.ability = new Button(
             this,
-            width * 0.45,
+            width * 0.5,
             height * 0.8,
-            'DEFEND',
+            'USE ABILITY',
             () => {
-                this.playerDefend();
+                this.playerUseSpecialAbility();
             },
             {
                 width: 120,
@@ -696,27 +711,10 @@ class EncounterScene extends Phaser.Scene {
             }
         );
         
-        // Create heal button
-        this.actionButtons.heal = new Button(
-            this,
-            width * 0.65,
-            height * 0.8,
-            'HEAL',
-            () => {
-                // Use a basic heal ability
-                this.playerUseAbility('basic-heal');
-            },
-            {
-                width: 120,
-                height: 50,
-                backgroundColor: 0x00aa66
-            }
-        );
-        
         // Create retreat button
         this.actionButtons.retreat = new Button(
             this,
-            width * 0.85,
+            width * 0.75,
             height * 0.8,
             'RETREAT',
             () => {
@@ -728,88 +726,6 @@ class EncounterScene extends Phaser.Scene {
                 backgroundColor: 0x555555
             }
         );
-    }
-    
-    /**
-     * Update the action buttons (enable/disable)
-     * @param {boolean} enabled - Whether buttons should be enabled
-     */
-    updateActionButtons(enabled) {
-        if (!this.actionButtons) return;
-        
-        Object.values(this.actionButtons).forEach(button => {
-            if (button && button.setInteractive) {
-                if (enabled) {
-                    button.setInteractive();
-                    button.setAlpha(1);
-                } else {
-                    button.disableInteractive();
-                    button.setAlpha(0.5);
-                }
-            }
-        });
-    }
-    
-    /**
-     * Start combat sequence
-     */
-    startCombat() {
-        // If no enemies provided, generate random ones
-        if (!this.enemies || this.enemies.length === 0) {
-            this.enemies = this.generateRandomEnemies();
-        }
-        
-        // Display enemies
-        this.displayEnemies();
-        
-        // Create encounter description
-        this.createEncounterDescription();
-        
-        // Initialize player status
-        if (!gameState.player.statusEffects) {
-            gameState.player.statusEffects = [];
-        }
-        
-        // Initialize enemy status effects
-        this.enemies.forEach(enemy => {
-            if (!enemy.statusEffects) {
-                enemy.statusEffects = [];
-            }
-        });
-        
-        // Start first round
-        this.startPlayerTurn();
-    }
-    
-    /**
-     * Start player turn
-     */
-    startPlayerTurn() {
-        // Set turn to player
-        this.combatState.turn = 'player';
-        
-        // Process player status effects
-        const statusResults = this.processStatusEffects(gameState.player, 'player');
-        
-        // Add status effect results to combat log
-        if (statusResults.effects.length > 0) {
-            this.addToCombatLog(`Status effects on player: ${statusResults.effects.join(', ')}`);
-        }
-        
-        // Check if player is stunned
-        const isStunned = gameState.player.statusEffects.some(effect => effect.type === 'stun');
-        
-        if (isStunned) {
-            this.addToCombatLog('Player is stunned and skips their turn!');
-            this.time.delayedCall(1000, () => {
-                this.startEnemyTurn();
-            });
-            return;
-        }
-        
-        // Update UI for player turn
-        this.updateActionButtons(true);
-        this.addToCombatLog('Your turn! Choose an action.');
     }
     
     /**
@@ -878,47 +794,53 @@ class EncounterScene extends Phaser.Scene {
     
     /**
      * Handle player using an ability
-     * @param {string} abilityId - The ID of the ability to use
+     * @param {string} abilityId - ID of the ability to use
      */
     playerUseAbility(abilityId) {
-        // Disable action buttons during animation
+        console.log(`Player using ability: ${abilityId}`);
+        
+        // Disable action buttons during ability execution
         this.updateActionButtons(false);
         
         // Get ability data
         const ability = getAbilityData(abilityId);
+        
         if (!ability) {
-            // Fallback to basic attack if ability not found
-            this.playerAttack();
+            console.warn(`Ability not found: ${abilityId}`);
+            this.addToCombatLog("That ability isn't available.");
+            this.updateActionButtons(true);
             return;
         }
         
         // Process ability based on type
         switch (ability.type) {
-            case 'damage':
+            case 'attack':
                 this.processPlayerDamageAbility(ability);
                 break;
-                
             case 'heal':
                 this.processPlayerHealAbility(ability);
                 break;
-                
             case 'buff':
                 this.processPlayerBuffAbility(ability);
                 break;
-                
             case 'debuff':
                 this.processPlayerDebuffAbility(ability);
                 break;
-                
             default:
-                this.addToCombatLog(`Used ${ability.name}!`);
+                console.warn(`Unknown ability type: ${ability.type}`);
+                this.addToCombatLog("Unable to use that ability.");
+                this.updateActionButtons(true);
                 break;
         }
         
-        // Continue to enemy turn after a delay
-        this.time.delayedCall(1500, () => {
-            this.startEnemyTurn();
-        });
+        // Update mana display
+        if (this.playerManaText) {
+            const player = gameState.player;
+            this.playerManaText.setText(`MP: ${player.mana}/${player.maxMana || 100}`);
+        }
+        if (this.playerManaBar) {
+            this.updateManaBar(this.playerManaBar, gameState.player.mana, gameState.player.maxMana || 100);
+        }
     }
     
     /**
@@ -932,7 +854,7 @@ class EncounterScene extends Phaser.Scene {
         
         // Determine targets
         let targets = [];
-        if (ability.targetType === 'all') {
+        if (ability.areaEffect) {
             targets = [...this.enemies];
         } else {
             // Default to first enemy for single target
@@ -941,34 +863,54 @@ class EncounterScene extends Phaser.Scene {
         
         // Calculate damage for each target
         targets.forEach(target => {
-            // Base damage calculation
-            let damage = ability.baseDamage || 5;
+            // Base damage calculation based on player strength
+            const baseAttack = Math.floor((player.strength || 10) * 0.8) + Math.floor(Math.random() * 6) + 1;
             
-            // Add scaling based on player attributes
-            if (ability.scaling) {
-                const attribute = ability.scaling.attribute || 'strength';
-                const scale = ability.scaling.factor || 0.5;
-                damage += Math.floor(player[attribute] * scale);
-            }
+            // Apply ability damage multiplier
+            let damage = Math.floor(baseAttack * (ability.damageMultiplier || 1.0));
             
             // Add level scaling
             damage += Math.floor(playerLevel * 0.3);
             
+            // Apply weapon damage if equipped
+            if (player.inventory && player.inventory.equipped && player.inventory.equipped.weapon) {
+                damage += player.inventory.equipped.weapon.damage || 0;
+            }
+            
+            // Check for multiple hits
+            const hits = ability.hits || 1;
+            let totalDamage = 0;
+            
+            for (let i = 0; i < hits; i++) {
+                // Apply small random variation for each hit
+                const hitDamage = Math.floor(damage * (0.9 + Math.random() * 0.2));
+                totalDamage += hitDamage;
+                
+                // For multi-hit abilities, log each hit
+                if (hits > 1) {
+                    this.addToCombatLog(`Hit ${i+1}: ${hitDamage} damage`);
+                }
+            }
+            
             // Apply damage
-            target.health = Math.max(0, target.health - damage);
+            target.health = Math.max(0, target.health - totalDamage);
             
             // Update enemy health display
             if (target.displayElements) {
+                this.updateHealthBar(target.displayElements.healthBar, target.health, target.maxHealth);
                 target.displayElements.healthText.setText(`HP: ${target.health}/${target.maxHealth}`);
             }
             
             // Add to combat log
-            this.addToCombatLog(`You used ${ability.name} on ${target.name} for ${damage} damage!`);
+            this.addToCombatLog(`You used ${ability.name} on ${target.name} for ${totalDamage} damage!`);
             
             // Apply status effect if ability has one
             if (ability.statusEffect) {
-                this.applyStatusEffectToTarget(target, ability.statusEffect);
-                this.addToCombatLog(`${target.name} is afflicted with ${ability.statusEffect.type}!`);
+                const chance = ability.statusEffect.chance || 1.0;
+                if (Math.random() < chance) {
+                    this.applyStatusEffectToTarget(target, ability.statusEffect);
+                    this.addToCombatLog(`${target.name} is afflicted with ${ability.statusEffect.type}!`);
+                }
             }
             
             // Play appropriate animation and sound
@@ -979,6 +921,13 @@ class EncounterScene extends Phaser.Scene {
                 this.enemyDefeated(target);
             }
         });
+        
+        // Continue to enemy turn after a delay if any enemies remain
+        if (this.enemies.some(enemy => enemy.health > 0)) {
+            this.time.delayedCall(1500, () => {
+                this.startEnemyTurn();
+            });
+        }
     }
     
     /**
@@ -989,16 +938,17 @@ class EncounterScene extends Phaser.Scene {
         // Get player stats
         const player = gameState.player;
         const playerLevel = player.level || 1;
-        const playerInt = player.intelligence || 8;
         
         // Calculate healing amount
-        let healAmount = ability.baseHeal || 10;
+        let healAmount = ability.healAmount || 10;
         
         // Add attribute scaling
         if (ability.scaling) {
             const attribute = ability.scaling.attribute || 'intelligence';
             const scale = ability.scaling.factor || 0.5;
-            healAmount += Math.floor(player[attribute] * scale);
+            // Use a default value of 10 if the attribute doesn't exist
+            const attributeValue = player[attribute] || 10;
+            healAmount += Math.floor(attributeValue * scale);
         }
         
         // Add level scaling
@@ -1010,7 +960,7 @@ class EncounterScene extends Phaser.Scene {
         const actualHealing = player.health - oldHealth;
         
         // Play heal animation and sound
-        this.playHealAnimation(player);
+        this.playHealAnimation(this.playerSprite);
         this.safePlaySound('heal-sound');
         
         // Add to combat log
@@ -1125,6 +1075,68 @@ class EncounterScene extends Phaser.Scene {
         // Update status effect display
         const targetType = target === gameState.player ? 'player' : 'enemy';
         this.updateStatusEffectDisplay(target, targetType);
+    }
+    
+    /**
+     * Start combat sequence
+     */
+    startCombat() {
+        // If no enemies provided, generate random ones
+        if (!this.enemies || this.enemies.length === 0) {
+            this.enemies = this.generateRandomEnemies();
+        }
+        
+        // Display enemies
+        this.displayEnemies();
+        
+        // Create encounter description
+        this.createEncounterDescription();
+        
+        // Initialize player status
+        if (!gameState.player.statusEffects) {
+            gameState.player.statusEffects = [];
+        }
+        
+        // Initialize enemy status effects
+        this.enemies.forEach(enemy => {
+            if (!enemy.statusEffects) {
+                enemy.statusEffects = [];
+            }
+        });
+        
+        // Start first round
+        this.startPlayerTurn();
+    }
+    
+    /**
+     * Start player turn
+     */
+    startPlayerTurn() {
+        // Set turn to player
+        this.combatState.turn = 'player';
+        
+        // Process player status effects
+        const statusResults = this.processStatusEffects(gameState.player, 'player');
+        
+        // Add status effect results to combat log
+        if (statusResults.effects.length > 0) {
+            this.addToCombatLog(`Status effects on player: ${statusResults.effects.join(', ')}`);
+        }
+        
+        // Check if player is stunned
+        const isStunned = gameState.player.statusEffects.some(effect => effect.type === 'stun');
+        
+        if (isStunned) {
+            this.addToCombatLog('Player is stunned and skips their turn!');
+            this.time.delayedCall(1000, () => {
+                this.startEnemyTurn();
+            });
+            return;
+        }
+        
+        // Update UI for player turn
+        this.updateActionButtons(true);
+        this.addToCombatLog('Your turn! Choose an action.');
     }
     
     /**
@@ -1329,30 +1341,34 @@ class EncounterScene extends Phaser.Scene {
      * Handle the retreat action
      */
     handleRetreat() {
-        console.log('Retreat button clicked');
+        // Disable action buttons
+        this.updateActionButtons(false);
         
-        // Calculate retreat success chance based on player agility
-        const retreatChance = Math.min(0.7, 0.4 + ((gameState.player.agility || 1) * 0.03));
-        const isSuccessful = Math.random() < retreatChance;
-        
-        if (isSuccessful) {
-            // Successful retreat
-            // Store retreat result for the result scene
-            gameState.combatResult = {
-                outcome: 'retreat',
-                enemies: this.enemies
-            };
+        // Calculate loot loss (70% of current loot)
+        if (gameState.currentRun && gameState.currentRun.loot) {
+            // Calculate gold loss
+            const goldLost = Math.floor(gameState.currentRun.loot.gold * 0.7);
+            gameState.currentRun.loot.gold -= goldLost;
             
-            // Use fade transition to combat result scene
-            this.transitions.fade(() => {
-                navigationManager.navigateTo(this, 'CombatResultScene');
-            });
+            // Calculate item loss (remove 70% of items randomly)
+            if (gameState.currentRun.loot.items && gameState.currentRun.loot.items.length > 0) {
+                const itemsToKeep = Math.ceil(gameState.currentRun.loot.items.length * 0.3);
+                gameState.currentRun.loot.items = gameState.currentRun.loot.items
+                    .sort(() => Math.random() - 0.5) // Shuffle
+                    .slice(0, itemsToKeep); // Keep only 30%
+            }
+            
+            this.addToCombatLog(`You retreat from combat, losing 70% of your loot!`);
         } else {
-            // Failed retreat, forced to fight
-            this.showMessage('Retreat failed! You must fight!', () => {
-                this.handleFight();
-            });
+            this.addToCombatLog(`You retreat from combat!`);
         }
+        
+        // Use fade transition back to dungeon scene
+        this.time.delayedCall(1500, () => {
+            this.transitions.fade(() => {
+                navigationManager.navigateTo(this, 'DungeonScene');
+            });
+        });
     }
     
     /**
@@ -1510,15 +1526,15 @@ class EncounterScene extends Phaser.Scene {
     playHealAnimation(target) {
         // Create heal effect
         const healEffect = this.add.image(
-            this.playerSprite.x, 
-            this.playerSprite.y,
+            target.x, 
+            target.y,
             'heal-effect'
         ).setScale(0.8).setAlpha(0.8);
         
         // Animate the heal effect
         this.tweens.add({
             targets: healEffect,
-            y: this.playerSprite.y - 50,
+            y: target.y - 50,
             alpha: 0,
             scale: 1.5,
             duration: 1000,
@@ -1530,7 +1546,7 @@ class EncounterScene extends Phaser.Scene {
         
         // Flash the target green
         this.tweens.add({
-            targets: this.playerSprite,
+            targets: target,
             tint: 0x00ff00,
             duration: 200,
             yoyo: true,
@@ -1539,37 +1555,18 @@ class EncounterScene extends Phaser.Scene {
     }
     
     /**
-     * Safe sound play method that won't crash if sound is missing
+     * Safely play a sound, handling cases where the sound might not be loaded
      * @param {string} key - The sound key to play
-     * @param {object} config - Optional sound config
      */
-    safePlaySound(key, config = {}) {
+    safePlaySound(key) {
         try {
-            // Try to play the sound with the provided key
             if (this.sound.get(key)) {
-                this.sound.play(key, config);
-                return true;
+                this.sound.play(key, { volume: 0.5 });
+            } else {
+                console.warn(`Sound not found: ${key}`);
             }
-            
-            // If that fails, try without the -sound suffix
-            const altKey = key.replace('-sound', '');
-            if (altKey !== key && this.sound.get(altKey)) {
-                this.sound.play(altKey, config);
-                return true;
-            }
-            
-            // If that fails too, try with the -sound suffix
-            const altKey2 = key + '-sound';
-            if (this.sound.get(altKey2)) {
-                this.sound.play(altKey2, config);
-                return true;
-            }
-            
-            console.log(`Sound not found: ${key}`);
-            return false;
         } catch (error) {
-            console.log(`Error playing sound ${key}:`, error);
-            return false;
+            console.warn(`Error playing sound ${key}:`, error);
         }
     }
     
@@ -1744,6 +1741,231 @@ class EncounterScene extends Phaser.Scene {
         
         // Continue to next enemy or end turn
         this.processNextEnemyOrEndTurn();
+    }
+    
+    /**
+     * Handle player defend action
+     */
+    playerDefend() {
+        // Set player as defending
+        if (!this.combatState) {
+            this.combatState = {};
+        }
+        this.combatState.playerDefending = true;
+        
+        // Play defend animation and sound
+        this.safePlaySound('defend-sound');
+        
+        // Flash the player with a blue shield effect
+        this.playerSprite.setTint(0x3399ff);
+        
+        // Create a shield effect
+        const shield = this.add.graphics();
+        shield.fillStyle(0x3399ff, 0.3);
+        shield.fillCircle(this.playerSprite.x, this.playerSprite.y, 40);
+        shield.lineStyle(2, 0x3399ff, 0.8);
+        shield.strokeCircle(this.playerSprite.x, this.playerSprite.y, 40);
+        
+        // Animate the shield
+        this.tweens.add({
+            targets: shield,
+            alpha: 0,
+            duration: 1000,
+            onComplete: () => {
+                shield.destroy();
+                this.playerSprite.clearTint();
+            }
+        });
+        
+        // Add to combat log
+        this.addToCombatLog("You take a defensive stance.");
+        
+        // Continue to enemy turn after a delay
+        this.time.delayedCall(1000, () => {
+            this.startEnemyTurn();
+        });
+    }
+    
+    /**
+     * Update the action buttons (enable/disable)
+     * @param {boolean} enabled - Whether buttons should be enabled
+     */
+    updateActionButtons(enabled) {
+        if (!this.actionButtons) return;
+        
+        Object.values(this.actionButtons).forEach(button => {
+            if (button && typeof button.setInteractive === 'function') {
+                if (enabled) {
+                    button.setInteractive();
+                    button.setAlpha(1);
+                } else {
+                    button.disableInteractive();
+                    button.setAlpha(0.5);
+                }
+            }
+        });
+    }
+    
+    /**
+     * Play an animation for an ability
+     * @param {object} target - The target of the ability
+     * @param {object} ability - The ability data
+     */
+    playAbilityAnimation(target, ability) {
+        // Default to slash effect if no specific animation
+        let effectKey = 'slash-effect';
+        let soundKey = 'attack-sound';
+        let color = 0xffffff;
+        
+        // Determine effect based on ability type or properties
+        if (ability.element === 'fire' || ability.name.toLowerCase().includes('fire')) {
+            effectKey = 'fire-effect';
+            soundKey = 'fire-sound';
+            color = 0xff6600;
+        } else if (ability.element === 'ice' || ability.name.toLowerCase().includes('ice')) {
+            effectKey = 'ice-effect';
+            soundKey = 'ice-sound';
+            color = 0x66ccff;
+        } else if (ability.element === 'arcane' || ability.name.toLowerCase().includes('arcane')) {
+            effectKey = 'arcane-effect';
+            soundKey = 'magic-sound';
+            color = 0xcc66ff;
+        } else if (ability.statusEffect && ability.statusEffect.type === 'poison') {
+            effectKey = 'poison-effect';
+            soundKey = 'poison-sound';
+            color = 0x66ff66;
+        } else if (ability.statusEffect && ability.statusEffect.type === 'bleed') {
+            effectKey = 'bleed-effect';
+            soundKey = 'bleed-sound';
+            color = 0xff3333;
+        }
+        
+        // Fallback to generic effects if the specific one isn't loaded
+        if (!this.textures.exists(effectKey)) {
+            effectKey = 'slash-effect';
+        }
+        
+        // Create effect at target position
+        try {
+            const effect = this.add.image(target.x, target.y, effectKey)
+                .setScale(0.8)
+                .setAlpha(0.8)
+                .setTint(color);
+            
+            // Animate the effect
+            this.tweens.add({
+                targets: effect,
+                scale: 1.5,
+                alpha: 0,
+                duration: 500,
+                onComplete: () => {
+                    effect.destroy();
+                }
+            });
+            
+            // Flash the target
+            this.tweens.add({
+                targets: target,
+                alpha: 0.5,
+                yoyo: true,
+                duration: 100,
+                repeat: 2
+            });
+            
+            // Shake the target
+            this.tweens.add({
+                targets: target,
+                x: target.x + 10,
+                duration: 50,
+                yoyo: true,
+                repeat: 3,
+                onComplete: () => {
+                    target.x = target.originalX || target.x;
+                }
+            });
+            
+            // Play sound effect
+            this.safePlaySound(soundKey);
+        } catch (error) {
+            console.warn('Error playing ability animation:', error);
+        }
+    }
+    
+    /**
+     * Handle player using their special ability (class-specific attack)
+     */
+    playerUseSpecialAbility() {
+        // Disable action buttons during ability execution
+        this.updateActionButtons(false);
+        
+        // Get player stats and class
+        const player = gameState.player;
+        const playerClass = player.class || 'Warrior';
+        
+        // Check if player has enough mana
+        const manaCost = 15; // Standard mana cost for special ability
+        
+        if ((player.mana || 0) < manaCost) {
+            this.addToCombatLog("Not enough mana to use special ability!");
+            
+            // Shake the ability button to indicate error
+            this.tweens.add({
+                targets: this.actionButtons.ability,
+                x: { from: this.actionButtons.ability.x - 5, to: this.actionButtons.ability.x + 5 },
+                duration: 100,
+                repeat: 3,
+                yoyo: true,
+                onComplete: () => {
+                    this.actionButtons.ability.x = this.cameras.main.width * 0.5;
+                    this.updateActionButtons(true);
+                }
+            });
+            return;
+        }
+        
+        // Deduct mana cost
+        player.mana -= manaCost;
+        
+        // Update mana display
+        if (this.playerManaText) {
+            this.playerManaText.setText(`MP: ${player.mana}/${player.maxMana || 100}`);
+        }
+        if (this.playerManaBar) {
+            this.updateManaBar(this.playerManaBar, player.mana, player.maxMana || 100);
+        }
+        
+        // Get the appropriate ability based on player class
+        let abilityId;
+        switch (playerClass) {
+            case 'Warrior':
+                abilityId = 'cleave';
+                break;
+            case 'Mage':
+                abilityId = 'fireball';
+                break;
+            case 'Rogue':
+                abilityId = 'backstab';
+                break;
+            case 'Cleric':
+                abilityId = 'smite';
+                break;
+            default:
+                abilityId = 'cleave';
+                break;
+        }
+        
+        // Get ability data
+        const ability = getAbilityData(abilityId);
+        
+        if (!ability) {
+            console.warn(`Ability not found: ${abilityId}`);
+            this.addToCombatLog("That ability isn't available.");
+            this.updateActionButtons(true);
+            return;
+        }
+        
+        // Process the ability
+        this.processPlayerDamageAbility(ability);
     }
 }
 

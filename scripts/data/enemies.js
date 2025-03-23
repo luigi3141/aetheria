@@ -242,6 +242,112 @@ const abilityDefinitions = {
         description: "Shoots a web that slows the target and may immobilize them"
     },
     
+    // Player abilities by class
+    // Warrior abilities
+    "cleave": {
+        name: "Cleave",
+        type: "attack",
+        damageMultiplier: 1.3,
+        areaEffect: true,
+        manaCost: 15,
+        description: "A sweeping attack that hits all enemies"
+    },
+    "shield-bash": {
+        name: "Shield Bash",
+        type: "attack",
+        damageMultiplier: 0.8,
+        statusEffect: { type: "stun", chance: 0.6, duration: 1 },
+        manaCost: 20,
+        description: "Bash with your shield, potentially stunning the target"
+    },
+    "battle-cry": {
+        name: "Battle Cry",
+        type: "buff",
+        effect: { type: "attack", value: 5, duration: 3 },
+        manaCost: 25,
+        description: "A powerful cry that increases your attack power"
+    },
+    
+    // Mage abilities
+    "fireball": {
+        name: "Fireball",
+        type: "attack",
+        damageMultiplier: 1.5,
+        statusEffect: { type: "burn", chance: 0.4, damage: 3, duration: 2 },
+        manaCost: 20,
+        description: "Hurl a ball of fire that may burn the target"
+    },
+    "ice-spike": {
+        name: "Ice Spike",
+        type: "attack",
+        damageMultiplier: 1.2,
+        statusEffect: { type: "freeze", chance: 0.3, duration: 1 },
+        manaCost: 15,
+        description: "Launch a spike of ice that may freeze the target"
+    },
+    "arcane-missiles": {
+        name: "Arcane Missiles",
+        type: "attack",
+        damageMultiplier: 0.5,
+        hits: 3,
+        manaCost: 25,
+        description: "Fire multiple arcane missiles at the target"
+    },
+    
+    // Rogue abilities
+    "backstab": {
+        name: "Backstab",
+        type: "attack",
+        damageMultiplier: 2.0,
+        critChance: 0.3,
+        critMultiplier: 1.5,
+        manaCost: 15,
+        description: "A deadly strike from behind with high critical chance"
+    },
+    "poison-strike": {
+        name: "Poison Strike",
+        type: "attack",
+        damageMultiplier: 0.8,
+        statusEffect: { type: "poison", chance: 0.8, damage: 5, duration: 3 },
+        manaCost: 20,
+        description: "Coat your blade with poison for a venomous strike"
+    },
+    "shadow-step": {
+        name: "Shadow Step",
+        type: "buff",
+        effect: { type: "dodge", value: 50, duration: 2 },
+        manaCost: 25,
+        description: "Step through the shadows, greatly increasing dodge chance"
+    },
+    
+    // Cleric abilities
+    "smite": {
+        name: "Smite",
+        type: "attack",
+        damageMultiplier: 1.3,
+        extraDamageToUndead: 1.5,
+        manaCost: 15,
+        description: "A holy attack that deals extra damage to undead"
+    },
+    "healing-word": {
+        name: "Healing Word",
+        type: "heal",
+        healAmount: 30,
+        scaling: {
+            attribute: "wisdom",
+            factor: 0.7
+        },
+        manaCost: 20,
+        description: "A prayer that heals your wounds"
+    },
+    "divine-protection": {
+        name: "Divine Protection",
+        type: "buff",
+        effect: { type: "defense", value: 10, duration: 3 },
+        manaCost: 25,
+        description: "Divine energy protects you, increasing defense"
+    },
+    
     // New abilities
     "spore-cloud": {
         name: "Spore Cloud",
@@ -388,7 +494,7 @@ const abilityDefinitions = {
  * @param {string} enemyId - The ID of the enemy
  * @returns {object} - The enemy data object
  */
-function getEnemyData(enemyId) {
+export function getEnemyData(enemyId) {
     return enemyData[enemyId] || null;
 }
 
@@ -397,7 +503,7 @@ function getEnemyData(enemyId) {
  * @param {string} abilityId - The ID of the ability
  * @returns {object} - The ability data object
  */
-function getAbilityData(abilityId) {
+export function getAbilityData(abilityId) {
     return abilityDefinitions[abilityId] || null;
 }
 
@@ -407,7 +513,7 @@ function getAbilityData(abilityId) {
  * @param {number} levelModifier - Optional level modifier (default: 0)
  * @returns {object} - An enemy instance with calculated stats
  */
-function generateEnemy(enemyId, levelModifier = 0) {
+export function generateEnemy(enemyId, levelModifier = 0) {
     const baseData = getEnemyData(enemyId);
     
     if (!baseData) {
@@ -462,7 +568,7 @@ function generateEnemy(enemyId, levelModifier = 0) {
  * @param {number} count - Number of enemies to generate
  * @returns {array} - Array of enemy objects
  */
-function getDungeonEnemies(dungeonId, dungeonLevel, count = 1) {
+export function getDungeonEnemies(dungeonId, dungeonLevel, count = 1) {
     let possibleEnemies = [];
     
     // Match enemies to dungeon
@@ -519,7 +625,7 @@ function getDungeonEnemies(dungeonId, dungeonLevel, count = 1) {
  * @param {number} count - Number of enemies to generate
  * @returns {array} - Array of default enemy objects
  */
-function createDefaultEnemies(level, count) {
+export function createDefaultEnemies(level, count) {
     const enemies = [];
     for (let i = 0; i < count; i++) {
         enemies.push(createDefaultEnemy(level));
@@ -532,7 +638,7 @@ function createDefaultEnemies(level, count) {
  * @param {number} level - The level for the enemy
  * @returns {object} - A default enemy object
  */
-function createDefaultEnemy(level) {
+export function createDefaultEnemy(level) {
     const types = ['Wolf', 'Bandit', 'Spider', 'Goblin'];
     const type = types[Math.floor(Math.random() * types.length)];
     
@@ -553,7 +659,7 @@ function createDefaultEnemy(level) {
  * @param {object|array} enemies - The enemy object or array of enemies
  * @returns {object} - Loot object containing gold, experience, and items
  */
-function generateLoot(enemies) {
+export function generateLoot(enemies) {
     // Convert single enemy to array for consistent processing
     const enemyArray = Array.isArray(enemies) ? enemies : [enemies];
     
@@ -598,7 +704,7 @@ function generateLoot(enemies) {
  * @param {number} dungeonLevel - The level of the dungeon
  * @returns {object} - Boss enemy object
  */
-function getDungeonBoss(dungeonId, dungeonLevel) {
+export function getDungeonBoss(dungeonId, dungeonLevel) {
     let bossId;
     
     // Match boss to dungeon
@@ -643,7 +749,7 @@ function getDungeonBoss(dungeonId, dungeonLevel) {
  * @param {number} level - The level for the boss
  * @returns {object} - A default boss object
  */
-function createDefaultBoss(level) {
+export function createDefaultBoss(level) {
     const types = ['Alpha Wolf', 'Bandit Chief', 'Spider Queen', 'Goblin King'];
     const type = types[Math.floor(Math.random() * types.length)];
     const bossLevel = level + 2;
@@ -666,7 +772,7 @@ function createDefaultBoss(level) {
  * @param {object} target - The target object (player or enemy)
  * @param {object} statusEffect - The status effect to apply
  */
-function applyStatusEffect(target, statusEffect) {
+export function applyStatusEffect(target, statusEffect) {
     // Check if effect should be applied based on chance
     if (statusEffect.chance && Math.random() > statusEffect.chance) {
         return false; // Effect failed to apply
@@ -698,14 +804,5 @@ function applyStatusEffect(target, statusEffect) {
 }
 
 export { 
-    getEnemyData, 
-    getAbilityData,
-    generateEnemy, 
-    generateLoot, 
-    getDungeonEnemies, 
-    getDungeonBoss,
-    applyStatusEffect,
-    createDefaultEnemy,
-    createDefaultBoss,
     abilityDefinitions
 };

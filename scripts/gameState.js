@@ -10,6 +10,7 @@ const gameState = {
         strength: 10,
         agility: 8,
         intelligence: 6,
+        wisdom: 5,
         defense: 5,
         experience: 0,
         experienceToNextLevel: 100,
@@ -23,7 +24,63 @@ const gameState = {
                 accessory: null
             }
         },
-        abilities: ['slash', 'block']
+        abilities: ['cleave', 'shield-bash', 'battle-cry']
+    },
+    
+    // Class definitions with starting abilities and stats
+    classes: {
+        'Warrior': {
+            baseHealth: 100,
+            baseMana: 50,
+            baseStats: {
+                strength: 10,
+                agility: 8,
+                intelligence: 6,
+                wisdom: 5,
+                defense: 5
+            },
+            abilities: ['cleave', 'shield-bash', 'battle-cry'],
+            description: 'A mighty fighter skilled in close combat and defensive tactics.'
+        },
+        'Mage': {
+            baseHealth: 70,
+            baseMana: 100,
+            baseStats: {
+                strength: 4,
+                agility: 6,
+                intelligence: 12,
+                wisdom: 10,
+                defense: 3
+            },
+            abilities: ['fireball', 'ice-spike', 'arcane-missiles'],
+            description: 'A spellcaster who harnesses arcane energies to devastate foes.'
+        },
+        'Rogue': {
+            baseHealth: 80,
+            baseMana: 60,
+            baseStats: {
+                strength: 7,
+                agility: 12,
+                intelligence: 8,
+                wisdom: 6,
+                defense: 4
+            },
+            abilities: ['backstab', 'poison-strike', 'shadow-step'],
+            description: 'A nimble fighter who relies on stealth and precision.'
+        },
+        'Cleric': {
+            baseHealth: 90,
+            baseMana: 80,
+            baseStats: {
+                strength: 6,
+                agility: 5,
+                intelligence: 8,
+                wisdom: 12,
+                defense: 7
+            },
+            abilities: ['smite', 'healing-word', 'divine-protection'],
+            description: 'A divine spellcaster who can heal allies and smite enemies.'
+        }
     },
     
     quests: {
