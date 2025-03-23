@@ -233,7 +233,7 @@ class EncounterScene extends Phaser.Scene {
             level: enemy.level
         });
         
-        // Import AssetConfig for enemy sprites - follow architecture improvements
+        // Check for AssetHelper (part of your architecture improvements)
         const assetConfig = this.scene.scene.sys.game.registry.get('assetConfig');
         const AssetHelper = assetConfig ? assetConfig.AssetHelper : null;
         console.log('AssetHelper available:', !!AssetHelper);
@@ -242,51 +242,50 @@ class EncounterScene extends Phaser.Scene {
         let spriteKey = enemy.sprite || 'default-enemy';
         console.log('Initial sprite key from enemy:', spriteKey);
         
-        // Log all available texture keys for debugging
+        // Log all available texture keys
         console.log('Available texture keys:', Object.keys(this.textures.list).filter(key => 
             !key.startsWith('__') && key !== 'displaylist'
         ));
         
-        // Create enemy sprite with proper error handling
-        // Use the safeAddImage or fallback to regular sprite creation with error checking
-        let enemySprite;
-        
-        if (this.safeAddImage) {
-            // Use the BaseScene's safeAddImage method if available (from architecture improvements)
-            console.log(`Using safeAddImage for "${spriteKey}"`);
-            enemySprite = this.safeAddImage(
-                width * 0.75,
-                height * 0.4,
-                spriteKey,
-                'default-enemy'
-            );
-        } else {
-            // Check if sprite exists in texture cache
-            if (!this.textures.exists(spriteKey)) {
-                console.warn(`Sprite key "${spriteKey}" not found in texture cache, trying alternatives...`);
-                
-                // Try without -sprite suffix if that exists
-                if (spriteKey.endsWith('-sprite') && this.textures.exists(spriteKey.replace('-sprite', ''))) {
-                    spriteKey = spriteKey.replace('-sprite', '');
-                    console.log(`Using key without -sprite suffix: ${spriteKey}`);
-                }
-                // If still not found, use default-enemy
-                else {
-                    console.warn(`No working sprite found, using default-enemy`);
-                    spriteKey = 'default-enemy';
-                }
+        // SOLUTION: Use placeholder sprites from DungeonScene which are already loaded
+        // This ensures something displays correctly
+        if (!this.textures.exists(spriteKey)) {
+            console.warn(`Sprite key "${spriteKey}" not found in texture cache, trying alternatives...`);
+            
+            // Map enemy sprites to dungeon placeholders that we know are loaded
+            const placeholderMap = {
+                'wolf-sprite': 'dungeon-wolf-placeholder',
+                'spider-sprite': 'dungeon-spider-placeholder',
+                'bandit-sprite': 'dungeon-bandit-placeholder',
+                'alpha-wolf-sprite': 'dungeon-alpha-wolf-placeholder'
+            };
+            
+            // Check if we have a matching placeholder
+            if (placeholderMap[spriteKey]) {
+                spriteKey = placeholderMap[spriteKey];
+                console.log(`Using placeholder sprite: ${spriteKey}`);
             }
-            
-            // Final sprite key to use
-            console.log(`Final sprite key: "${spriteKey}"`);
-            
-            // Create enemy sprite with resolved key
-            enemySprite = this.add.sprite(
-                width * 0.75,
-                height * 0.4,
-                spriteKey
-            );
+            // Try without -sprite suffix
+            else if (spriteKey.endsWith('-sprite') && this.textures.exists(spriteKey.replace('-sprite', ''))) {
+                spriteKey = spriteKey.replace('-sprite', '');
+                console.log(`Using key without -sprite suffix: ${spriteKey}`);
+            }
+            // Use player-icon as a final fallback (which is definitely loaded)
+            else {
+                console.warn('No suitable fallback found, using player-icon as emergency fallback');
+                spriteKey = 'player-icon';
+            }
         }
+        
+        // Final sprite key to use
+        console.log(`Final sprite key: "${spriteKey}"`);
+        
+        // Create enemy sprite with final key
+        const enemySprite = this.add.sprite(
+            width * 0.75,
+            height * 0.4,
+            spriteKey
+        );
         
         // Double-check that the sprite was created successfully
         console.log('Enemy sprite created:', {
@@ -2279,10 +2278,11 @@ class EncounterScene extends Phaser.Scene {
         
         // Create effect at target position
         try {
-            const effect = this.add.image(target.x, target.y, effectKey)
-                .setScale(0.8)
-                .setAlpha(0.8)
-                .setTint(color);
+            const effect = this.add.image(
+                target.x, 
+                target.y,
+                effectKey
+            ).setScale(0.8);
             
             // Animate the effect
             this.tweens.add({
