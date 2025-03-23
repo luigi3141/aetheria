@@ -59,7 +59,7 @@ class CombatResultScene extends Phaser.Scene {
         });
         
         // Create the combat results display
-        this.createCombatResults();
+        this.createResultsDisplay();
         
         // Create the loot display if there is loot
         if (combatResult.loot && (isVictory || isRetreat)) {
@@ -71,39 +71,38 @@ class CombatResultScene extends Phaser.Scene {
     }
     
     /**
-     * Create the combat results display
+     * Create the results display
      */
-    createCombatResults() {
+    createResultsDisplay() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
         // Get combat result data
         const combatResult = gameState.combatResult || {};
-        const enemies = combatResult.enemies || [];
-        const isRetreat = combatResult.outcome === 'retreat';
         const isVictory = combatResult.outcome === 'victory';
+        const isRetreat = combatResult.outcome === 'retreat';
         const isDefeat = combatResult.outcome === 'defeat';
         
-        // Create a panel for the results
-        const panel = this.ui.createPanel(
-            width/2,
-            height * 0.3,
-            width * 0.8,
-            height * 0.25,
-            {
-                fillColor: 0x111122,
-                fillAlpha: 0.8,
-                borderColor: 0x3399ff,
-                borderThickness: 2
-            }
-        );
+        // Get enemy data - handle both single enemy and multiple enemies
+        let enemy = null;
+        let enemies = [];
+        
+        if (combatResult.enemy) {
+            // Single enemy format
+            enemy = combatResult.enemy;
+            enemies = [enemy];
+        } else if (combatResult.enemies && Array.isArray(combatResult.enemies)) {
+            // Multiple enemies format (legacy)
+            enemies = combatResult.enemies;
+            enemy = enemies[0];
+        }
         
         // Create title for the results
         let resultTitle;
         if (isRetreat) {
             resultTitle = 'You managed to escape safely!';
         } else if (isVictory) {
-            resultTitle = `You defeated ${enemies.length} ${enemies.length === 1 ? 'enemy' : 'enemies'}!`;
+            resultTitle = `You defeated the ${enemy ? enemy.name : 'enemy'}!`;
         } else if (isDefeat) {
             resultTitle = 'You were defeated in battle!';
         } else {

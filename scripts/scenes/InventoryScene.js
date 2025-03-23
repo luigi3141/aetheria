@@ -107,13 +107,12 @@ class InventoryScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Create a panel for the inventory
-        this.ui.createPanel(
-            this,
-            width * 0.35,
-            height * 0.45,
-            width * 0.6,
+        // Create inventory panel
+        const inventoryPanel = this.ui.createPanel(
+            width * 0.5,
             height * 0.5,
+            width * 0.8,
+            height * 0.6,
             {
                 fillColor: 0x111122,
                 fillAlpha: 0.7,
@@ -121,6 +120,19 @@ class InventoryScene extends Phaser.Scene {
                 borderThickness: 2
             }
         );
+        
+        // Initialize inventory if it doesn't exist
+        if (!gameState.inventory) {
+            gameState.inventory = {
+                items: [],
+                equipped: {}
+            };
+        }
+        
+        // Ensure items array exists
+        if (!gameState.inventory.items) {
+            gameState.inventory.items = [];
+        }
         
         // Get inventory items from gameState or use sample data if empty
         const inventoryItems = gameState.inventory.items.length > 0 ? 
@@ -170,10 +182,9 @@ class InventoryScene extends Phaser.Scene {
                 
                 // Show tooltip on hover
                 itemIcon.on('pointerover', () => {
-                    this.showItemTooltip(item, cellX + cellSize/2, cellY + cellSize/2);
+                    this.showItemTooltip(item, cellX + cellSize/2, cellY + cellSize);
                 });
                 
-                // Hide tooltip when not hovering
                 itemIcon.on('pointerout', () => {
                     this.hideItemTooltip();
                 });
@@ -196,19 +207,23 @@ class InventoryScene extends Phaser.Scene {
      * @param {number} y - Y position for the tooltip
      */
     showItemTooltip(item, x, y) {
+        // Remove any existing tooltip first
+        this.hideItemTooltip();
+        
         // Create tooltip container
-        this.itemTooltip = this.ui.createPanel(
+        this.tooltipGroup = this.add.group();
+        
+        // Create tooltip background
+        const tooltipBg = this.add.rectangle(
             x + 100,
             y,
             200,
             120,
-            {
-                fillColor: 0x111122,
-                fillAlpha: 0.9,
-                borderColor: 0xffcc00,
-                borderThickness: 2
-            }
-        );
+            0x111122,
+            0.9
+        ).setStrokeStyle(2, 0xffcc00);
+        
+        this.tooltipGroup.add(tooltipBg);
         
         // Add item name with rarity color
         let nameColor = '#ffffff';
@@ -227,45 +242,56 @@ class InventoryScene extends Phaser.Scene {
                 break;
         }
         
-        this.add.text(x + 100, y - 40, item.name, {
+        const nameText = this.add.text(x + 100, y - 40, item.name, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.md + 'px',
             fill: nameColor,
             align: 'center'
         }).setOrigin(0.5);
         
+        this.tooltipGroup.add(nameText);
+        
         // Add item type
-        this.add.text(x + 100, y - 15, item.type, {
+        const typeText = this.add.text(x + 100, y - 15, item.type, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.sm + 'px',
-            fill: '#aaaaaa',
+            fill: '#cccccc',
             align: 'center'
         }).setOrigin(0.5);
         
+        this.tooltipGroup.add(typeText);
+        
         // Add item stats
-        this.add.text(x + 100, y + 15, item.stats, {
+        const statsText = this.add.text(x + 100, y + 10, item.stats || '', {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.sm + 'px',
             fill: '#ffffff',
             align: 'center'
         }).setOrigin(0.5);
         
-        // Add rarity
-        this.add.text(x + 100, y + 40, item.rarity, {
-            fontFamily: "'VT323'",
-            fontSize: this.ui.fontSize.sm + 'px',
-            fill: nameColor,
-            align: 'center'
-        }).setOrigin(0.5);
+        this.tooltipGroup.add(statsText);
+        
+        // Add item description if available
+        if (item.description) {
+            const descText = this.add.text(x + 100, y + 35, item.description, {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.xs + 'px',
+                fill: '#aaaaaa',
+                align: 'center',
+                wordWrap: { width: 180 }
+            }).setOrigin(0.5);
+            
+            this.tooltipGroup.add(descText);
+        }
     }
     
     /**
      * Hide the item tooltip
      */
     hideItemTooltip() {
-        if (this.itemTooltip) {
-            this.itemTooltip.destroy();
-            this.itemTooltip = null;
+        if (this.tooltipGroup) {
+            this.tooltipGroup.clear(true, true);
+            this.tooltipGroup = null;
         }
     }
     
@@ -361,38 +387,22 @@ class InventoryScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Create back button
-        const backButton = new Button(
+        // Create return button
+        const returnButton = new Button(
             this,
-            width * 0.25,
+            width * 0.85,
             height * 0.9,
-            'BACK TO TOWN',
+            'Return',
             () => {
-                console.log('Back to town clicked');
+                console.log('Return button clicked');
                 navigationManager.navigateTo(this, 'OverworldScene');
             },
             {
-                width: 200,
-                height: 50
-            }
-        );
-        
-        // Add shine effect to make the button more noticeable
-        backButton.addShineEffect();
-        
-        // Create crafting button
-        const craftingButton = new Button(
-            this,
-            width * 0.75,
-            height * 0.9,
-            'GO TO CRAFTING',
-            () => {
-                console.log('Go to crafting clicked');
-                navigationManager.navigateTo(this, 'CraftingScene');
-            },
-            {
-                width: 200,
-                height: 50
+                fontSize: this.ui.fontSize.md,
+                width: 150,
+                height: 50,
+                backgroundColor: 0x222266,
+                borderColor: 0x3399ff
             }
         );
     }

@@ -31,20 +31,13 @@ class EncounterScene extends Phaser.Scene {
         this.load.image('crystal-effect', 'assets/sprites/effects/crystal.png');
         this.load.image('ghost-effect', 'assets/sprites/effects/ghost.png');
         
-        // Load audio
+        // Load audio - only load essential sounds to prevent missing file errors
         this.load.audio('attack-sound', 'assets/audio/attack.mp3');
         this.load.audio('enemy-hit-sound', 'assets/audio/enemy-hit.mp3');
         this.load.audio('player-hit-sound', 'assets/audio/player-hit.mp3');
-        this.load.audio('fire-sound', 'assets/audio/fire.mp3');
-        this.load.audio('ice-sound', 'assets/audio/ice.mp3');
-        this.load.audio('magic-sound', 'assets/audio/magic.mp3');
         this.load.audio('heal-sound', 'assets/audio/heal.mp3');
-        this.load.audio('poison-sound', 'assets/audio/poison.mp3');
-        this.load.audio('bleed-sound', 'assets/audio/bleed.mp3');
         this.load.audio('defend-sound', 'assets/audio/defend.mp3');
         this.load.audio('victory-sound', 'assets/audio/victory.mp3');
-        this.load.audio('ghost-sound', 'assets/audio/ghost.mp3');
-        this.load.audio('crystal-sound', 'assets/audio/crystal.mp3');
     }
     
     create(data) {
@@ -55,16 +48,9 @@ class EncounterScene extends Phaser.Scene {
         this.ui = new UIManager(this);
         this.transitions = new TransitionManager(this);
         
-        // Add background
-        this.add.image(width/2, height/2, 'combat-bg').setDisplaySize(width, height);
-        
-        // Add decorative corners
-        this.ui.addScreenCorners();
-        
-        // Get combat data from gameState
-        const combatData = gameState.combatData || {};
-        this.enemies = combatData.enemies || [];
-        this.isBoss = combatData.isBoss || false;
+        // Reset combat flags
+        this.combatEnded = false;
+        this.victoryHandled = false;
         
         // Initialize combat state
         this.combatState = {
@@ -82,6 +68,17 @@ class EncounterScene extends Phaser.Scene {
                 enemies: {}
             }
         };
+        
+        // Add background
+        this.add.image(width/2, height/2, 'combat-bg').setDisplaySize(width, height);
+        
+        // Add decorative corners
+        this.ui.addScreenCorners();
+        
+        // Get combat data from gameState
+        const combatData = gameState.combatData || {};
+        this.enemies = combatData.enemies || [];
+        this.isBoss = combatData.isBoss || false;
         
         // Create the combat UI
         this.createCombatUI();
@@ -114,72 +111,253 @@ class EncounterScene extends Phaser.Scene {
     }
     
     /**
-     * Display enemies on screen
+     * Create the enemy display
      */
-    displayEnemies() {
+    createEnemyDisplay() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Clear any existing enemy sprites
-        if (this.enemySprites) {
-            this.enemySprites.forEach(sprite => sprite.destroy());
-        }
-        
-        this.enemySprites = [];
-        
-        // Get the primary enemy (first in the list)
+        // Get the enemy
         const enemy = this.enemies[0];
         
-        if (!enemy) return;
+        // Create enemy sprite
+        const enemySprite = this.add.sprite(
+            width * 0.75,
+            height * 0.4,
+            enemy.spriteKey || 'enemy-placeholder'
+        );
         
-        // Add enemy sprite
-        const sprite = enemy.sprite || 'enemy-icon';
-        this.enemySprites[0] = this.add.image(
-            width * 0.85, 
+        // Scale sprite appropriately
+        const scale = enemy.scale || 1.0;
+        enemySprite.setScale(scale);
+        
+        // Add enemy name
+        const nameText = this.add.text(
+            width * 0.75,
+            height * 0.25,
+            enemy.name,
+            {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.md + 'px',
+                fill: '#ffffff',
+                align: 'center'
+            }
+        ).setOrigin(0.5);
+        
+        // Create health bar
+        const healthBarWidth = 200;
+        const healthBarHeight = 20;
+        const healthBarX = width * 0.75;
+        const healthBarY = height * 0.3;
+        
+        // Create health bar background
+        const healthBarBg = this.add.rectangle(
+            healthBarX,
+            healthBarY,
+            healthBarWidth,
+            healthBarHeight,
+            0x333333
+        ).setOrigin(0.5);
+        
+        // Create health bar foreground
+        const healthBar = this.add.graphics();
+        
+        // Draw initial health bar
+        const healthPercentage = enemy.health / enemy.maxHealth;
+        healthBar.fillStyle(0xff0000, 1);
+        healthBar.fillRect(
+            healthBarX - healthBarWidth / 2,
+            healthBarY - healthBarHeight / 2,
+            healthBarWidth * healthPercentage,
+            healthBarHeight
+        );
+        
+        // Add border
+        const healthBarBorder = this.add.graphics();
+        healthBarBorder.lineStyle(2, 0xffffff, 1);
+        healthBarBorder.strokeRect(
+            healthBarX - healthBarWidth / 2,
+            healthBarY - healthBarHeight / 2,
+            healthBarWidth,
+            healthBarHeight
+        );
+        
+        // Add health text
+        const healthText = this.add.text(
+            healthBarX,
+            healthBarY,
+            `${enemy.health}/${enemy.maxHealth}`,
+            {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.sm + 'px',
+                fill: '#ffffff',
+                align: 'center'
+            }
+        ).setOrigin(0.5);
+        
+        // Create status effect container
+        const statusContainer = this.add.container(
+            width * 0.75,
+            height * 0.35
+        );
+        
+        // Store display elements with the enemy
+        enemy.displayElements = {
+            sprite: enemySprite,
+            nameText: nameText,
+            healthBar: {
+                bg: healthBarBg,
+                bar: healthBar,
+                border: healthBarBorder,
+                x: healthBarX - healthBarWidth / 2,
+                y: healthBarY - healthBarHeight / 2,
+                width: healthBarWidth,
+                height: healthBarHeight,
+                color: 0xff0000
+            },
+            healthText: healthText,
+            statusContainer: statusContainer
+        };
+    }
+    
+    /**
+     * Update a health bar
+     * @param {object} healthBar - The health bar object
+     * @param {number} currentHealth - Current health value
+     * @param {number} maxHealth - Maximum health value
+     */
+    updateHealthBar(healthBar, currentHealth, maxHealth) {
+        if (!healthBar || !healthBar.bar) return;
+        
+        // Ensure health doesn't exceed maximum
+        currentHealth = Math.min(currentHealth, maxHealth);
+        
+        // Calculate percentage
+        const percentage = Math.max(0, Math.min(currentHealth / maxHealth, 1));
+        
+        // Clear previous graphics
+        healthBar.bar.clear();
+        
+        // Draw new health bar
+        healthBar.bar.fillStyle(healthBar.color, 1);
+        healthBar.bar.fillRect(
+            healthBar.x, 
+            healthBar.y, 
+            healthBar.width * percentage, 
+            healthBar.height
+        );
+    }
+    
+    /**
+     * Create the combat UI for turn-based combat
+     */
+    createCombatUI() {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        
+        // Create combat log container
+        this.createCombatLog();
+        
+        // Create title based on boss status
+        const titleText = this.isBoss ? 'Boss Battle!' : 'Combat Encounter';
+        this.ui.createTitle(width/2, height * 0.08, titleText, {
+            fontSize: this.ui.fontSize.lg
+        });
+        
+        // Create player panel
+        const playerPanel = this.ui.createPanel(
+            width * 0.25,
+            height * 0.25,
+            width * 0.4,
+            height * 0.2,
+            {
+                fillColor: 0x111122,
+                fillAlpha: 0.7,
+                borderColor: 0x3399ff,
+                borderThickness: 2
+            }
+        );
+        
+        // Add player icon
+        this.playerSprite = this.add.image(
+            width * 0.15, 
             height * 0.25, 
-            sprite
-        ).setDisplaySize(enemy.isBoss ? 96 : 64, enemy.isBoss ? 96 : 64);
+            'player-icon'
+        ).setDisplaySize(64, 64);
         
-        // Add enemy name and health
-        this.enemyNameText = this.add.text(width * 0.75, height * 0.2, enemy.name, {
+        // Add player stats
+        const playerName = gameState.player.name || 'Adventurer';
+        const playerHealth = gameState.player.health || 100;
+        const playerMaxHealth = gameState.player.maxHealth || 100;
+        
+        this.playerNameText = this.add.text(width * 0.25, height * 0.2, playerName, {
             fontFamily: "'Press Start 2P'",
             fontSize: this.ui.fontSize.sm + 'px',
             fill: '#ffffff'
         }).setOrigin(0.5);
         
-        this.enemyHealthText = this.add.text(width * 0.75, height * 0.25, `HP: ${enemy.health}/${enemy.maxHealth}`, {
+        this.playerHealthText = this.add.text(width * 0.25, height * 0.25, `HP: ${playerHealth}/${playerMaxHealth}`, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.sm + 'px',
             fill: '#ffffff'
         }).setOrigin(0.5);
         
-        this.enemyHealthBar = this.makeHealthBar(width * 0.75, height * 0.3, 150, 15, 0xff3333);
-        this.updateHealthBar(this.enemyHealthBar, enemy.health, enemy.maxHealth);
+        this.playerHealthBar = this.makeHealthBar(width * 0.25, height * 0.3, 150, 15, 0x3399ff);
+        this.updateHealthBar(this.playerHealthBar, playerHealth, playerMaxHealth);
         
-        // Store references to display elements in the enemy object
-        enemy.displayElements = {
-            sprite: this.enemySprites[0],
-            nameText: this.enemyNameText,
-            healthText: this.enemyHealthText,
-            healthBar: this.enemyHealthBar,
-            statusContainer: this.add.container(width * 0.75, height * 0.35)
-        };
+        // Add player mana bar
+        const playerMana = gameState.player.mana || 100;
+        const playerMaxMana = gameState.player.maxMana || 100;
+        this.playerManaText = this.add.text(width * 0.25, height * 0.35, `MP: ${playerMana}/${playerMaxMana}`, {
+            fontFamily: "'VT323'",
+            fontSize: this.ui.fontSize.sm + 'px',
+            fill: '#ffffff'
+        }).setOrigin(0.5);
+        this.playerManaBar = this.makeManaBar(width * 0.25, height * 0.35, 150, 15, 0x0066ff);
+        this.updateManaBar(this.playerManaBar, playerMana, playerMaxMana);
         
-        // If this is a boss, add a special effect
-        if (enemy.isBoss) {
-            // Add pulsing glow effect
-            const glow = this.add.graphics();
-            glow.fillStyle(0xff0000, 0.3);
-            glow.fillCircle(width * 0.85, height * 0.25, 60);
-            
-            this.tweens.add({
-                targets: glow,
-                alpha: 0.1,
-                duration: 800,
-                yoyo: true,
-                repeat: -1
-            });
-        }
+        // Create enemy panel
+        const enemyPanel = this.ui.createPanel(
+            width * 0.75,
+            height * 0.25,
+            width * 0.4,
+            height * 0.2,
+            {
+                fillColor: 0x221111,
+                fillAlpha: 0.7,
+                borderColor: 0xff3333,
+                borderThickness: 2
+            }
+        );
+        
+        // Display enemies
+        this.createEnemyDisplay();
+        
+        // Create combat log panel
+        const logPanel = this.ui.createPanel(
+            width * 0.5,
+            height * 0.55,
+            width * 0.8,
+            height * 0.2,
+            {
+                fillColor: 0x111111,
+                fillAlpha: 0.7,
+                borderColor: 0xffcc00,
+                borderThickness: 2
+            }
+        );
+        
+        // Add combat log text
+        this.combatLogText = this.add.text(width * 0.5, height * 0.55, 'Combat begins!', {
+            fontFamily: "'VT323'",
+            fontSize: this.ui.fontSize.md + 'px',
+            fill: '#ffffff',
+            align: 'center',
+            wordWrap: { width: width * 0.75 }
+        }).setOrigin(0.5);
+        
+        // Create combat action buttons
+        this.createCombatActionButtons();
     }
     
     /**
@@ -202,17 +380,6 @@ class EncounterScene extends Phaser.Scene {
             height: height,
             color: color
         };
-    }
-    
-    /**
-     * Update a health bar
-     */
-    updateHealthBar(bar, value, maxValue) {
-        const percentage = Math.max(0, Math.min(value / maxValue, 1));
-        
-        bar.bar.clear();
-        bar.bar.fillStyle(bar.color, 1);
-        bar.bar.fillRect(bar.x, bar.y, bar.width * percentage, bar.height);
     }
     
     /**
@@ -372,21 +539,10 @@ class EncounterScene extends Phaser.Scene {
         const height = this.cameras.main.height;
         
         // Calculate difficulty
-        const difficulty = this.calculateDifficulty();
+        const { difficulty, difficultyColor } = this.calculateDifficulty();
         
-        // Change color based on difficulty
-        let difficultyColor;
-        switch(difficulty) {
-            case 'Easy': difficultyColor = '#00ff00'; break;
-            case 'Moderate': difficultyColor = '#ffff00'; break;
-            case 'Challenging': difficultyColor = '#ff9900'; break;
-            case 'Dangerous': difficultyColor = '#ff0000'; break;
-            default: difficultyColor = '#ffffff';
-        }
-        
-        // Create encounter description
+        // Create description panel
         this.ui.createPanel(
-            this,
             width/2,
             height * 0.62,
             width * 0.7,
@@ -399,13 +555,12 @@ class EncounterScene extends Phaser.Scene {
             }
         );
         
-        // Enemy count description
-        const enemyCountText = this.enemies.length === 1 
-            ? "You've encountered a lone enemy" 
-            : `You've encountered a group of ${this.enemies.length} enemies`;
+        // Enemy description - simplified for single enemy combat
+        const enemy = this.enemies[0];
+        const enemyText = `You've encountered a ${enemy.name}!`;
         
         // Create description text
-        this.add.text(width/2, height * 0.58, enemyCountText, {
+        this.add.text(width/2, height * 0.58, enemyText, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.md + 'px',
             fill: '#ffffff',
@@ -442,10 +597,10 @@ class EncounterScene extends Phaser.Scene {
         const relativeDifficulty = (averageEnemyLevel * enemyCountFactor) / playerLevel;
         
         // Determine difficulty rating
-        if (relativeDifficulty < 0.8) return 'Easy';
-        if (relativeDifficulty < 1.2) return 'Moderate';
-        if (relativeDifficulty < 1.8) return 'Challenging';
-        return 'Dangerous';
+        if (relativeDifficulty < 0.8) return { difficulty: 'Easy', difficultyColor: '#00ff00' };
+        if (relativeDifficulty < 1.2) return { difficulty: 'Moderate', difficultyColor: '#ffff00' };
+        if (relativeDifficulty < 1.8) return { difficulty: 'Challenging', difficultyColor: '#ff9900' };
+        return { difficulty: 'Dangerous', difficultyColor: '#ff0000' };
     }
     
     /**
@@ -515,24 +670,7 @@ class EncounterScene extends Phaser.Scene {
         const height = this.cameras.main.height;
         
         // Create combat log container
-        this.combatLogContainer = this.add.container(width * 0.75, height * 0.3);
-        this.combatLogBg = this.add.rectangle(0, 0, width * 0.4, height * 0.4, 0x000000, 0.7)
-            .setOrigin(0.5, 0.5);
-        this.combatLogContainer.add(this.combatLogBg);
-        
-        // Add title
-        this.combatLogTitle = this.add.text(0, -this.combatLogBg.height * 0.4, 'COMBAT LOG', {
-            fontSize: '18px',
-            fontFamily: 'Arial',
-            color: '#FFFFFF',
-            stroke: '#000000',
-            strokeThickness: 4
-        }).setOrigin(0.5, 0.5);
-        this.combatLogContainer.add(this.combatLogTitle);
-        
-        // Create log entries container
-        this.logEntries = [];
-        this.maxLogEntries = 8; // Maximum number of log entries to display
+        this.createCombatLog();
         
         // Create title based on boss status
         const titleText = this.isBoss ? 'Boss Battle!' : 'Combat Encounter';
@@ -607,7 +745,7 @@ class EncounterScene extends Phaser.Scene {
         );
         
         // Display enemies
-        this.displayEnemies();
+        this.createEnemyDisplay();
         
         // Create combat log panel
         const logPanel = this.ui.createPanel(
@@ -817,15 +955,19 @@ class EncounterScene extends Phaser.Scene {
             case 'attack':
                 this.processPlayerDamageAbility(ability);
                 break;
+                
             case 'heal':
                 this.processPlayerHealAbility(ability);
                 break;
+                
             case 'buff':
                 this.processPlayerBuffAbility(ability);
                 break;
+                
             case 'debuff':
                 this.processPlayerDebuffAbility(ability);
                 break;
+                
             default:
                 console.warn(`Unknown ability type: ${ability.type}`);
                 this.addToCombatLog("Unable to use that ability.");
@@ -852,78 +994,67 @@ class EncounterScene extends Phaser.Scene {
         const player = gameState.player;
         const playerLevel = player.level || 1;
         
-        // Determine targets
-        let targets = [];
-        if (ability.areaEffect) {
-            targets = [...this.enemies];
-        } else {
-            // Default to first enemy for single target
-            targets = [this.enemies[0]];
+        // Determine targets - in our simplified system, we only have one enemy
+        const target = this.enemies[0];
+        
+        // Base damage calculation based on player strength
+        const baseAttack = Math.floor((player.strength || 10) * 0.8) + Math.floor(Math.random() * 6) + 1;
+        
+        // Apply ability damage multiplier
+        let damage = Math.floor(baseAttack * (ability.damageMultiplier || 1.0));
+        
+        // Add level scaling
+        damage += Math.floor(playerLevel * 0.3);
+        
+        // Apply weapon damage if equipped
+        if (player.inventory && player.inventory.equipped && player.inventory.equipped.weapon) {
+            damage += player.inventory.equipped.weapon.damage || 0;
         }
         
-        // Calculate damage for each target
-        targets.forEach(target => {
-            // Base damage calculation based on player strength
-            const baseAttack = Math.floor((player.strength || 10) * 0.8) + Math.floor(Math.random() * 6) + 1;
-            
-            // Apply ability damage multiplier
-            let damage = Math.floor(baseAttack * (ability.damageMultiplier || 1.0));
-            
-            // Add level scaling
-            damage += Math.floor(playerLevel * 0.3);
-            
-            // Apply weapon damage if equipped
-            if (player.inventory && player.inventory.equipped && player.inventory.equipped.weapon) {
-                damage += player.inventory.equipped.weapon.damage || 0;
-            }
-            
-            // Check for multiple hits
-            const hits = ability.hits || 1;
-            let totalDamage = 0;
-            
-            for (let i = 0; i < hits; i++) {
-                // Apply small random variation for each hit
-                const hitDamage = Math.floor(damage * (0.9 + Math.random() * 0.2));
-                totalDamage += hitDamage;
-                
-                // For multi-hit abilities, log each hit
-                if (hits > 1) {
-                    this.addToCombatLog(`Hit ${i+1}: ${hitDamage} damage`);
-                }
-            }
-            
-            // Apply damage
-            target.health = Math.max(0, target.health - totalDamage);
-            
-            // Update enemy health display
-            if (target.displayElements) {
-                this.updateHealthBar(target.displayElements.healthBar, target.health, target.maxHealth);
-                target.displayElements.healthText.setText(`HP: ${target.health}/${target.maxHealth}`);
-            }
-            
-            // Add to combat log
-            this.addToCombatLog(`You used ${ability.name} on ${target.name} for ${totalDamage} damage!`);
-            
-            // Apply status effect if ability has one
-            if (ability.statusEffect) {
-                const chance = ability.statusEffect.chance || 1.0;
-                if (Math.random() < chance) {
-                    this.applyStatusEffectToTarget(target, ability.statusEffect);
-                    this.addToCombatLog(`${target.name} is afflicted with ${ability.statusEffect.type}!`);
-                }
-            }
-            
-            // Play appropriate animation and sound
-            this.playAbilityAnimation(target, ability);
-            
-            // Check if enemy defeated
-            if (target.health <= 0) {
-                this.enemyDefeated(target);
-            }
-        });
+        // Check for multiple hits
+        const hits = ability.hits || 1;
+        let totalDamage = 0;
         
-        // Continue to enemy turn after a delay if any enemies remain
-        if (this.enemies.some(enemy => enemy.health > 0)) {
+        for (let i = 0; i < hits; i++) {
+            // Apply small random variation for each hit
+            const hitDamage = Math.floor(damage * (0.9 + Math.random() * 0.2));
+            totalDamage += hitDamage;
+            
+            // For multi-hit abilities, log each hit
+            if (hits > 1) {
+                this.addToCombatLog(`Hit ${i+1}: ${hitDamage} damage`);
+            }
+        }
+        
+        // Apply damage
+        target.health = Math.max(0, target.health - totalDamage);
+        
+        // Update enemy health display
+        if (target.displayElements) {
+            this.updateHealthBar(target.displayElements.healthBar, target.health, target.maxHealth);
+            target.displayElements.healthText.setText(`HP: ${target.health}/${target.maxHealth}`);
+        }
+        
+        // Add to combat log
+        this.addToCombatLog(`You used ${ability.name} on ${target.name} for ${totalDamage} damage!`);
+        
+        // Apply status effect if ability has one
+        if (ability.statusEffect) {
+            const chance = ability.statusEffect.chance || 1.0;
+            if (Math.random() < chance) {
+                this.applyStatusEffectToTarget(target, ability.statusEffect);
+                this.addToCombatLog(`${target.name} is afflicted with ${ability.statusEffect.type}!`);
+            }
+        }
+        
+        // Play appropriate animation and sound
+        this.playAbilityAnimation(target, ability);
+        
+        // Check if enemy defeated
+        if (target.health <= 0) {
+            this.enemyDefeated(target);
+        } else {
+            // Continue to enemy turn after a delay if enemy is still alive
             this.time.delayedCall(1500, () => {
                 this.startEnemyTurn();
             });
@@ -1087,7 +1218,7 @@ class EncounterScene extends Phaser.Scene {
         }
         
         // Display enemies
-        this.displayEnemies();
+        this.createEnemyDisplay();
         
         // Create encounter description
         this.createEncounterDescription();
@@ -1115,38 +1246,31 @@ class EncounterScene extends Phaser.Scene {
         // Set turn to player
         this.combatState.turn = 'player';
         
-        // Process player status effects
-        const statusResults = this.processStatusEffects(gameState.player, 'player');
+        // Process status effects
+        this.processStatusEffects(gameState.player, 'player');
         
-        // Add status effect results to combat log
-        if (statusResults.effects.length > 0) {
-            this.addToCombatLog(`Status effects on player: ${statusResults.effects.join(', ')}`);
-        }
-        
-        // Check if player is stunned
-        const isStunned = gameState.player.statusEffects.some(effect => effect.type === 'stun');
-        
-        if (isStunned) {
-            this.addToCombatLog('Player is stunned and skips their turn!');
-            this.time.delayedCall(1000, () => {
-                this.startEnemyTurn();
-            });
-            return;
-        }
-        
-        // Update UI for player turn
+        // Update action buttons
         this.updateActionButtons(true);
-        this.addToCombatLog('Your turn! Choose an action.');
+        
+        // Add to combat log
+        this.addToCombatLog('Your turn!');
     }
     
     /**
      * Start enemy turn
      */
     startEnemyTurn() {
-        // Set turn to enemy
-        this.combatState.turn = 'enemy';
+        // Check if all enemies are defeated
+        if (this.enemies.every(enemy => enemy.defeated || enemy.health <= 0)) {
+            // If all enemies are defeated, handle victory
+            this.handleVictory();
+            return;
+        }
         
-        // Process each enemy's turn
+        // Add to combat log
+        this.addToCombatLog("Enemy turn!");
+        
+        // Process enemy turns
         this.processEnemyTurns(0);
     }
     
@@ -1155,30 +1279,37 @@ class EncounterScene extends Phaser.Scene {
      * @param {number} index - Current enemy index
      */
     processEnemyTurns(index) {
-        // If all enemies processed, go back to player turn
+        // Check if there are enemies left to process
         if (index >= this.enemies.length) {
-            // Decrement cooldowns
-            Object.keys(this.combatState.abilityCooldowns.player).forEach(abilityId => {
-                if (this.combatState.abilityCooldowns.player[abilityId] > 0) {
-                    this.combatState.abilityCooldowns.player[abilityId]--;
-                }
+            // All enemies have taken their turn, go back to player
+            this.time.delayedCall(1000, () => {
+                this.startPlayerTurn();
             });
-            
-            // Start a new round
-            this.combatState.round++;
-            this.startPlayerTurn();
             return;
         }
         
-        // Get current enemy
+        // Get the current enemy
         const enemy = this.enemies[index];
         
         // Skip defeated enemies
-        if (enemy.health <= 0) {
+        if (enemy.defeated || enemy.health <= 0) {
             this.processEnemyTurns(index + 1);
             return;
         }
         
+        // Process enemy turn
+        this.performEnemyAction(enemy, () => {
+            // Move to next enemy after this one's turn is complete
+            this.processEnemyTurns(index + 1);
+        });
+    }
+    
+    /**
+     * Perform enemy action
+     * @param {object} enemy - The enemy performing the action
+     * @param {function} callback - Function to call when action is complete
+     */
+    performEnemyAction(enemy, callback) {
         // Process enemy status effects
         const statusResults = this.processStatusEffects(enemy, 'enemy');
         
@@ -1188,48 +1319,31 @@ class EncounterScene extends Phaser.Scene {
         }
         
         // Check if enemy is stunned
-        const isStunned = enemy.statusEffects.some(effect => effect.type === 'stun');
+        const isStunned = enemy.statusEffects && enemy.statusEffects.some(effect => effect.type === 'stun');
         
         if (isStunned) {
             this.addToCombatLog(`${enemy.name} is stunned and skips their turn!`);
-            this.time.delayedCall(800, () => {
-                this.processEnemyTurns(index + 1);
-            });
+            this.time.delayedCall(800, callback);
             return;
         }
         
-        // Perform enemy action after a delay
-        this.time.delayedCall(800, () => {
-            this.performEnemyAction(enemy);
-            
-            // Process next enemy after a delay
-            this.time.delayedCall(800, () => {
-                this.processEnemyTurns(index + 1);
-            });
-        });
-    }
-    
-    /**
-     * Perform enemy action
-     * @param {object} enemy - The enemy performing the action
-     */
-    performEnemyAction(enemy) {
         // If enemy has abilities, decide whether to use one
         if (enemy.abilities && enemy.abilities.length > 0 && Math.random() < 0.7) {
             // Choose a random ability
             const abilityId = enemy.abilities[Math.floor(Math.random() * enemy.abilities.length)];
-            this.enemyUseAbility(enemy, abilityId);
+            this.enemyUseAbility(enemy, abilityId, callback);
         } else {
             // Default to basic attack
-            this.enemyAttack(enemy);
+            this.enemyAttack(enemy, callback);
         }
     }
     
     /**
      * Handle enemy attack
      * @param {object} enemy - The attacking enemy
+     * @param {function} callback - Function to call when action is complete
      */
-    enemyAttack(enemy) {
+    enemyAttack(enemy, callback) {
         // Get player stats
         const player = gameState.player;
         
@@ -1244,7 +1358,7 @@ class EncounterScene extends Phaser.Scene {
         damage += Math.floor(enemyLevel * 0.3);
         
         // Check if player is defending
-        if (this.combatState.playerDefending) {
+        if (this.combatState && this.combatState.playerDefending) {
             damage = Math.floor(damage * 0.5);
             this.addToCombatLog('You are defending and take reduced damage!');
         }
@@ -1273,22 +1387,63 @@ class EncounterScene extends Phaser.Scene {
         if (player.health <= 0) {
             this.playerDefeated();
         }
+        
+        // Call callback to continue to next enemy or end turn
+        callback();
     }
     
     /**
      * Handle victory
      */
     handleVictory() {
+        // Check if victory has already been handled
+        if (this.victoryHandled) {
+            return;
+        }
+        
+        // Set flag to prevent multiple victory calls
+        this.victoryHandled = true;
+        
         // Play victory sound
         this.safePlaySound('victory-sound');
         
-        // Calculate rewards
-        const expGained = this.enemies.reduce((total, enemy) => total + (enemy.expValue || enemy.level * 10), 0);
-        const goldGained = this.enemies.reduce((total, enemy) => total + (enemy.goldValue || enemy.level * 5), 0);
+        // Calculate rewards based on the single enemy
+        const enemy = this.enemies[0];
+        const expGained = enemy.expValue || enemy.level * 10;
+        const goldGained = enemy.goldValue || enemy.level * 5;
+        
+        // Generate loot items
+        const lootItems = [];
+        if (enemy.loot && Array.isArray(enemy.loot)) {
+            enemy.loot.forEach(lootItem => {
+                // Check if item should drop based on chance
+                if (Math.random() <= (lootItem.chance || 0.5)) {
+                    lootItems.push(lootItem.item || lootItem);
+                }
+            });
+        }
+        
+        // Initialize player inventory if it doesn't exist
+        if (!gameState.player.inventory) {
+            gameState.player.inventory = {
+                items: [],
+                equipped: {}
+            };
+        }
+        
+        // Ensure items array exists
+        if (!gameState.player.inventory.items) {
+            gameState.player.inventory.items = [];
+        }
         
         // Add rewards to player
         gameState.player.experience += expGained;
         gameState.player.gold += goldGained;
+        
+        // Add loot items to player inventory
+        lootItems.forEach(item => {
+            gameState.player.inventory.items.push(item);
+        });
         
         // Check for level up
         const didLevelUp = gameState.player.experience >= gameState.player.experienceToNextLevel;
@@ -1297,17 +1452,19 @@ class EncounterScene extends Phaser.Scene {
         const isBoss = gameState.currentEncounter && gameState.currentEncounter.type === 'boss';
         
         // Store combat results
-        gameState.combatResults = {
-            victory: true,
-            expGained: expGained,
-            goldGained: goldGained,
-            levelUp: didLevelUp,
+        gameState.combatResult = {
+            outcome: 'victory',
+            enemy: enemy,
             isBoss: isBoss,
-            itemsFound: [] // TODO: Implement item drops
+            loot: {
+                experience: expGained,
+                gold: goldGained,
+                items: lootItems
+            }
         };
         
         // Show victory message
-        this.addToCombatLog("Victory! You defeated all enemies.");
+        this.addToCombatLog("Victory! You defeated the enemy.");
         
         // Use fade transition to combat result scene after a short delay
         this.time.delayedCall(2000, () => {
@@ -1341,9 +1498,6 @@ class EncounterScene extends Phaser.Scene {
      * Handle the retreat action
      */
     handleRetreat() {
-        // Disable action buttons
-        this.updateActionButtons(false);
-        
         // Calculate loot loss (70% of current loot)
         if (gameState.currentRun && gameState.currentRun.loot) {
             // Calculate gold loss
@@ -1438,37 +1592,66 @@ class EncounterScene extends Phaser.Scene {
         // Create new text object for the log entry
         const newEntry = this.add.text(0, 0, message, {
             fontSize: '14px',
-            fontFamily: 'Arial',
-            color: '#FFFFFF',
-            wordWrap: { width: this.combatLogBg.width * 0.8 }
-        }).setOrigin(0.5, 0);
+            fontFamily: "'VT323'",
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
+        });
         
-        // Add to our array of log entries
-        this.logEntries.push(newEntry);
-        this.combatLogContainer.add(newEntry);
-        
-        // If we have too many entries, remove the oldest
-        if (this.logEntries.length > this.maxLogEntries) {
-            const oldestEntry = this.logEntries.shift();
-            oldestEntry.destroy();
+        // Add to container
+        if (this.combatLogEntries) {
+            this.combatLogEntries.add(newEntry);
+            
+            // Position the new entry at the bottom of the log
+            const entries = this.combatLogEntries.getAll();
+            const entryHeight = 20;
+            
+            // Reposition all entries to move them up
+            entries.forEach((entry, index) => {
+                const y = (entries.length - 1 - index) * entryHeight;
+                entry.setPosition(10, y);
+                
+                // Fade out older entries
+                const alpha = Math.max(0.5, 1 - (entries.length - 1 - index) * 0.15);
+                entry.setAlpha(alpha);
+            });
+            
+            // If we have too many entries, remove the oldest ones
+            const maxEntries = 8;
+            if (entries.length > maxEntries) {
+                for (let i = 0; i < entries.length - maxEntries; i++) {
+                    entries[i].destroy();
+                }
+            }
+        } else {
+            console.warn('Combat log container not initialized yet');
         }
         
-        // Position all entries
-        this.updateCombatLogPositions();
-        
-        console.log(`Combat Log: ${message}`);
+        // Log to console as well
+        console.log('Combat Log:', message);
     }
     
     /**
-     * Update positions of all combat log entries
+     * Create the combat log
      */
-    updateCombatLogPositions() {
-        const startY = -this.combatLogBg.height * 0.3;
-        const spacing = 20;
+    createCombatLog() {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
         
-        this.logEntries.forEach((entry, index) => {
-            entry.setPosition(0, startY + (index * spacing));
-        });
+        // Create a container for the combat log
+        this.combatLogContainer = this.add.container(width * 0.5, height * 0.55);
+        
+        // Create the background for the combat log
+        this.combatLogBg = this.add.rectangle(0, 0, width * 0.8, height * 0.2, 0x111111, 0.7);
+        this.combatLogBg.setStrokeStyle(2, 0xffcc00);
+        this.combatLogContainer.add(this.combatLogBg);
+        
+        // Create a container for the log entries
+        this.combatLogEntries = this.add.container(0, 0);
+        this.combatLogContainer.add(this.combatLogEntries);
+        
+        // Add initial message
+        this.addToCombatLog('Combat begins!');
     }
     
     /**
@@ -1560,13 +1743,14 @@ class EncounterScene extends Phaser.Scene {
      */
     safePlaySound(key) {
         try {
+            // Check if the sound exists in the cache
             if (this.sound.get(key)) {
                 this.sound.play(key, { volume: 0.5 });
             } else {
-                console.warn(`Sound not found: ${key}`);
+                console.warn(`Sound ${key} not found in cache`);
             }
         } catch (error) {
-            console.warn(`Error playing sound ${key}:`, error);
+            console.warn(`Error playing sound ${key}: ${error.message}`);
         }
     }
     
@@ -1604,8 +1788,19 @@ class EncounterScene extends Phaser.Scene {
      * @param {object} enemy - The defeated enemy
      */
     enemyDefeated(enemy) {
+        // Check if enemy is already defeated to prevent multiple defeat processing
+        if (enemy.defeated) {
+            return;
+        }
+        
         // Add to combat log
         this.addToCombatLog(`${enemy.name} has been defeated!`);
+        
+        // Mark as defeated
+        enemy.defeated = true;
+        
+        // Disable all action buttons immediately
+        this.disableAllButtons();
         
         // Play defeat animation
         if (enemy.displayElements && enemy.displayElements.sprite) {
@@ -1628,59 +1823,48 @@ class EncounterScene extends Phaser.Scene {
             }
         }
         
-        // Mark as defeated
-        enemy.defeated = true;
-        
-        // Check if all enemies are defeated
-        const allDefeated = this.enemies.every(e => e.defeated || e.health <= 0);
-        
-        if (allDefeated) {
-            // Delay victory to allow defeat animation to play
-            this.time.delayedCall(1000, () => {
-                this.handleVictory();
-            });
-        } else {
-            // Continue to next enemy turn
-            this.time.delayedCall(1000, () => {
-                this.startEnemyTurn();
-            });
-        }
+        // Immediately go to victory screen
+        this.time.delayedCall(1000, () => {
+            this.handleVictory();
+        });
     }
     
     /**
      * Handle enemy using an ability
      * @param {object} enemy - The enemy using the ability
      * @param {string} abilityId - The ID of the ability to use
+     * @param {function} callback - Function to call when action is complete
      */
-    enemyUseAbility(enemy, abilityId) {
+    enemyUseAbility(enemy, abilityId, callback) {
         // Get ability data
         const ability = getAbilityData(abilityId);
         if (!ability) {
             // Fallback to basic attack if ability not found
-            this.enemyAttack(enemy);
+            this.enemyAttack(enemy, callback);
             return;
         }
         
         // Process ability based on type
         switch (ability.type) {
             case 'damage':
-                this.processEnemyDamageAbility(enemy, ability);
+                this.processEnemyDamageAbility(enemy, ability, callback);
                 break;
                 
             case 'heal':
-                this.processEnemyHealAbility(enemy, ability);
+                this.processEnemyHealAbility(enemy, ability, callback);
                 break;
                 
             case 'buff':
-                this.processEnemyBuffAbility(enemy, ability);
+                this.processEnemyBuffAbility(enemy, ability, callback);
                 break;
                 
             case 'debuff':
-                this.processEnemyDebuffAbility(enemy, ability);
+                this.processEnemyDebuffAbility(enemy, ability, callback);
                 break;
                 
             default:
                 this.addToCombatLog(`${enemy.name} used ${ability.name}!`);
+                callback();
                 break;
         }
     }
@@ -1689,8 +1873,9 @@ class EncounterScene extends Phaser.Scene {
      * Process an enemy damage ability
      * @param {object} enemy - The enemy using the ability
      * @param {object} ability - The ability data
+     * @param {function} callback - Function to call when action is complete
      */
-    processEnemyDamageAbility(enemy, ability) {
+    processEnemyDamageAbility(enemy, ability, callback) {
         // Get player stats
         const player = gameState.player;
         
@@ -1716,13 +1901,13 @@ class EncounterScene extends Phaser.Scene {
         // Apply damage
         player.health = Math.max(0, player.health - damage);
         
-        // Update player health display
-        this.playerHealthText.setText(`HP: ${player.health}/${player.maxHealth}`);
-        this.updateHealthBar(this.playerHealthBar, player.health, player.maxHealth);
-        
         // Play appropriate animation and sound
         this.playEnemyAttackAnimation(enemy);
         this.safePlaySound(`${ability.soundKey || 'enemy-attack'}-sound`);
+        
+        // Update player health display
+        this.playerHealthText.setText(`HP: ${player.health}/${player.maxHealth}`);
+        this.updateHealthBar(this.playerHealthBar, player.health, player.maxHealth);
         
         // Add to combat log
         this.addToCombatLog(`${enemy.name} used ${ability.name} for ${damage} damage!`);
@@ -1739,8 +1924,8 @@ class EncounterScene extends Phaser.Scene {
             return;
         }
         
-        // Continue to next enemy or end turn
-        this.processNextEnemyOrEndTurn();
+        // Call callback to continue to next enemy or end turn
+        callback();
     }
     
     /**
@@ -1804,6 +1989,49 @@ class EncounterScene extends Phaser.Scene {
                 }
             }
         });
+    }
+    
+    /**
+     * Disable all action buttons
+     */
+    disableAllButtons() {
+        // Find all buttons in the scene and disable them
+        this.children.list
+            .filter(child => child.type === 'Image' && child.texture.key === 'button-background')
+            .forEach(button => {
+                // Disable the button
+                if (button.setInteractive) {
+                    button.disableInteractive();
+                }
+                
+                // Dim the button to indicate it's disabled
+                this.tweens.add({
+                    targets: button,
+                    alpha: 0.5,
+                    duration: 200
+                });
+            });
+            
+        // Also disable ability buttons if they exist
+        if (this.abilityButtons) {
+            this.abilityButtons.forEach(button => {
+                if (button && button.setInteractive) {
+                    button.disableInteractive();
+                }
+                
+                // Dim the button
+                if (button) {
+                    this.tweens.add({
+                        targets: button,
+                        alpha: 0.5,
+                        duration: 200
+                    });
+                }
+            });
+        }
+        
+        // Set a flag to indicate combat is over
+        this.combatEnded = true;
     }
     
     /**
@@ -1928,6 +2156,7 @@ class EncounterScene extends Phaser.Scene {
         
         // Update mana display
         if (this.playerManaText) {
+            const player = gameState.player;
             this.playerManaText.setText(`MP: ${player.mana}/${player.maxMana || 100}`);
         }
         if (this.playerManaBar) {
