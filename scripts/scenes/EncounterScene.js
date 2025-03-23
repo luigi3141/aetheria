@@ -1495,7 +1495,7 @@ class EncounterScene extends Phaser.Scene {
         // Check if all enemies are defeated
         if (this.enemies.every(enemy => enemy.defeated || enemy.health <= 0)) {
             // If all enemies are defeated, handle victory
-            this.handleVictory();
+            this.handleVictory(this.enemies[0]);
             return;
         }
         
@@ -1650,8 +1650,9 @@ class EncounterScene extends Phaser.Scene {
             completeDelay: 200
         });
         
-        // Play defeat animation with reduced duration
-        if (enemy.displayElements && enemy.displayElements.sprite) {
+        // Make sure we have a valid enemy with display elements before animating
+        // This fixes the "Cannot read properties of undefined" error
+        if (enemy && enemy.displayElements && enemy.displayElements.sprite) {
             // Fade out the enemy sprite
             this.tweens.add({
                 targets: enemy.displayElements.sprite,
@@ -1661,7 +1662,7 @@ class EncounterScene extends Phaser.Scene {
                 ease: 'Power2'
             });
             
-            // Fade out the enemy name and health text
+            // Fade out the enemy name and health text if they exist
             if (enemy.displayElements.nameText) {
                 this.tweens.add({
                     targets: [enemy.displayElements.nameText, enemy.displayElements.healthText],
@@ -1669,6 +1670,8 @@ class EncounterScene extends Phaser.Scene {
                     duration: 500 // Reduced from 800ms
                 });
             }
+        } else {
+            console.warn('handleVictory called with invalid enemy or missing display elements');
         }
         
         // Process victory after a shorter delay
