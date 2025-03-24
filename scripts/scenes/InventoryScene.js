@@ -396,14 +396,17 @@ class InventoryScene extends Phaser.Scene {
             'Return',
             () => {
                 console.log('Return button clicked');
-                navigationManager.navigateTo(this, 'OverworldScene');
+                // Check if we came from the dungeon
+                if (gameState.previousScene === 'DungeonScene') {
+                    navigationManager.navigateTo(this, 'DungeonScene');
+                } else {
+                    // Default to OverworldScene
+                    navigationManager.navigateTo(this, 'OverworldScene');
+                }
             },
             {
-                fontSize: this.ui.fontSize.md,
                 width: 150,
-                height: 50,
-                backgroundColor: 0x222266,
-                borderColor: 0x3399ff
+                height: 50
             }
         );
     }

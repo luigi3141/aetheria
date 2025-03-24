@@ -905,16 +905,37 @@ class DungeonScene extends BaseScene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Create combat button
-        const combatButton = new Button(
+        // Create explore button (renamed from 'COMBAT' to 'EXPLORE')
+        const exploreButton = new Button(
             this,
             width * 0.25,
             height * 0.9,
-            'COMBAT',
+            'EXPLORE',
             () => {
-                console.log('Combat button clicked');
+                console.log('Explore button clicked');
                 // Start a proper combat encounter
                 this.startCombatEncounter();
+            },
+            {
+                width: 160,
+                height: 50
+            }
+        );
+        
+        // Create inventory button (new)
+        const inventoryButton = new Button(
+            this,
+            width * 0.5,
+            height * 0.9,
+            'INVENTORY',
+            () => {
+                console.log('Inventory button clicked');
+                // Store current scene in game state
+                gameState.previousScene = 'DungeonScene';
+                // Navigate to inventory
+                this.transitions.fade(() => {
+                    navigationManager.navigateTo(this, 'InventoryScene');
+                });
             },
             {
                 width: 160,
