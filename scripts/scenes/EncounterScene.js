@@ -43,6 +43,22 @@ class EncounterScene extends Phaser.Scene {
     }
 
     preload() {
+        // Use background from current dungeon
+        if (gameState.currentDungeon && gameState.currentDungeon.backgroundKey) {
+            // Clear any previous instance of the background texture
+            if (this.textures.exists('encounter-bg')) {
+                this.textures.remove('encounter-bg');
+            }
+            
+            // Load the background based on current dungeon
+            this.load.image('encounter-bg', ASSET_PATHS.BACKGROUNDS[gameState.currentDungeon.backgroundKey.toUpperCase().replace('-BG', '')]);
+        } else {
+            // Load default combat background if no dungeon is selected
+            this.load.image('encounter-bg', ASSET_PATHS.BACKGROUNDS.COMBAT);
+        }
+        
+        // Load UI assets
+        
         // Detect GitHub Pages
         const isGitHubPages = window.location.hostname.includes('github.io');
         console.log(`Running on GitHub Pages: ${isGitHubPages}`);
@@ -56,9 +72,6 @@ class EncounterScene extends Phaser.Scene {
         
         // Debug asset loading
         console.log(`Loading sprites from path: ${getPath('assets/sprites/enemies/wolf-sprite.png')}`);
-        
-        // Load encounter assets using AssetConfig paths
-        this.load.image('combat-bg', getPath(ASSET_PATHS.BACKGROUNDS.COMBAT));
         
         // Load effect sprites using AssetConfig paths
         this.load.image('slash-effect', getPath(ASSET_PATHS.EFFECTS.SLASH));
@@ -174,7 +187,7 @@ class EncounterScene extends Phaser.Scene {
         };
         
         // Add background
-        const background = this.add.image(width/2, height/2, 'combat-bg').setDisplaySize(width, height);
+        const background = this.add.image(width/2, height/2, 'encounter-bg').setDisplaySize(width, height);
         // Apply a desaturation tint to make UI elements stand out better
         background.setTint(0xaaaaaa);
         

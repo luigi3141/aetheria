@@ -11,7 +11,9 @@ export const ASSET_PATHS = {
         TITLE: 'assets/sprites/backgrounds/title-bg.png',
         OVERWORLD: 'assets/sprites/backgrounds/overworld-bg.png',
         DUNGEON: 'assets/sprites/backgrounds/dungeon-bg.png',
-        BATTLE_RESULT: 'assets/sprites/backgrounds/battle-result-bg.png'
+        BATTLE_RESULT: 'assets/sprites/backgrounds/battle-result-bg.png',
+        FOREST: 'assets/sprites/backgrounds/forest-bg.png',
+        CAVERNS: 'assets/sprites/backgrounds/caverns-bg.png'
     },
     
     // Character portraits

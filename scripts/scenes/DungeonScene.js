@@ -18,13 +18,21 @@ class DungeonScene extends BaseScene {
     }
 
     preload() {
-        // Clear texture cache for combat-bg to ensure we load the new one
-        if (this.textures.exists('combat-bg')) {
-            this.textures.remove('combat-bg');
+        // Use background from current dungeon
+        if (gameState.currentDungeon && gameState.currentDungeon.backgroundKey) {
+            // Clear any previous instance of the background texture
+            if (this.textures.exists('combat-bg')) {
+                this.textures.remove('combat-bg');
+            }
+            
+            // Load the background based on current dungeon
+            this.load.image('combat-bg', ASSET_PATHS.BACKGROUNDS[gameState.currentDungeon.backgroundKey.toUpperCase().replace('-BG', '')]);
+        } else {
+            // Load default combat background if no dungeon is selected
+            this.load.image('combat-bg', ASSET_PATHS.BACKGROUNDS.COMBAT);
         }
         
-        // Load dungeon assets with unique keys
-        this.load.image('combat-bg', ASSET_PATHS.BACKGROUNDS.COMBAT);
+        // Load UI elements
         this.load.image('player-icon', ASSET_PATHS.ICONS.PLAYER);
         this.load.image('enemy-icon', ASSET_PATHS.ENEMIES.DEFAULT);
         
