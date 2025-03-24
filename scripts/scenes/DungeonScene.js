@@ -88,8 +88,6 @@ class DungeonScene extends BaseScene {
         // Add background using the safe image loading method from BaseScene
         this.safeAddImage(width/2, height/2, 'combat-bg', null, { displayWidth: width, displayHeight: height });
 
-        // Add decorative corners
-        this.ui.addScreenCorners();
         
         // Make sure we have a current dungeon
         if (!gameState.currentDungeon) {
@@ -905,14 +903,14 @@ class DungeonScene extends BaseScene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Create explore button (renamed from 'COMBAT' to 'EXPLORE')
-        const exploreButton = new Button(
+        // Create explore button (renamed from 'COMBAT' to 'EXPLORE' to 'ADVANCE')
+        const advanceButton = new Button(
             this,
             width * 0.25,
             height * 0.9,
-            'EXPLORE',
+            'ADVANCE',
             () => {
-                console.log('Explore button clicked');
+                console.log('Advance button clicked');
                 // Start a proper combat encounter
                 this.startCombatEncounter();
             },

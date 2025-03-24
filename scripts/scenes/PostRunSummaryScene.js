@@ -32,8 +32,6 @@ class PostRunSummaryScene extends Phaser.Scene {
         // Add background
         this.add.image(width/2, height/2, 'summary-bg').setDisplaySize(width, height);
 
-        // Add decorative corners
-        this.ui.addScreenCorners();
         
         // Create the title
         this.ui.createTitle(width/2, height * 0.08, 'Dungeon Run Summary', {

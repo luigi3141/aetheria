@@ -43,8 +43,6 @@ class DungeonSelectScene extends BaseScene {
         // Add background with unique key
         this.add.image(width/2, height/2, 'select-bg').setDisplaySize(width, height);
 
-        // Add decorative corners
-        this.ui.addScreenCorners();
         
         // Create the title
         this.ui.createTitle(width/2, height * 0.08, 'Dungeon Selection', {
@@ -60,7 +58,7 @@ class DungeonSelectScene extends BaseScene {
             height * 0.9,
             'BACK TO TOWN',
             () => {
-                navigationManager.navigateTo(this, 'MainMenuScene');
+                navigationManager.navigateTo(this, 'OverworldScene');
             },
             {
                 width: 200,

@@ -191,8 +191,7 @@ class EncounterScene extends Phaser.Scene {
         // Apply a desaturation tint to make UI elements stand out better
         background.setTint(0xaaaaaa);
         
-        // Add decorative corners
-        this.ui.addScreenCorners();
+
         
         // Get combat data from gameState
         const combatData = gameState.combatData || {};

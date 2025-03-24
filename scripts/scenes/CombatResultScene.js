@@ -38,8 +38,7 @@ class CombatResultScene extends Phaser.Scene {
         // Add background
         this.add.image(width/2, height/2, 'combat-result-bg').setDisplaySize(width, height);
 
-        // Add decorative corners
-        this.ui.addScreenCorners();
+
         
         // Get combat result data from gameState
         const combatResult = gameState.combatResult || {};

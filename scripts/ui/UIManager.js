@@ -363,7 +363,7 @@ class UIManager {
     }
     
     /**
-     * Add decorative corners to the screen
+     * Add decorative corners to the screen - REMOVED FROM ALL SCENES
      * @param {object} options - Optional configuration
      * @returns {array} Array of corner decoration objects
      */

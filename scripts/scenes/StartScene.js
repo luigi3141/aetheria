@@ -27,8 +27,7 @@ class StartScene extends Phaser.Scene {
         // Add a background
         this.add.image(width/2, height/2, 'title-bg').setDisplaySize(width, height);
 
-        // Add decorative corners
-        this.ui.addScreenCorners();
+
         
         // Create the title
         this.ui.createTitle(width/2, height * 0.2, 'Echoes of Aetheria', {

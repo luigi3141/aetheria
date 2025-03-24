@@ -24,8 +24,6 @@ class BaseScene extends Phaser.Scene {
         // Initialize transitions manager
         this.transitions = new TransitionManager(this);
         
-        // Add decorative corners (common UI element)
-        this.ui.addScreenCorners();
         
         // Initialize safe asset handling
         this.initializeSafeAssetHandling();
