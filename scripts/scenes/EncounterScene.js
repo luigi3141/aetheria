@@ -566,29 +566,7 @@ class EncounterScene extends Phaser.Scene {
         // Display enemies
         this.createEnemyDisplay();
         
-        // Create combat log panel
-        const logPanel = this.ui.createPanel(
-            width * 0.5,
-            height * 0.55,
-            width * 0.8,
-            height * 0.2,
-            {
-                fillColor: 0x111111,
-                fillAlpha: 0.7,
-                borderColor: 0xffcc00,
-                borderThickness: 2
-            }
-        );
-        
-        // Add combat log text
-        this.combatLogText = this.add.text(width * 0.5, height * 0.55, 'Combat begins!', {
-            fontFamily: "'VT323'",
-            fontSize: this.ui.fontSize.md + 'px',
-            fill: '#ffffff',
-            align: 'center',
-            wordWrap: { width: width * 0.75 }
-        }).setOrigin(0.5);
-        
+       
         // Create combat action buttons
         this.createCombatActionButtons();
     }
@@ -1008,29 +986,7 @@ class EncounterScene extends Phaser.Scene {
         // Display enemies
         this.createEnemyDisplay();
         
-        // Create combat log panel
-        const logPanel = this.ui.createPanel(
-            width * 0.5,
-            height * 0.55,
-            width * 0.8,
-            height * 0.2,
-            {
-                fillColor: 0x111111,
-                fillAlpha: 0.7,
-                borderColor: 0xffcc00,
-                borderThickness: 2
-            }
-        );
-        
-        // Add combat log text
-        this.combatLogText = this.add.text(width * 0.5, height * 0.55, 'Combat begins!', {
-            fontFamily: "'VT323'",
-            fontSize: this.ui.fontSize.md + 'px',
-            fill: '#ffffff',
-            align: 'center',
-            wordWrap: { width: width * 0.75 }
-        }).setOrigin(0.5);
-        
+ 
         // Create combat action buttons
         this.createCombatActionButtons();
     }
@@ -1471,6 +1427,10 @@ class EncounterScene extends Phaser.Scene {
      * Start combat sequence
      */
     startCombat() {
+        console.log('Starting combat encounter');
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        
         // If no enemies provided, generate random ones
         if (!this.enemies || this.enemies.length === 0) {
             this.enemies = this.generateRandomEnemies();
@@ -1478,9 +1438,6 @@ class EncounterScene extends Phaser.Scene {
         
         // Display enemies
         this.createEnemyDisplay();
-        
-        // Create encounter description
-        this.createEncounterDescription();
         
         // Initialize player status
         if (!gameState.player.statusEffects) {
@@ -1494,8 +1451,57 @@ class EncounterScene extends Phaser.Scene {
             }
         });
         
-        // Start first round
-        this.startPlayerTurn();
+        // Check if we should show the encounter intro
+        const skipIntro = gameState.combatData && gameState.combatData.showIntro === false;
+        
+        if (!skipIntro) {
+            // Calculate difficulty
+            const { difficulty, difficultyColor } = this.calculateDifficulty();
+            
+            // Create info panel
+            const panel = this.ui.createPanel(
+                width/2,
+                height * 0.62,
+                width * 0.7,
+                height * 0.15,
+                {
+                    fillColor: 0x111122,
+                    fillAlpha: 0.7,
+                    borderColor: 0x3399ff,
+                    borderThickness: 2
+                }
+            );
+            
+            // Enemy description - simplified for single enemy combat
+            const enemy = this.enemies[0];
+            const enemyText = `You've encountered a ${enemy.name}!`;
+            
+            // Create description text
+            this.add.text(width/2, height * 0.58, enemyText, {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.md + 'px',
+                fill: '#ffffff',
+                align: 'center'
+            }).setOrigin(0.5);
+            
+            // Add difficulty text
+            this.add.text(width/2, height * 0.65, `Difficulty: ${difficulty}`, {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.md + 'px',
+                fill: difficultyColor,
+                align: 'center'
+            }).setOrigin(0.5);
+            
+            // Start player turn after the intro delay
+            this.time.delayedCall(1500, () => {
+                this.startPlayerTurn();
+            });
+        } else {
+            // If we're skipping the intro, use the difficulty from DungeonScene
+            console.log('Skipping encounter intro, using passed difficulty data');
+            // Start player turn immediately
+            this.startPlayerTurn();
+        }
     }
     
     /**
@@ -1771,9 +1777,9 @@ class EncounterScene extends Phaser.Scene {
         // Create panel background
         const panel = this.ui.createPanel(
             this,
-            width/2,
-            height/2,
-            width * 0.7,
+            width * 0.5,
+            height * 0.5,
+            width * 0.3,
             height * 0.3,
             {
                 fillColor: 0x111122,
@@ -1823,7 +1829,7 @@ class EncounterScene extends Phaser.Scene {
      */
     addToCombatLog(message) {
         // Create new text object for the log entry
-        const newEntry = this.add.text(0, 0, message, {
+        const newEntry = this.add.text(-80, -80, message, {
             fontSize: '14px',
             fontFamily: "'VT323'",
             fill: '#ffffff',
@@ -1842,7 +1848,7 @@ class EncounterScene extends Phaser.Scene {
             // Reposition all entries to move them up
             entries.forEach((entry, index) => {
                 const y = (entries.length - 1 - index) * entryHeight;
-                entry.setPosition(10, y);
+                entry.setPosition(-80, y-80);
                 
                 // Fade out older entries
                 const alpha = Math.max(0.5, 1 - (entries.length - 1 - index) * 0.15);
@@ -1875,7 +1881,7 @@ class EncounterScene extends Phaser.Scene {
         this.combatLogContainer = this.add.container(width * 0.5, height * 0.55);
         
         // Create the background for the combat log
-        this.combatLogBg = this.add.rectangle(0, 0, width * 0.8, height * 0.2, 0x111111, 0.7);
+        this.combatLogBg = this.add.rectangle(0, 0, width * 0.3, height * 0.3, 0x111111, 0.7);
         this.combatLogBg.setStrokeStyle(2, 0xffcc00);
         this.combatLogContainer.add(this.combatLogBg);
         
