@@ -86,21 +86,7 @@ class DungeonSelectScene extends BaseScene {
         // Calculate panel dimensions
         const panelWidth = width * 0.75;
         const panelHeight = height * 0.16; // Reduced from 0.2 to 0.16
-        
-        // Create panel for dungeon list
-        this.ui.createPanel(
-            width * 0.5,
-            height * 0.52, 
-            width * 0.8,
-            height * 0.7, 
-            {
-                fillColor: 0x111122,
-                fillAlpha: 0.7,
-                borderColor: 0x3399ff,
-                borderThickness: 2
-            }
-        );
-        
+               
         // Create dungeon entries
         dungeons.forEach((dungeon, index) => {
             const y = startY + (index * spacing);
