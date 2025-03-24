@@ -3,6 +3,7 @@ import Button from '../ui/components/Button.js';
 import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import TransitionManager from '../ui/TransitionManager.js';
+import { ASSET_PATHS } from '../config/AssetConfig.js';
 
 /**
  * DungeonSelectScene - Scene for selecting which dungeon to explore
@@ -13,9 +14,9 @@ class DungeonSelectScene extends Phaser.Scene {
     }
 
     preload() {
-        // Load dungeon selection assets
-        this.load.image('dungeon-bg', 'https://labs.phaser.io/assets/skies/space2.png');
-        this.load.image('dungeon-icon', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        // Load dungeon selection assets with unique keys
+        this.load.image('select-bg', ASSET_PATHS.BACKGROUNDS.TITLE); // Using title bg for selection screen
+        this.load.image('dungeon-preview', ASSET_PATHS.BACKGROUNDS.DUNGEON);
         
         // Load transition assets
         this.load.spritesheet('door', 'https://labs.phaser.io/assets/sprites/metalslug_mummy37x45.png', { 
@@ -37,8 +38,8 @@ class DungeonSelectScene extends Phaser.Scene {
         // Create Transition Manager
         this.transitions = new TransitionManager(this);
         
-        // Add background
-        this.add.image(width/2, height/2, 'dungeon-bg').setDisplaySize(width, height);
+        // Add background with unique key
+        this.add.image(width/2, height/2, 'select-bg').setDisplaySize(width, height);
 
         // Add decorative corners
         this.ui.addScreenCorners();
@@ -101,7 +102,7 @@ class DungeonSelectScene extends Phaser.Scene {
             
             // Add dungeon icon
             const iconX = width * 0.2;
-            this.add.image(iconX, y, 'dungeon-icon').setDisplaySize(60, 60);
+            this.add.image(iconX, y, 'dungeon-preview').setDisplaySize(60, 60);
             
             // Add dungeon info
             const infoX = width * 0.4;

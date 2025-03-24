@@ -174,7 +174,9 @@ class EncounterScene extends Phaser.Scene {
         };
         
         // Add background
-        this.add.image(width/2, height/2, 'combat-bg').setDisplaySize(width, height);
+        const background = this.add.image(width/2, height/2, 'combat-bg').setDisplaySize(width, height);
+        // Apply a desaturation tint to make UI elements stand out better
+        background.setTint(0xaaaaaa);
         
         // Add decorative corners
         this.ui.addScreenCorners();
@@ -506,16 +508,20 @@ class EncounterScene extends Phaser.Scene {
         this.playerNameText = this.add.text(width * 0.25, height * 0.2, playerName, {
             fontFamily: "'Press Start 2P'",
             fontSize: this.ui.fontSize.sm + 'px',
-            fill: '#ffffff'
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
         }).setOrigin(0.5);
         
         this.playerHealthText = this.add.text(width * 0.25, height * 0.25, `HP: ${playerHealth}/${playerMaxHealth}`, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.sm + 'px',
-            fill: '#ffffff'
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
         }).setOrigin(0.5);
         
-        this.playerHealthBar = this.makeHealthBar(width * 0.25, height * 0.3, 150, 15, 0x3399ff);
+        this.playerHealthBar = this.makeHealthBar(width * 0.25, height * 0.3, 150, 15, 0x00ff00);
         this.updateHealthBar(this.playerHealthBar, playerHealth, playerMaxHealth);
         
         // Add player mana bar
@@ -524,7 +530,9 @@ class EncounterScene extends Phaser.Scene {
         this.playerManaText = this.add.text(width * 0.25, height * 0.35, `MP: ${playerMana}/${playerMaxMana}`, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.sm + 'px',
-            fill: '#ffffff'
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
         }).setOrigin(0.5);
         this.playerManaBar = this.makeManaBar(width * 0.25, height * 0.35, 150, 15, 0x0066ff);
         this.updateManaBar(this.playerManaBar, playerMana, playerMaxMana);
@@ -942,16 +950,20 @@ class EncounterScene extends Phaser.Scene {
         this.playerNameText = this.add.text(width * 0.25, height * 0.2, playerName, {
             fontFamily: "'Press Start 2P'",
             fontSize: this.ui.fontSize.sm + 'px',
-            fill: '#ffffff'
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
         }).setOrigin(0.5);
         
         this.playerHealthText = this.add.text(width * 0.25, height * 0.25, `HP: ${playerHealth}/${playerMaxHealth}`, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.sm + 'px',
-            fill: '#ffffff'
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
         }).setOrigin(0.5);
         
-        this.playerHealthBar = this.makeHealthBar(width * 0.25, height * 0.3, 150, 15, 0x3399ff);
+        this.playerHealthBar = this.makeHealthBar(width * 0.25, height * 0.3, 150, 15, 0x00ff00);
         this.updateHealthBar(this.playerHealthBar, playerHealth, playerMaxHealth);
         
         // Add player mana bar
@@ -960,7 +972,9 @@ class EncounterScene extends Phaser.Scene {
         this.playerManaText = this.add.text(width * 0.25, height * 0.35, `MP: ${playerMana}/${playerMaxMana}`, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.sm + 'px',
-            fill: '#ffffff'
+            fill: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 2
         }).setOrigin(0.5);
         this.playerManaBar = this.makeManaBar(width * 0.25, height * 0.35, 150, 15, 0x0066ff);
         this.updateManaBar(this.playerManaBar, playerMana, playerMaxMana);

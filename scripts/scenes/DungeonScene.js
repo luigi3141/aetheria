@@ -18,34 +18,28 @@ class DungeonScene extends BaseScene {
     }
 
     preload() {
-        // Clear texture cache for dungeon-bg to ensure we load the new one
-        if (this.textures.exists('dungeon-bg')) {
-            this.textures.remove('dungeon-bg');
+        // Clear texture cache for combat-bg to ensure we load the new one
+        if (this.textures.exists('combat-bg')) {
+            this.textures.remove('combat-bg');
         }
         
-        // Load dungeon assets
-        this.load.image('dungeon-bg', ASSET_PATHS.BACKGROUNDS.COMBAT);
-        this.load.image('player-icon', 'assets/sprites/i1.png');
-        this.load.image('enemy-icon', 'assets/sprites/i2.png');
+        // Load dungeon assets with unique keys
+        this.load.image('combat-bg', ASSET_PATHS.BACKGROUNDS.COMBAT);
+        this.load.image('player-icon', ASSET_PATHS.ICONS.PLAYER);
+        this.load.image('enemy-icon', ASSET_PATHS.ENEMIES.DEFAULT);
         
-        // Load transition assets
-        this.load.spritesheet('door', 'https://labs.phaser.io/assets/sprites/metalslug_mummy37x45.png', { 
-            frameWidth: 37, 
-            frameHeight: 45 
-        });
-        this.load.audio('door-open', 'assets/audio/door_open.wav');
-        this.load.audio('combat-start', 'assets/audio/sword.wav');
-        
-        // Load enemy sprites - placeholders with dungeon- prefix to avoid collisions
-        this.load.image('dungeon-wolf-placeholder', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('dungeon-bandit-placeholder', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('dungeon-spider-placeholder', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('dungeon-alpha-wolf-placeholder', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        // Load enemy sprites
+        this.load.image('dungeon-wolf', ASSET_PATHS.ENEMIES.WOLF);
+        this.load.image('dungeon-bandit', ASSET_PATHS.ENEMIES.DEFAULT); // No bandit asset, use default
+        this.load.image('dungeon-spider', ASSET_PATHS.ENEMIES.SPIDER);
+        this.load.image('dungeon-alpha-wolf', ASSET_PATHS.ENEMIES.WOLF); // Use wolf for alpha-wolf
         
         // Load combat effect sprites
-        this.load.image('attack-effect', 'https://labs.phaser.io/assets/particles/red.png');
-        this.load.image('heal-effect', 'https://labs.phaser.io/assets/particles/blue.png');
-        this.load.image('defend-effect', 'https://labs.phaser.io/assets/particles/yellow.png');
+        this.load.image('attack-effect', ASSET_PATHS.EFFECTS.SLASH);
+        
+        // Load audio
+        this.load.audio('door-open', 'assets/audio/door_open.wav');
+        this.load.audio('combat-start', 'assets/audio/sword.wav');
     }
 
     init(data) {
@@ -84,7 +78,7 @@ class DungeonScene extends BaseScene {
         const height = this.cameras.main.height;
         
         // Add background using the safe image loading method from BaseScene
-        this.safeAddImage(width/2, height/2, 'dungeon-bg', null, { displayWidth: width, displayHeight: height });
+        this.safeAddImage(width/2, height/2, 'combat-bg', null, { displayWidth: width, displayHeight: height });
 
         // Add decorative corners
         this.ui.addScreenCorners();
@@ -149,8 +143,8 @@ class DungeonScene extends BaseScene {
         
         // Generate random number of rooms
         const totalRooms = Phaser.Math.Between(
-            dungeonTemplate.minRooms || 5, 
-            dungeonTemplate.maxRooms || 10
+            dungeonTemplate.minRooms || 15, 
+            dungeonTemplate.maxRooms || 20
         );
         
         // Create current dungeon
@@ -784,29 +778,7 @@ class DungeonScene extends BaseScene {
             this.gameOver();
         }
     }
-    
-    /**
-     * Handle a defend action
-     */
-    handleDefend() {
-        // Calculate defense bonus
-        const defenseBonus = Phaser.Math.Between(5, 10);
-        
-        // Apply defense bonus to player
-        gameState.player.defense += defenseBonus;
-    }
-    
-    /**
-     * Handle a heal action
-     */
-    handleHeal() {
-        // Calculate heal amount
-        const healAmount = Phaser.Math.Between(10, 20);
-        
-        // Apply heal to player
-        gameState.player.health += healAmount;
-    }
-    
+      
     /**
      * End combat
      */
@@ -869,14 +841,15 @@ class DungeonScene extends BaseScene {
                     this.add.image(
                         cellX + cellSize/2,
                         cellY + cellSize/2,
-                        'chest-sprite'
-                    ).setDisplaySize(cellSize * 0.6, cellSize * 0.6);
+                        'player-icon'  // Using player icon as a temporary chest
+                    ).setDisplaySize(cellSize * 0.6, cellSize * 0.6)
+                    .setTint(0xffaa00); // Gold tint for chests
                 } else if (!isWall && Math.random() < 0.15) {
                     // Add an enemy
                     this.add.image(
                         cellX + cellSize/2,
                         cellY + cellSize/2,
-                        'enemy-sprite'
+                        'enemy-icon'  // Using the loaded enemy icon
                     ).setDisplaySize(cellSize * 0.7, cellSize * 0.7)
                     .setTint(0xff0000);
                 }
@@ -895,7 +868,7 @@ class DungeonScene extends BaseScene {
         this.player = this.add.image(
             width/2,
             height/2,
-            'player-sprite'
+            'player-icon'  // Updated to use player-icon which is loaded properly
         ).setDisplaySize(40, 40);
         
         // Add a simple highlight instead of glow (which requires WebGL)
