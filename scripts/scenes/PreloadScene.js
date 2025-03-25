@@ -114,15 +114,15 @@ class PreloadScene extends BaseScene {
             }
           };
           
-          tryLoadAudio('attack', ASSET_PATHS.SOUNDS.ATTACK);
-          tryLoadAudio('hit', ASSET_PATHS.SOUNDS.HIT);
-          tryLoadAudio('victory', ASSET_PATHS.SOUNDS.VICTORY);
-          tryLoadAudio('defeat', ASSET_PATHS.SOUNDS.DEFEAT);
-          tryLoadAudio('level-up', ASSET_PATHS.SOUNDS.LEVEL_UP);
-          tryLoadAudio('heal', ASSET_PATHS.SOUNDS.HEAL);
-          tryLoadAudio('button-click', ASSET_PATHS.SOUNDS.BUTTON_CLICK);
-          tryLoadAudio('menu-open', ASSET_PATHS.SOUNDS.MENU_OPEN);
-          tryLoadAudio('menu-close', ASSET_PATHS.SOUNDS.MENU_CLOSE);
+          tryLoadAudio('attack', ASSET_PATHS.SOUNDS.combat.attack);
+          tryLoadAudio('hit', ASSET_PATHS.SOUNDS.combat.hit);
+          tryLoadAudio('victory', ASSET_PATHS.SOUNDS.combat.victory);
+          tryLoadAudio('defeat', ASSET_PATHS.SOUNDS.combat.defeat);
+          tryLoadAudio('level-up', ASSET_PATHS.SOUNDS.combat.levelUp);
+          tryLoadAudio('heal', ASSET_PATHS.SOUNDS.combat.heal);
+          tryLoadAudio('button-click', ASSET_PATHS.SOUNDS.ui.buttonClick);
+          tryLoadAudio('menu-open', ASSET_PATHS.SOUNDS.ui.menuOpen);
+          tryLoadAudio('menu-close', ASSET_PATHS.SOUNDS.ui.menuClose);
           tryLoadAudio('background-music', ASSET_PATHS.MUSIC.BACKGROUND);
           tryLoadAudio('combat-music', ASSET_PATHS.MUSIC.COMBAT);
           tryLoadAudio('menu-music', ASSET_PATHS.MUSIC.MENU);

@@ -62,7 +62,7 @@ export const ASSET_PATHS = {
     },
     
     // Audio for combat
-    COMBAT_AUDIO: {
+    SOUNDS: {
         combat: {
             attack: 'assets/audio/combat/attack.mp3',
             hit: 'assets/audio/combat/player-hit.mp3',
