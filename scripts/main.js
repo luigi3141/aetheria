@@ -1,4 +1,5 @@
 // Import all scene classes
+import PreloadScene from './scenes/PreloadScene.js';
 import StartScene from './scenes/StartScene.js';
 import CharacterSelectScene from './scenes/CharacterSelectScene.js';
 import OverworldScene from './scenes/OverworldScene.js';
@@ -10,6 +11,7 @@ import PostRunSummaryScene from './scenes/PostRunSummaryScene.js';
 import InventoryScene from './scenes/InventoryScene.js';
 import CraftingScene from './scenes/CraftingScene.js';
 import CharacterSheetScene from './scenes/CharacterSheetScene.js';
+import DefeatScene from './scenes/DefeatScene.js';
 
 // Initialize Phaser game instance
 window.addEventListener('load', function() {
@@ -27,6 +29,7 @@ window.addEventListener('load', function() {
     
     // Check each module
     const modules = {
+        PreloadScene: checkModule('PreloadScene', PreloadScene),
         StartScene: checkModule('StartScene', StartScene),
         CharacterSelectScene: checkModule('CharacterSelectScene', CharacterSelectScene),
         OverworldScene: checkModule('OverworldScene', OverworldScene),
@@ -37,7 +40,8 @@ window.addEventListener('load', function() {
         PostRunSummaryScene: checkModule('PostRunSummaryScene', PostRunSummaryScene),
         InventoryScene: checkModule('InventoryScene', InventoryScene),
         CraftingScene: checkModule('CraftingScene', CraftingScene),
-        CharacterSheetScene: checkModule('CharacterSheetScene', CharacterSheetScene)
+        CharacterSheetScene: checkModule('CharacterSheetScene', CharacterSheetScene),
+        DefeatScene: checkModule('DefeatScene', DefeatScene)
     };
     
     try {
@@ -47,6 +51,7 @@ window.addEventListener('load', function() {
             height: 600,
             parent: 'game-container',
             scene: [
+                modules.PreloadScene,
                 modules.StartScene, 
                 modules.CharacterSelectScene,
                 modules.OverworldScene,
@@ -57,7 +62,8 @@ window.addEventListener('load', function() {
                 modules.PostRunSummaryScene,
                 modules.InventoryScene,
                 modules.CraftingScene,
-                modules.CharacterSheetScene
+                modules.CharacterSheetScene,
+                modules.DefeatScene,
             ],
             backgroundColor: '#000000',
             pixelArt: true,
@@ -86,6 +92,15 @@ window.addEventListener('load', function() {
         // Create the game instance
         console.log('Creating Phaser game instance');
         window.game = new Phaser.Game(config);
+        // Validate scene keys
+        const allScenes = game.scene.scenes;
+        const keys = allScenes.map(scene => scene.scene.key);
+        const duplicates = keys.filter((key, index, arr) => arr.indexOf(key) !== index);
+
+        if (duplicates.length > 0) {
+            console.warn(`⚠️ Duplicate scene keys found: ${duplicates.join(', ')}`);
+}
+
         console.log('Phaser game instance created successfully');
     } catch (error) {
         console.error('Error initializing Phaser game:', error);

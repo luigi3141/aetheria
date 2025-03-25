@@ -6,7 +6,9 @@ export const ASSET_PATHS = {
     // Backgrounds
     BACKGROUNDS: {
         COMBAT: 'assets/sprites/backgrounds/combat-bg.png',
+        MENU: 'assets/sprites/backgrounds/menu-bg.png',
         CHARACTER: 'assets/sprites/backgrounds/character-bg.png',
+        DEFEAT: 'assets/sprites/backgrounds/defeat-bg.png',
         INVENTORY: 'assets/sprites/backgrounds/inventory-bg.png',
         TITLE: 'assets/sprites/backgrounds/title-bg.png',
         OVERWORLD: 'assets/sprites/backgrounds/overworld-bg.png',
@@ -14,6 +16,76 @@ export const ASSET_PATHS = {
         BATTLE_RESULT: 'assets/sprites/backgrounds/battle-result-bg.png',
         FOREST: 'assets/sprites/backgrounds/forest-bg.png',
         CAVERNS: 'assets/sprites/backgrounds/caverns-bg.png'
+    },
+    
+    // Character sprites
+    PLAYERS: {
+        DEFAULT: 'assets/sprites/characters/warrior-sprite.png',
+        WARRIOR: 'assets/sprites/characters/warrior-sprite.png',
+        MAGE: 'assets/sprites/characters/mage-sprite.png',
+        ROGUE: 'assets/sprites/characters/rogue-sprite.png',
+        CLERIC: 'assets/sprites/characters/cleric-sprite.png',
+        RANGER: 'assets/sprites/characters/ranger-sprite.png',
+        BARD: 'assets/sprites/characters/bard-sprite.png'
+    },
+    
+    // Enemy sprites
+    ENEMIES: {
+        DEFAULT: 'assets/sprites/enemies/goblin-sprite.png',
+        GOBLIN: 'assets/sprites/enemies/goblin-sprite.png',
+        SPIDER: 'assets/sprites/enemies/spider-sprite.png',
+        WOLF: 'assets/sprites/enemies/wolf-sprite.png',
+        SKELETON: 'assets/sprites/enemies/skeleton-sprite.png',
+        SLIME: 'assets/sprites/enemies/slime-sprite.png',
+        BAT: 'assets/sprites/enemies/bat-sprite.png',
+        MUSHROOM: 'assets/sprites/enemies/mushroom-sprite.png',
+        BANDIT: 'assets/sprites/enemies/bandit-sprite.png',
+        GOBLIN_CHIEF: 'assets/sprites/enemies/goblin-chief-sprite.png'
+    },
+    
+    // Effect sprites
+    EFFECTS: {
+        SLASH: 'assets/sprites/effects/slash.png',
+        ARCANE: 'assets/sprites/effects/arcane.png',
+        FIRE: 'assets/sprites/effects/fire.png',
+        POISON: 'assets/sprites/effects/poison.png',
+        BLEED: 'assets/sprites/effects/bleed.png',
+        STUN: 'assets/sprites/effects/stun.png',
+        CRYSTAL: 'assets/sprites/effects/crystal.png',
+        GHOST: 'assets/sprites/effects/ghost.png'
+    },
+    
+    // UI
+    UI: {
+        HEALTH_BAR: 'assets/sprites/ui/health-bar.png',
+        MANA_BAR: 'assets/sprites/ui/mana-bar.png'
+    },
+    
+    // Audio for combat
+    COMBAT_AUDIO: {
+        combat: {
+            attack: 'assets/audio/combat/attack.mp3',
+            hit: 'assets/audio/combat/player-hit.mp3',
+            victory: 'assets/audio/combat/victory.mp3',
+            defeat: 'assets/audio/combat/defeat.mp3',
+            levelUp: 'assets/audio/combat/level-up.mp3',
+            heal: 'assets/audio/combat/heal.mp3'
+        },
+        ui: {
+            buttonClick: 'assets/audio/ui/button-click.mp3',
+            menuOpen: 'assets/audio/ui/menu-open.mp3',
+            menuClose: 'assets/audio/ui/menu-close.mp3'
+        }
+    },
+    
+    // Music
+    MUSIC: {
+        TITLE: 'assets/audio/music/title.mp3',
+        BATTLE: 'assets/audio/music/battle.mp3',
+        VICTORY: 'assets/audio/music/victory.mp3',
+        DEFEAT: 'assets/audio/music/defeat.mp3',
+        OVERWORLD: 'assets/audio/music/overworld.mp3',
+        DUNGEON: 'assets/audio/music/dungeon.mp3'
     },
     
     // Character portraits
@@ -36,59 +108,6 @@ export const ASSET_PATHS = {
         AGILITY: 'assets/sprites/icons/agility-icon.png',
         INTELLIGENCE: 'assets/sprites/icons/intelligence-icon.png',
         CONSTITUTION: 'assets/sprites/icons/constitution-icon.png'
-    },
-    
-    // Effects
-    EFFECTS: {
-        SLASH: 'assets/sprites/effects/slash.png',
-        FIRE: 'assets/sprites/effects/fire.png',
-        ICE: 'assets/sprites/effects/ice.png',
-        ARCANE: 'assets/sprites/effects/arcane.png',
-        POISON: 'assets/sprites/effects/poison.png',
-        BLEED: 'assets/sprites/effects/bleed.png',
-        STUN: 'assets/sprites/effects/stun.png',
-        HEAL: 'assets/sprites/effects/heal.png',
-        SHIELD: 'assets/sprites/effects/shield.png',
-        CRYSTAL: 'assets/sprites/effects/crystal.png',
-        GHOST: 'assets/sprites/effects/ghost.png'
-    },
-    
-    // Enemy sprites
-    ENEMIES: {
-        GOBLIN: 'assets/sprites/enemies/goblin-sprite.png',
-        WOLF: 'assets/sprites/enemies/wolf-sprite.png',
-        MUSHROOM: 'assets/sprites/enemies/mushroom-sprite.png',
-        BAT: 'assets/sprites/enemies/bat-sprite.png',
-        SKELETON: 'assets/sprites/enemies/skeleton-sprite.png',
-        SLIME: 'assets/sprites/enemies/slime-sprite.png',
-        SPIDER: 'assets/sprites/enemies/spider-sprite.png',
-        GHOST: 'assets/sprites/enemies/ghost-sprite.png',
-        GOLEM: 'assets/sprites/enemies/golem-sprite.png',
-        DRAGON: 'assets/sprites/enemies/dragon-sprite.png',
-        DEFAULT: 'assets/sprites/enemies/default-enemy.png'
-    },
-    
-    // Player sprites
-    PLAYERS: {
-        WARRIOR: 'assets/sprites/characters/warrior-sprite.png',
-        MAGE: 'assets/sprites/characters/mage-sprite.png',
-        ROGUE: 'assets/sprites/characters/rogue-sprite.png',
-        CLERIC: 'assets/sprites/characters/cleric-sprite.png',
-        RANGER: 'assets/sprites/characters/ranger-sprite.png',
-        DEFAULT: 'assets/sprites/characters/default-player.png'
-    },
-    
-    // Audio
-    SOUNDS: {
-        ATTACK: 'assets/audio/attack.mp3',
-        ENEMY_HIT: 'assets/audio/enemy-hit.mp3',
-        PLAYER_HIT: 'assets/audio/player-hit.mp3',
-        HEAL: 'assets/audio/heal.mp3',
-        DEFEND: 'assets/audio/defend.mp3',
-        VICTORY: 'assets/audio/victory.mp3',
-        DEFEAT: 'assets/audio/defeat.mp3',
-        MENU_SELECT: 'assets/audio/menu-select.mp3',
-        LEVEL_UP: 'assets/audio/level-up.mp3'
     },
     
     // Fallback assets (used when actual assets not found)

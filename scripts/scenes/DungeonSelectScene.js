@@ -12,7 +12,7 @@ import BaseScene from './BaseScene.js';
  */
 class DungeonSelectScene extends BaseScene {
     constructor() {
-        super('DungeonSelectScene');
+        super({ key: 'DungeonSelectScene' });
     }
 
     preload() {

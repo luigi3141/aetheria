@@ -10,7 +10,7 @@ import ButtonFactory from '../ui/ButtonFactory.js';
  */
 class CharacterSheetScene extends BaseScene {
     constructor() {
-        super('CharacterSheetScene');
+        super({ key: 'CharacterSheetScene' });
     }
 
     preload() {

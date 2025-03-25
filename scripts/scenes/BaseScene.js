@@ -4,29 +4,51 @@ import TransitionManager from '../ui/TransitionManager.js';
 /**
  * BaseScene - Base class for all scenes with common functionality
  */
-class BaseScene extends Phaser.Scene {
-    /**
-     * @param {string} key - The scene key
-     * @param {object} options - Additional scene options
-     */
-    constructor(key, options = {}) {
-        super({ key, ...options });
-    }
+export default class BaseScene extends Phaser.Scene {
+    constructor(config) {
+        if (!config || typeof config.key !== 'string') {
+          throw new Error(
+            `BaseScene constructor must be passed an object with a valid { key: 'SceneName' }`
+          );
+        }
+    
+        super(config);
+        console.log(`🧩 BaseScene constructor for ${config.key}`);
+      }
 
     /**
      * Initialize base scene components
      * This should be called at the beginning of the create() method in child classes
      */
     initializeScene() {
-        // Initialize UI manager
-        this.ui = new UIManager(this);
-        
-        // Initialize transitions manager
-        this.transitions = new TransitionManager(this);
-        
-        
+        // Initialize UI manager if not already set
+        if (!this.ui) {
+            console.log(`🧩 Initializing UIManager for scene: ${this.scene.key}`);
+            try {
+                this.ui = new UIManager(this);
+            } catch (e) {
+                console.warn(`⚠️ UIManager failed to initialize in ${this.scene.key}:`, e);
+            }
+        }
+    
+        // Initialize transition manager if not already set
+        if (!this.transitions) {
+            console.log(`🧩 Initializing TransitionManager for scene: ${this.scene.key}`);
+            try {
+                this.transitions = new TransitionManager(this);
+            } catch (e) {
+                console.warn(`⚠️ TransitionManager failed to initialize in ${this.scene.key}:`, e);
+            }
+        }
+    
         // Initialize safe asset handling
-        this.initializeSafeAssetHandling();
+        if (typeof this.initializeSafeAssetHandling === 'function') {
+            try {
+                this.initializeSafeAssetHandling();
+            } catch (e) {
+                console.warn(`⚠️ initializeSafeAssetHandling failed in ${this.scene.key}:`, e);
+            }
+        }
     }
     
     /**
@@ -81,5 +103,3 @@ class BaseScene extends Phaser.Scene {
         // This can be expanded with more safe asset methods as needed
     }
 }
-
-export default BaseScene;

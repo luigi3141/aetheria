@@ -7,7 +7,7 @@ const enemyData = {
     // Verdant Woods enemies
     "forest-goblin": {
         name: "Forest Goblin",
-        sprite: "goblin-sprite",
+        sprite: "goblin",
         level: 1,
         baseHealth: 25,
         baseAttack: 5,
@@ -25,7 +25,7 @@ const enemyData = {
     },
     "wolf": {
         name: "Forest Wolf",
-        sprite: "wolf-sprite",
+        sprite: "wolf",
         level: 2,
         baseHealth: 35,
         baseAttack: 8,
@@ -43,7 +43,7 @@ const enemyData = {
     },
     "forest-spider": {
         name: "Giant Spider",
-        sprite: "spider-sprite",
+        sprite: "spider",
         level: 3,
         baseHealth: 40,
         baseAttack: 7,
@@ -63,7 +63,7 @@ const enemyData = {
     // New Verdant Woods enemies
     "forest-bandit": {
         name: "Forest Bandit",
-        sprite: "bandit-sprite",
+        sprite: "bandit",
         level: 3,
         baseHealth: 45,
         baseAttack: 9,
@@ -82,7 +82,7 @@ const enemyData = {
     },
     "mushroom-creature": {
         name: "Myconid",
-        sprite: "mushroom-sprite",
+        sprite: "mushroom",
         level: 2,
         baseHealth: 30,
         baseAttack: 6,
@@ -102,7 +102,7 @@ const enemyData = {
     // Crystal Caverns enemies
     "cave-bat": {
         name: "Crystal Bat",
-        sprite: "bat-sprite",
+        sprite: "bat",
         level: 4,
         baseHealth: 30,
         baseAttack: 10,
@@ -120,7 +120,7 @@ const enemyData = {
     },
     "crystal-golem": {
         name: "Crystal Golem",
-        sprite: "golem-sprite",
+        sprite: "golem",
         level: 6,
         baseHealth: 80,
         baseAttack: 12,
@@ -138,7 +138,7 @@ const enemyData = {
     },
     "miner-ghost": {
         name: "Spectral Miner",
-        sprite: "ghost-sprite",
+        sprite: "ghost",
         level: 5,
         baseHealth: 45,
         baseAttack: 15,
@@ -159,7 +159,7 @@ const enemyData = {
     // Bosses
     "goblin-chief": {
         name: "Goblin Chieftain",
-        sprite: "goblin-chief-sprite",
+        sprite: "goblin-chief",
         level: 5,
         baseHealth: 100,
         baseAttack: 12,
@@ -179,7 +179,7 @@ const enemyData = {
     },
     "crystal-queen": {
         name: "Crystal Queen",
-        sprite: "crystal-queen-sprite",
+        sprite: "crystal-queen",
         level: 8,
         baseHealth: 150,
         baseAttack: 18,
@@ -494,8 +494,16 @@ const abilityDefinitions = {
  * @param {string} enemyId - The ID of the enemy
  * @returns {object} - The enemy data object
  */
-export function getEnemyData(enemyId) {
-    return enemyData[enemyId] || null;
+function getEnemyData(enemyId) {
+    const enemy = enemyData[enemyId];
+    if (!enemy) {
+        console.warn(`Enemy data not found for ID: ${enemyId}`);
+        return enemyData['wolf']; // Default to wolf if enemy not found
+    }
+    return {
+        ...enemy,
+        maxHealth: enemy.baseHealth
+    };
 }
 
 /**
@@ -503,7 +511,7 @@ export function getEnemyData(enemyId) {
  * @param {string} abilityId - The ID of the ability
  * @returns {object} - The ability data object
  */
-export function getAbilityData(abilityId) {
+function getAbilityData(abilityId) {
     return abilityDefinitions[abilityId] || null;
 }
 
@@ -513,7 +521,7 @@ export function getAbilityData(abilityId) {
  * @param {number} levelModifier - Optional level modifier (default: 0)
  * @returns {object} - An enemy instance with calculated stats
  */
-export function generateEnemy(enemyId, levelModifier = 0) {
+function generateEnemy(enemyId, levelModifier = 0) {
     const baseData = getEnemyData(enemyId);
     
     if (!baseData) {
@@ -568,7 +576,7 @@ export function generateEnemy(enemyId, levelModifier = 0) {
  * @param {number} count - Number of enemies to generate
  * @returns {array} - Array of enemy objects
  */
-export function getDungeonEnemies(dungeonId, dungeonLevel, count = 1) {
+function getDungeonEnemies(dungeonId, dungeonLevel, count = 1) {
     let possibleEnemies = [];
     
     // Match enemies to dungeon
@@ -625,7 +633,7 @@ export function getDungeonEnemies(dungeonId, dungeonLevel, count = 1) {
  * @param {number} count - Number of enemies to generate
  * @returns {array} - Array of default enemy objects
  */
-export function createDefaultEnemies(level, count) {
+function createDefaultEnemies(level, count) {
     const enemies = [];
     for (let i = 0; i < count; i++) {
         enemies.push(createDefaultEnemy(level));
@@ -638,7 +646,7 @@ export function createDefaultEnemies(level, count) {
  * @param {number} level - The level for the enemy
  * @returns {object} - A default enemy object
  */
-export function createDefaultEnemy(level) {
+function createDefaultEnemy(level) {
     const types = ['Wolf', 'Bandit', 'Spider', 'Goblin'];
     const type = types[Math.floor(Math.random() * types.length)];
     
@@ -659,7 +667,7 @@ export function createDefaultEnemy(level) {
  * @param {object|array} enemies - The enemy object or array of enemies
  * @returns {object} - Loot object containing gold, experience, and items
  */
-export function generateLoot(enemies) {
+function generateLoot(enemies) {
     // Convert single enemy to array for consistent processing
     const enemyArray = Array.isArray(enemies) ? enemies : [enemies];
     
@@ -704,7 +712,7 @@ export function generateLoot(enemies) {
  * @param {number} dungeonLevel - The level of the dungeon
  * @returns {object} - Boss enemy object
  */
-export function getDungeonBoss(dungeonId, dungeonLevel) {
+function getDungeonBoss(dungeonId, dungeonLevel) {
     let bossId;
     
     // Match boss to dungeon
@@ -749,7 +757,7 @@ export function getDungeonBoss(dungeonId, dungeonLevel) {
  * @param {number} level - The level for the boss
  * @returns {object} - A default boss object
  */
-export function createDefaultBoss(level) {
+function createDefaultBoss(level) {
     const types = ['Alpha Wolf', 'Bandit Chief', 'Spider Queen', 'Goblin King'];
     const type = types[Math.floor(Math.random() * types.length)];
     const bossLevel = level + 2;
@@ -772,7 +780,7 @@ export function createDefaultBoss(level) {
  * @param {object} target - The target object (player or enemy)
  * @param {object} statusEffect - The status effect to apply
  */
-export function applyStatusEffect(target, statusEffect) {
+function applyStatusEffect(target, statusEffect) {
     // Check if effect should be applied based on chance
     if (statusEffect.chance && Math.random() > statusEffect.chance) {
         return false; // Effect failed to apply
@@ -804,5 +812,12 @@ export function applyStatusEffect(target, statusEffect) {
 }
 
 export { 
+    getEnemyData,
+    getAbilityData,
+    generateLoot,
+    applyStatusEffect,
+    getDungeonBoss,
+    getDungeonEnemies,
+    enemyData,
     abilityDefinitions
 };

@@ -7,7 +7,7 @@ import BaseScene from './BaseScene.js';
  */
 class PreloadScene extends BaseScene {
     constructor() {
-        super('PreloadScene');
+        super({ key: 'PreloadScene' });
         
         // Track loading progress
         this.loadingProgress = 0;
@@ -34,7 +34,7 @@ class PreloadScene extends BaseScene {
         
         // Start the title screen scene after a short delay
         this.time.delayedCall(500, () => {
-            this.scene.start('TitleScene');
+            this.scene.start('StartScene');
         });
     }
     
@@ -106,47 +106,73 @@ class PreloadScene extends BaseScene {
      * Preload all shared assets used across multiple scenes
      */
     preloadSharedAssets() {
-        // Load common backgrounds
-        this.load.image('character-bg', ASSET_PATHS.BACKGROUNDS.CHARACTER);
-        this.load.image('combat-bg', ASSET_PATHS.BACKGROUNDS.COMBAT);
-        this.load.image('inventory-bg', ASSET_PATHS.BACKGROUNDS.INVENTORY);
-        this.load.image('title-bg', ASSET_PATHS.BACKGROUNDS.TITLE);
-        this.load.image('overworld-bg', ASSET_PATHS.BACKGROUNDS.OVERWORLD);
-        this.load.image('dungeon-bg', ASSET_PATHS.BACKGROUNDS.DUNGEON);
-        this.load.image('battle-result-bg', ASSET_PATHS.BACKGROUNDS.BATTLE_RESULT);
-        
-        // Load character class portraits
-        this.load.image('warrior', ASSET_PATHS.PORTRAITS.WARRIOR);
-        this.load.image('mage', ASSET_PATHS.PORTRAITS.MAGE);
-        this.load.image('rogue', ASSET_PATHS.PORTRAITS.ROGUE);
-        this.load.image('cleric', ASSET_PATHS.PORTRAITS.CLERIC);
-        this.load.image('ranger', ASSET_PATHS.PORTRAITS.RANGER);
-        this.load.image('bard', ASSET_PATHS.PORTRAITS.BARD);
-        
-        // Load common icons
-        this.load.image('player-icon', ASSET_PATHS.ICONS.PLAYER);
-        this.load.image('health-icon', ASSET_PATHS.ICONS.HEALTH);
-        this.load.image('mana-icon', ASSET_PATHS.ICONS.MANA);
-        this.load.image('strength-icon', ASSET_PATHS.ICONS.STRENGTH);
-        this.load.image('agility-icon', ASSET_PATHS.ICONS.AGILITY);
-        this.load.image('intelligence-icon', ASSET_PATHS.ICONS.INTELLIGENCE);
-        this.load.image('constitution-icon', ASSET_PATHS.ICONS.CONSTITUTION);
-        
-        // Load effect sprites
-        this.load.image('slash-effect', ASSET_PATHS.EFFECTS.SLASH);
-        this.load.image('fire-effect', ASSET_PATHS.EFFECTS.FIRE);
-        this.load.image('heal-effect', ASSET_PATHS.EFFECTS.HEAL);
-        
-        // Load sound effects
-        this.load.audio('attack', ASSET_PATHS.AUDIO.ATTACK);
-        this.load.audio('enemy-hit', ASSET_PATHS.AUDIO.ENEMY_HIT);
-        this.load.audio('player-hit', ASSET_PATHS.AUDIO.PLAYER_HIT);
-        this.load.audio('heal', ASSET_PATHS.AUDIO.HEAL);
-        this.load.audio('victory', ASSET_PATHS.AUDIO.VICTORY);
-        this.load.audio('defeat', ASSET_PATHS.AUDIO.DEFEAT);
-        this.load.audio('button-click', ASSET_PATHS.AUDIO.MENU_SELECT);
-        this.load.audio('level-up', ASSET_PATHS.AUDIO.LEVEL_UP);
-    }
+        const tryLoadAudio = (key, path) => {
+            if (path) {
+              this.load.audio(key, path);
+            } else {
+              console.warn(`⚠️ Skipping load.audio for "${key}" — path is undefined`);
+            }
+          };
+          
+          tryLoadAudio('attack', ASSET_PATHS.SOUNDS.ATTACK);
+          tryLoadAudio('hit', ASSET_PATHS.SOUNDS.HIT);
+          tryLoadAudio('victory', ASSET_PATHS.SOUNDS.VICTORY);
+          tryLoadAudio('defeat', ASSET_PATHS.SOUNDS.DEFEAT);
+          tryLoadAudio('level-up', ASSET_PATHS.SOUNDS.LEVEL_UP);
+          tryLoadAudio('heal', ASSET_PATHS.SOUNDS.HEAL);
+          tryLoadAudio('button-click', ASSET_PATHS.SOUNDS.BUTTON_CLICK);
+          tryLoadAudio('menu-open', ASSET_PATHS.SOUNDS.MENU_OPEN);
+          tryLoadAudio('menu-close', ASSET_PATHS.SOUNDS.MENU_CLOSE);
+          tryLoadAudio('background-music', ASSET_PATHS.MUSIC.BACKGROUND);
+          tryLoadAudio('combat-music', ASSET_PATHS.MUSIC.COMBAT);
+          tryLoadAudio('menu-music', ASSET_PATHS.MUSIC.MENU);
+          tryLoadAudio('title-music', ASSET_PATHS.MUSIC.TITLE);
+          tryLoadAudio('game-music', ASSET_PATHS.MUSIC.GAME);
+          
+          const tryLoadImage = (key, path) => {
+            if (path) {
+              this.load.image(key, path);
+            } else {
+              console.warn(`⚠️ Skipping load.image for "${key}" — path is undefined`);
+            }
+          };
+          
+          // Load common backgrounds
+          tryLoadImage('character-bg', ASSET_PATHS.BACKGROUNDS.CHARACTER);
+          tryLoadImage('combat-bg', ASSET_PATHS.BACKGROUNDS.COMBAT);
+          tryLoadImage('inventory-bg', ASSET_PATHS.BACKGROUNDS.INVENTORY);
+          tryLoadImage('title-bg', ASSET_PATHS.BACKGROUNDS.TITLE);
+          tryLoadImage('overworld-bg', ASSET_PATHS.BACKGROUNDS.OVERWORLD);
+          tryLoadImage('dungeon-bg', ASSET_PATHS.BACKGROUNDS.DUNGEON);
+          tryLoadImage('battle-result-bg', ASSET_PATHS.BACKGROUNDS.BATTLE_RESULT);
+
+          // Load character portraits
+          tryLoadImage('warrior', ASSET_PATHS.PORTRAITS.WARRIOR);
+          tryLoadImage('mage', ASSET_PATHS.PORTRAITS.MAGE);
+          tryLoadImage('rogue', ASSET_PATHS.PORTRAITS.ROGUE);
+          tryLoadImage('cleric', ASSET_PATHS.PORTRAITS.CLERIC);
+          tryLoadImage('ranger', ASSET_PATHS.PORTRAITS.RANGER);
+          tryLoadImage('bard', ASSET_PATHS.PORTRAITS.BARD);
+
+          // Load icons
+          tryLoadImage('player-icon', ASSET_PATHS.ICONS.PLAYER);
+          tryLoadImage('health-icon', ASSET_PATHS.ICONS.HEALTH);
+          tryLoadImage('mana-icon', ASSET_PATHS.ICONS.MANA);
+          tryLoadImage('strength-icon', ASSET_PATHS.ICONS.STRENGTH);
+          tryLoadImage('agility-icon', ASSET_PATHS.ICONS.AGILITY);
+          tryLoadImage('intelligence-icon', ASSET_PATHS.ICONS.INTELLIGENCE);
+          tryLoadImage('constitution-icon', ASSET_PATHS.ICONS.CONSTITUTION);
+
+          // Load effects
+          tryLoadImage('slash-effect', ASSET_PATHS.EFFECTS.SLASH);
+          tryLoadImage('fire-effect', ASSET_PATHS.EFFECTS.FIRE);
+          tryLoadImage('heal-effect', ASSET_PATHS.EFFECTS.HEAL);
+
+        } catch (error) {
+          console.error('Error loading assets:', error);
+        }
 }
+    
+
 
 export default PreloadScene;

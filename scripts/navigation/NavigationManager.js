@@ -19,6 +19,7 @@ class NavigationManager {
             { from: "EncounterScene", to: "DungeonScene" },
             { from: "EncounterScene", to: "CombatResultScene" },
             { from: "DungeonScene", to: "CombatResultScene" },
+            { from: "EncounterScene", to: "DefeatScene" },
             { from: "CombatResultScene", to: "DungeonScene", condition: "Next Level" },
             { from: "CombatResultScene", to: "OverworldScene" },
             { from: "CombatResultScene", to: "PostRunSummaryScene", condition: "Retreat with Loot" },

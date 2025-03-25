@@ -13,7 +13,7 @@ import BaseScene from './BaseScene.js';
  */
 class DungeonScene extends BaseScene {
     constructor() {
-        super('DungeonScene');
+        super({ key: 'DungeonScene' });
         this.inCombat = false;
     }
 
@@ -104,9 +104,7 @@ class DungeonScene extends BaseScene {
             fontSize: this.ui.fontSize.md
         });
         
-        // Create the dungeon map
-        this.createDungeonMap();
-        
+
         // Create player character
         this.createPlayer();
         
@@ -811,57 +809,7 @@ class DungeonScene extends BaseScene {
         navigationManager.navigateTo(this, 'GameOverScene');
     }
     
-    /**
-     * Create the dungeon map
-     */
-    createDungeonMap() {
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
-        
-        // Create a simple grid as placeholder for the dungeon
-        const gridSize = 8;
-        const cellSize = 50;
-        const startX = width/2 - (gridSize * cellSize)/2;
-        const startY = height/2 - (gridSize * cellSize)/2;
-        
-        // Draw grid cells
-        for (let x = 0; x < gridSize; x++) {
-            for (let y = 0; y < gridSize; y++) {
-                // Randomly determine if this is a wall or floor
-                const isWall = Math.random() < 0.2;
-                
-                const cellX = startX + x * cellSize;
-                const cellY = startY + y * cellSize;
-                
-                const cell = this.add.rectangle(
-                    cellX + cellSize/2,
-                    cellY + cellSize/2,
-                    cellSize - 2,
-                    cellSize - 2,
-                    isWall ? 0x333333 : 0x666666
-                );
-                
-                // Add some random elements
-                if (!isWall && Math.random() < 0.1) {
-                    // Add a chest
-                    this.add.image(
-                        cellX + cellSize/2,
-                        cellY + cellSize/2,
-                        'player-icon'  // Using player icon as a temporary chest
-                    ).setDisplaySize(cellSize * 0.6, cellSize * 0.6)
-                    .setTint(0xffaa00); // Gold tint for chests
-                } else if (!isWall && Math.random() < 0.15) {
-                    // Add an enemy
-                    this.add.image(
-                        cellX + cellSize/2,
-                        cellY + cellSize/2,
-                        'enemy-icon'  // Using the loaded enemy icon
-                    ).setDisplaySize(cellSize * 0.7, cellSize * 0.7)
-                    .setTint(0xff0000);
-                }
-            }
-        }
-    }
+    
     
     /**
      * Create the player character
@@ -911,8 +859,8 @@ class DungeonScene extends BaseScene {
             'ADVANCE',
             () => {
                 console.log('Advance button clicked');
-                // Start a proper combat encounter
-                this.startCombatEncounter();
+                // Start a proper combat encounter with a message transition
+                this.showEncounterMessage();
             },
             {
                 width: 160,
@@ -1040,6 +988,157 @@ class DungeonScene extends BaseScene {
                 height: 50
             }
         );
+    }
+    
+    /**
+     * Show a transition message before starting a combat encounter
+     */
+    showEncounterMessage() {
+        // Generate enemies based on dungeon level
+        const dungeon = gameState.currentDungeon || { id: 'verdant-woods', level: 1 };
+        const enemyCount = Math.floor(Math.random() * 2) + 1;
+        
+        // Get enemies for the encounter
+        let enemies = [];
+        try {
+            enemies = getDungeonEnemies(dungeon.id, dungeon.level, enemyCount);
+        } catch (error) {
+            console.error("Error generating enemies:", error);
+            // Fallback to a default enemy if there's an error
+            enemies = [{ 
+                name: "Forest Goblin", 
+                level: dungeon.level, 
+                hp: 20, 
+                maxHp: 20,
+                attack: 5,
+                defense: 3
+            }];
+        }
+        
+        // Get the first enemy for display
+        const enemy = enemies[0];
+        
+        // Calculate difficulty using the same system as EncounterScene
+        const playerLevel = gameState.player?.level || 1;
+        let totalEnemyLevel = 0;
+        enemies.forEach(enemy => {
+            totalEnemyLevel += enemy.level || 1;
+        });
+        
+        const averageEnemyLevel = totalEnemyLevel / enemies.length;
+        const enemyCountFactor = 1 + ((enemies.length - 1) * 0.3); // 30% harder per additional enemy
+        const relativeDifficulty = (averageEnemyLevel * enemyCountFactor) / playerLevel;
+        
+        // Determine difficulty rating - match EncounterScene's system
+        let difficulty = "Moderate";
+        let difficultyColor = '#ffff00'; // Yellow
+        
+        if (relativeDifficulty < 0.8) {
+            difficulty = "Easy";
+            difficultyColor = '#00ff00'; // Green
+        } else if (relativeDifficulty < 1.2) {
+            difficulty = "Moderate";
+            difficultyColor = '#ffff00'; // Yellow
+        } else if (relativeDifficulty < 1.8) {
+            difficulty = "Challenging";
+            difficultyColor = '#ff9900'; // Orange
+        } else {
+            difficulty = "Dangerous";
+            difficultyColor = '#ff0000'; // Red
+        }
+        
+        // Set up combat data for the encounter scene - this data will be available in EncounterScene
+        gameState.combatData = {
+            enemies: enemies,
+            dungeon: dungeon,
+            showIntro: false, // Skip the intro in EncounterScene since we're showing it here
+            difficulty: difficulty,
+            difficultyColor: difficultyColor
+        };
+        
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        
+        // Create a container for all message elements
+        const messageContainer = this.add.container(0, 0);
+        
+        // Create dim background
+        const background = this.add.rectangle(
+            width/2, 
+            height/2, 
+            width, 
+            height, 
+            0x000000, 
+            0.6
+        );
+        
+        // Create message box
+        const messageBox = this.add.rectangle(
+            width/2, 
+            height/2, 
+            width * 0.6, 
+            height * 0.3, 
+            0x222222, 
+            0.9
+        ).setStrokeStyle(2, 0xffffff);
+        
+        // Create encounter text
+        const text = this.add.text(
+            width/2, 
+            height/2 - 20, 
+            `You've encountered a ${enemy.name}!`, 
+            {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.md + 'px',
+                fill: '#ffffff',
+                align: 'center'
+            }
+        ).setOrigin(0.5);
+        
+        // Create difficulty text with the same color as in EncounterScene
+        const difficultyText = this.add.text(
+            width/2, 
+            height/2 + 20, 
+            `Difficulty: ${difficulty}`, 
+            {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.md + 'px',
+                fill: difficultyColor,
+                align: 'center'
+            }
+        ).setOrigin(0.5);
+        
+        // Add all elements to the container
+        messageContainer.add(background);
+        messageContainer.add(messageBox);
+        messageContainer.add(text);
+        messageContainer.add(difficultyText);
+        
+        // Play an alert sound if available
+        this.safePlaySound('combat-start');
+        
+        // Add a fade-in tween for the message
+        text.alpha = 0;
+        difficultyText.alpha = 0;
+        
+        this.tweens.add({
+            targets: [text, difficultyText],
+            alpha: 1,
+            duration: 300,
+            ease: 'Power2'
+        });
+        
+        // Delay then navigate
+        this.time.delayedCall(1500, () => {
+            // Use fade transition to navigate to encounter scene
+            this.transitions.fade(() => {
+                // Clean up the message elements
+                messageContainer.destroy();
+                
+                // Navigate to encounter scene
+                navigationManager.navigateTo(this, 'EncounterScene');
+            }, 300);
+        });
     }
 }
 

@@ -313,11 +313,23 @@ class CharacterSelectScene extends Phaser.Scene {
                 const playerClass = this.classGrid.getSelectedItem().toLowerCase();
                 const playerRace = this.raceGrid.getSelectedItem();
                 
+                // Store player class selection properly
+                const playerClassLower = this.classGrid.getSelectedItem().toLowerCase();
+                const playerRaceLower = this.raceGrid.getSelectedItem().toLowerCase();
+                
+                // Store the player data to use in other scenes
+                gameState.player.name = playerName;
+                gameState.player.class = playerClassLower;
+                gameState.player.race = playerRaceLower;
+                // Store sprite and portrait paths to use in other scenes
+                gameState.player.sprite = ASSET_PATHS.PLAYERS[playerClassLower.toUpperCase()] || ASSET_PATHS.PLAYERS.DEFAULT;
+                gameState.player.portrait = ASSET_PATHS.PORTRAITS[playerClassLower.toUpperCase()] || ASSET_PATHS.PORTRAITS.DEFAULT;
+                
                 // Generate stats based on class and race
                 let str = 10, agi = 10, int = 10, con = 10;
                 
                 // Adjust stats based on class
-                switch (playerClass) {
+                switch (playerClassLower) {
                     case 'warrior':
                         str += 3; con += 2;
                         break;
@@ -339,7 +351,7 @@ class CharacterSelectScene extends Phaser.Scene {
                 }
                 
                 // Adjust stats based on race
-                switch (playerRace.toLowerCase()) {
+                switch (playerRaceLower) {
                     case 'human':
                         str += 1; agi += 1; int += 1; con += 1;
                         break;
@@ -365,9 +377,6 @@ class CharacterSelectScene extends Phaser.Scene {
                 const maxMana = 20 + (int * 3);
                 
                 // Save character data to gameState
-                gameState.player.name = playerName;
-                gameState.player.class = playerClass;
-                gameState.player.race = playerRace;
                 gameState.player.level = 1;
                 gameState.player.experience = 0;
                 gameState.player.experienceToNextLevel = 100;
