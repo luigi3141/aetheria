@@ -32,22 +32,15 @@ class DungeonScene extends BaseScene {
             this.load.image('combat-bg', ASSET_PATHS.BACKGROUNDS.COMBAT);
         }
         
-        // Load UI elements
-        this.load.image('player-icon', ASSET_PATHS.ICONS.PLAYER);
-        this.load.image('enemy-icon', ASSET_PATHS.ENEMIES.DEFAULT);
-        
-        // Load enemy sprites
-        this.load.image('dungeon-wolf', ASSET_PATHS.ENEMIES.WOLF);
-        this.load.image('dungeon-bandit', ASSET_PATHS.ENEMIES.DEFAULT); // No bandit asset, use default
-        this.load.image('dungeon-spider', ASSET_PATHS.ENEMIES.SPIDER);
-        this.load.image('dungeon-alpha-wolf', ASSET_PATHS.ENEMIES.WOLF); // Use wolf for alpha-wolf
-        
-        // Load combat effect sprites
-        this.load.image('attack-effect', ASSET_PATHS.EFFECTS.SLASH);
-        
-        // Load audio
-        this.load.audio('door-open', 'assets/audio/door_open.wav');
-        this.load.audio('combat-start', 'assets/audio/sword.wav');
+        const playerClass = gameState.player.class?.toUpperCase() || 'DEFAULT';
+        const spriteKey = `player-${playerClass.toLowerCase()}`;
+        const spritePath = ASSET_PATHS.PLAYERS[playerClass] || ASSET_PATHS.PLAYERS.DEFAULT;
+      
+        // Load the class-specific sprite using a unique key
+        this.load.image(spriteKey, spritePath);
+      
+        // Store key for later use in create()
+        this.playerSpriteKey = spriteKey;
     }
 
     init(data) {
@@ -818,23 +811,22 @@ class DungeonScene extends BaseScene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         
-        // Add player sprite at the center of the screen
-        this.player = this.add.image(
-            width/2,
-            height/2,
-            'player-icon'  // Updated to use player-icon which is loaded properly
-        ).setDisplaySize(40, 40);
-        
-        // Add a simple highlight instead of glow (which requires WebGL)
+        // Add player sprite using the correct class-specific key
+        this.player = this.add.sprite(
+            width / 2,
+            height * 0.6, // lower on screen than exact center
+            this.playerSpriteKey
+        ).setScale(2); // tweak scale as needed
+
+        // Optional highlight
         const playerHighlight = this.add.circle(
-            width/2,
-            height/2,
+            width / 2,
+            height * 0.75,
             25,
             0xffff00,
             0.3
         );
-        
-        // Make the highlight pulse
+
         this.tweens.add({
             targets: playerHighlight,
             alpha: 0.5,

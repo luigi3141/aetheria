@@ -1,5 +1,6 @@
 import { ASSET_PATHS } from '../config/AssetConfig.js';
 import { LAYOUT } from '../config/Layout.js';
+import gameState from '../gameState.js';
 
 export default class SpriteManager {
     constructor(scene) {
@@ -13,15 +14,24 @@ export default class SpriteManager {
      * Preload sprite assets
      */
     preloadSprites() {
-        // Player sprite
-        this.scene.load.image('player', ASSET_PATHS.PLAYERS.DEFAULT);
-        
-        // Enemy sprites
+        // Load correct player sprite using selected class
+        const playerClass = gameState.player.class?.toUpperCase() || 'DEFAULT';
+        const spriteKey = `player-${playerClass.toLowerCase()}`;
+        const spritePath = ASSET_PATHS.PLAYERS[playerClass] || ASSET_PATHS.PLAYERS.DEFAULT;
+      
+        // ✅ Load sprite under a unique key (not just 'player')
+        this.scene.load.image(spriteKey, spritePath);
+      
+        // Enemy sprites 
         const enemyTypes = ['DEFAULT', 'GOBLIN', 'SPIDER', 'WOLF'];
         enemyTypes.forEach(type => {
-            this.scene.load.image(type.toLowerCase(), ASSET_PATHS.ENEMIES[type]);
+          this.scene.load.image(type.toLowerCase(), ASSET_PATHS.ENEMIES[type]);
         });
-    }
+      
+        // Store the key for use when creating the sprite
+        this.playerSpriteKey = spriteKey;
+      }
+      
 
     /**
      * Create player sprite
@@ -33,11 +43,12 @@ export default class SpriteManager {
         }
 
         // Create player sprite
+        const key = this.playerSpriteKey || 'player'; // fallback
         this.playerSprite = this.scene.add.sprite(
-            LAYOUT.COMBAT.SPRITES.PLAYER.x,
-            LAYOUT.COMBAT.SPRITES.PLAYER.y,
-            'player'
-        ).setScale(3);
+          LAYOUT.COMBAT.SPRITES.PLAYER.x,
+          LAYOUT.COMBAT.SPRITES.PLAYER.y,
+          key
+        ).setScale(1);
         
         // Add a slight bobbing animation
         this.scene.tweens.add({
@@ -68,7 +79,7 @@ export default class SpriteManager {
             LAYOUT.COMBAT.SPRITES.ENEMY.x,
             LAYOUT.COMBAT.SPRITES.ENEMY.y,
             spriteKey
-        ).setScale(3);
+        ).setScale(1);
         
         // Add a slight bobbing animation to make the enemy sprite feel alive
         this.scene.tweens.add({
