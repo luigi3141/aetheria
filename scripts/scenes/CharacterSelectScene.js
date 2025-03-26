@@ -70,7 +70,7 @@ class CharacterSelectScene extends Phaser.Scene {
         
         // Use a more balanced layout with proper spacing
         // Left column is 30% of width, right side split into two equal columns
-        const leftColumnWidth = width * 0.3;
+        const leftColumnWidth = width * 0.4;
         const rightSideWidth = width - leftColumnWidth;
         const rightColumnWidth = rightSideWidth / 2;
         
@@ -83,15 +83,17 @@ class CharacterSelectScene extends Phaser.Scene {
         // === MIDDLE COLUMN - Character Class ===
         this.createClassSelectionSection(
             leftColumnWidth + (rightColumnWidth / 2), 
-            height * 0.25
+            height * 0.35
         );
         
         // === RIGHT COLUMN - Character Race ===
+        /*
         this.createRaceSelectionSection(
             leftColumnWidth + rightColumnWidth + (rightColumnWidth / 2), 
             height * 0.25
         );
-        
+        */
+
         // === BOTTOM SECTION - Character Name ===
         this.createNameInputSection(
             width / 2, 
@@ -181,7 +183,7 @@ class CharacterSelectScene extends Phaser.Scene {
     
     /**
      * Create the race selection section
-     */
+
     createRaceSelectionSection(x, y) {
         // Available races
         const races = ['Human', 'Elf', 'Dwarf', 'Halfling', 'Orc', 'Dragonborn'];
@@ -218,7 +220,8 @@ class CharacterSelectScene extends Phaser.Scene {
             }
         );
     }
-    
+         */
+
     /**
      * Create the name input section
      */
@@ -311,16 +314,16 @@ class CharacterSelectScene extends Phaser.Scene {
                 // Get character info
                 const playerName = this.nameInput.getValue() || 'Adventurer';
                 const playerClass = this.classGrid.getSelectedItem().toLowerCase();
-                const playerRace = this.raceGrid.getSelectedItem();
+                //const playerRace = this.raceGrid.getSelectedItem();
                 
                 // Store player class selection properly
                 const playerClassLower = this.classGrid.getSelectedItem().toLowerCase();
-                const playerRaceLower = this.raceGrid.getSelectedItem().toLowerCase();
+                //const playerRaceLower = this.raceGrid.getSelectedItem().toLowerCase();
                 
                 // Store the player data to use in other scenes
                 gameState.player.name = playerName;
                 gameState.player.class = playerClassLower;
-                gameState.player.race = playerRaceLower;
+                //gameState.player.race = playerRaceLower;
                 // Store sprite and portrait paths to use in other scenes
                 gameState.player.sprite = ASSET_PATHS.PLAYERS[playerClassLower.toUpperCase()] || ASSET_PATHS.PLAYERS.DEFAULT;
                 gameState.player.portrait = ASSET_PATHS.PORTRAITS[playerClassLower.toUpperCase()] || ASSET_PATHS.PORTRAITS.DEFAULT;
@@ -351,6 +354,7 @@ class CharacterSelectScene extends Phaser.Scene {
                 }
                 
                 // Adjust stats based on race
+                /*
                 switch (playerRaceLower) {
                     case 'human':
                         str += 1; agi += 1; int += 1; con += 1;
@@ -371,7 +375,7 @@ class CharacterSelectScene extends Phaser.Scene {
                         str += 2; int += 2; con += 1;
                         break;
                 }
-                
+                */                
                 // Calculate derived stats
                 const maxHealth = 50 + (con * 5);
                 const maxMana = 20 + (int * 3);
