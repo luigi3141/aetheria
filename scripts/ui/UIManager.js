@@ -2,6 +2,9 @@
  * UIManager - A utility class for consistent UI creation and management
  * This helps create consistent UI elements with proper spacing and alignment
  */
+
+import Button from '../ui/components/Button.js';
+
 class UIManager {
     /**
      * Create a new UI Manager
@@ -83,49 +86,29 @@ class UIManager {
     }
     
     createButton(x, y, text, callback, options = {}) {
-        const width = options.width || Math.min(240, this.width * 0.4);
-        const height = options.height || 50;
-        const fontSize = options.fontSize || this.fontSize.sm;
-        
-        // Use custom or default colors
-        const fillColor = options.fillColor ?? this.colors.primary;
-        const hoverColor = options.hoverColor ?? this.colors.primaryHover;
-        const strokeColor = options.strokeColor ?? this.colors.accent;
-        
-        // Create button background
-        const bg = this.scene.add.rectangle(x, y, width, height, fillColor)
-            .setOrigin(0.5)
-            .setInteractive()  // This makes the background interactive
-            .setStrokeStyle(2, strokeColor);
-            
-        // Create button text
-        const buttonText = this.scene.add.text(x, y, text, {
+        // Define button options with UIManager defaults
+        const buttonOptions = {
+            width: options.width || Math.min(240, this.width * 0.4),
+            height: options.height || 50,
+            fontSize: options.fontSize || this.fontSize.sm,
             fontFamily: "'Press Start 2P'",
-            fontSize: fontSize + 'px',
-            fill: '#ffffff',
-            resolution: 3
-        }).setOrigin(0.5);
+            fillColor: this.colors.primary,
+            hoverColor: this.colors.primaryHover,
+            strokeColor: this.colors.accent,
+            textColor: '#ffffff',
+            // Allow overriding with provided options
+            ...options
+        };
         
-        // Add hover effects
-        bg.on('pointerover', () => {
-            bg.fillStyle = hoverColor;
-        });
-        
-        bg.on('pointerout', () => {
-            bg.fillStyle = fillColor;
-        });
-        
-        // Add click handler
-        bg.on('pointerdown', callback);
-        
-        // Create button object
-        const button = { bg, text: buttonText };
+        // Create a new Button instance
+        const button = new Button(this.scene, x, y, text, callback, buttonOptions);
         
         // Store in elements if an id is provided
         if (options.id) {
             this.elements[options.id] = button;
         }
         
+        // Return the Button instance
         return button;
     }
     
