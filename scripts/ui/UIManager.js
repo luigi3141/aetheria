@@ -82,25 +82,21 @@ class UIManager {
         return title;
     }
     
-    /**
-     * Create a button with consistent styling
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     * @param {string} text - Button text
-     * @param {function} callback - Function to call when button is clicked
-     * @param {object} options - Optional configuration
-     * @returns {object} Button object with background and text
-     */
     createButton(x, y, text, callback, options = {}) {
         const width = options.width || Math.min(240, this.width * 0.4);
         const height = options.height || 50;
         const fontSize = options.fontSize || this.fontSize.sm;
         
+        // Use custom or default colors
+        const fillColor = options.fillColor ?? this.colors.primary;
+        const hoverColor = options.hoverColor ?? this.colors.primaryHover;
+        const strokeColor = options.strokeColor ?? this.colors.accent;
+        
         // Create button background
-        const bg = this.scene.add.rectangle(x, y, width, height, this.colors.primary)
+        const bg = this.scene.add.rectangle(x, y, width, height, fillColor)
             .setOrigin(0.5)
-            .setInteractive()
-            .setStrokeStyle(2, this.colors.accent);
+            .setInteractive()  // This makes the background interactive
+            .setStrokeStyle(2, strokeColor);
             
         // Create button text
         const buttonText = this.scene.add.text(x, y, text, {
@@ -112,11 +108,11 @@ class UIManager {
         
         // Add hover effects
         bg.on('pointerover', () => {
-            bg.fillColor = this.colors.primaryHover;
+            bg.fillStyle = hoverColor;
         });
         
         bg.on('pointerout', () => {
-            bg.fillColor = this.colors.primary;
+            bg.fillStyle = fillColor;
         });
         
         // Add click handler
