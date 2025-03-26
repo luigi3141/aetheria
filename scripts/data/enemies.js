@@ -7,7 +7,7 @@ const enemyData = {
     // Verdant Woods enemies
     "forest-goblin": {
         name: "Forest Goblin",
-        sprite: "goblin",
+        sprite: "GOBLIN",
         level: 1,
         baseHealth: 25,
         baseAttack: 5,
@@ -25,7 +25,7 @@ const enemyData = {
     },
     "wolf": {
         name: "Forest Wolf",
-        sprite: "wolf",
+        sprite: "WOLF",
         level: 2,
         baseHealth: 35,
         baseAttack: 8,
@@ -43,7 +43,7 @@ const enemyData = {
     },
     "forest-spider": {
         name: "Giant Spider",
-        sprite: "spider",
+        sprite: "SPIDER",
         level: 3,
         baseHealth: 40,
         baseAttack: 7,
@@ -63,7 +63,7 @@ const enemyData = {
     // New Verdant Woods enemies
     "forest-bandit": {
         name: "Forest Bandit",
-        sprite: "bandit",
+        sprite: "BANDIT",
         level: 3,
         baseHealth: 45,
         baseAttack: 9,
@@ -82,7 +82,7 @@ const enemyData = {
     },
     "mushroom-creature": {
         name: "Myconid",
-        sprite: "mushroom",
+        sprite: "MUSHROOM",
         level: 2,
         baseHealth: 30,
         baseAttack: 6,
@@ -102,7 +102,7 @@ const enemyData = {
     // Crystal Caverns enemies
     "cave-bat": {
         name: "Crystal Bat",
-        sprite: "bat",
+        sprite: "BAT",
         level: 4,
         baseHealth: 30,
         baseAttack: 10,
@@ -120,7 +120,7 @@ const enemyData = {
     },
     "crystal-golem": {
         name: "Crystal Golem",
-        sprite: "golem",
+        sprite: "CRYSTAL",
         level: 6,
         baseHealth: 80,
         baseAttack: 12,
@@ -138,7 +138,7 @@ const enemyData = {
     },
     "miner-ghost": {
         name: "Spectral Miner",
-        sprite: "ghost",
+        sprite: "GHOST",
         level: 5,
         baseHealth: 45,
         baseAttack: 15,
@@ -159,7 +159,7 @@ const enemyData = {
     // Bosses
     "goblin-chief": {
         name: "Goblin Chieftain",
-        sprite: "goblin-chief",
+        sprite: "GOBLIN-CHIEFTAIN",
         level: 5,
         baseHealth: 100,
         baseAttack: 12,
@@ -179,7 +179,7 @@ const enemyData = {
     },
     "crystal-queen": {
         name: "Crystal Queen",
-        sprite: "crystal-queen",
+        sprite: "CRYSTAL-QUEEN",
         level: 8,
         baseHealth: 150,
         baseAttack: 18,

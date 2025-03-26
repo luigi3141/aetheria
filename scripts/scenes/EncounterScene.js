@@ -8,11 +8,13 @@ import SpriteManager from '../encounter/SpriteManager.js';
 import { getEnemyData } from '../data/enemies.js';
 import { LAYOUT } from '../config/Layout.js';
 import gameState from '../gameState.js';
+import { generateCombatEncounter } from '../encounter/EnemyGenerator.js';
+import { ASSET_PATHS } from '../config/AssetConfig.js';
+
 
 export default class EncounterScene extends BaseScene {
     constructor() {
         super({ key: 'EncounterScene' });
-        this.enemies = [];
         this.isBoss = false;
         this.dungeonLevel = 1; // Default level if not specified
     }
@@ -43,11 +45,44 @@ export default class EncounterScene extends BaseScene {
         this.combatAudio = new CombatAudio(this);
         this.combatText = new CombatText(this);
         this.combatEngine = new CombatEngine(this);
-        
-        // Preload necessary assets
+    
+        // Preload combat background
         this.load.image('combat-background', 'assets/sprites/backgrounds/combat-bg.png');
-        this.spriteManager.preloadSprites();
+    
+        // Access combat data to get dungeon + isBoss
+        const dungeon = gameState.combatData?.dungeon || { id: 'verdant-woods', level: 1 };
+        const isBoss = gameState.combatData?.isBoss || false;
+    
+        // Generate enemies for preload only
+        const enemies = generateCombatEncounter(dungeon, isBoss);
+    
+        // Preload enemy sprites dynamically
+        enemies.forEach(enemy => {
+            if (enemy.sprite && !this.textures.exists(enemy.sprite)) {
+                const spritePath = ASSET_PATHS.ENEMIES[enemy.sprite.toUpperCase()];
+                if (spritePath) {
+                    this.load.image(enemy.sprite, spritePath);
+                } else {
+                    console.warn(`No sprite path found for sprite key: ${enemy.sprite}`);
+                }
+            }
+        });
+    
+        // Preload player sprite
+        const playerClass = gameState.player.class?.toUpperCase() || 'DEFAULT';
+        const spriteKey = `player-${playerClass.toLowerCase()}`;
+        const spritePath = ASSET_PATHS.PLAYERS[playerClass] || ASSET_PATHS.PLAYERS.DEFAULT;
+        if (!this.textures.exists(spriteKey)) {
+            this.load.image(spriteKey, spritePath);
+        }
+    
+        // Store keys for later
+        this.spriteManager = new SpriteManager(this);
+        this.spriteManager.playerSpriteKey = spriteKey;
+        this.enemiesToPreload = enemies; // Pass to create()
     }
+    
+    
     
     /**
      * Create the scene
@@ -55,53 +90,36 @@ export default class EncounterScene extends BaseScene {
     create(data) {
         // Initialize base scene components
         this.initializeScene();
-        
+    
         // Set up scene background
         this.add.image(0, 0, 'combat-background')
             .setOrigin(0)
             .setDisplaySize(this.cameras.main.width, this.cameras.main.height);
-
-        // Set up enemies
-        this.enemies = data.enemies || this.generateRandomEnemies();
+    
+        // Determine source of dungeon and boss flag
+        const dungeon = data.dungeon || gameState.currentDungeon || { id: 'verdant-woods', level: 1 };
         this.isBoss = data.isBoss || false;
-        
-        // Ensure enemy has proper stats
-        this.enemies.forEach(enemy => {
-            if (!enemy.health) enemy.health = enemy.baseHealth;
-            if (!enemy.maxHealth) enemy.maxHealth = enemy.baseHealth;
-            if (!enemy.damage) enemy.damage = enemy.baseAttack;
-            if (!enemy.defense) enemy.defense = enemy.baseDefense;
-        });
-        
+    
+        // Set up enemies using preload cache
+        this.enemies = this.enemiesToPreload || [];
+    
+        // Debug: confirm the sprite is correct
+        console.log("Selected enemy sprite:", this.enemies[0]?.sprite);
+    
+        // Inject enemies into combat engine
         this.combatEngine.setEnemies(this.enemies);
-
+    
         // Create UI elements
         this.combatUI.createCombatUI();
         this.spriteManager.createPlayerSprite();
         this.spriteManager.createEnemyDisplay(this.enemies[0]); // Pass the first enemy since we only show one at a time
         this.combatLog.createCombatLog();
-
+    
         // Start combat
         this.combatEngine.startCombat();
         this.combatAudio.playBattleMusic();
     }
     
-    /**
-     * Generate random enemies if none provided
-     */
-    generateRandomEnemies() {
-        const enemyTypes = ['forest-goblin', 'forest-spider', 'wolf'];
-        const randomType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
-        const enemy = getEnemyData(randomType);
-        
-        // Set health and other stats
-        enemy.health = enemy.baseHealth;
-        enemy.maxHealth = enemy.baseHealth;
-        enemy.damage = enemy.baseAttack;
-        enemy.defense = enemy.baseDefense;
-        
-        return [enemy];
-    }
     
     /**
      * Update method called every frame

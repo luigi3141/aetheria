@@ -14,23 +14,19 @@ export default class SpriteManager {
      * Preload sprite assets
      */
     preloadSprites() {
-        // Load correct player sprite using selected class
+        // Preload player sprite
         const playerClass = gameState.player.class?.toUpperCase() || 'DEFAULT';
         const spriteKey = `player-${playerClass.toLowerCase()}`;
         const spritePath = ASSET_PATHS.PLAYERS[playerClass] || ASSET_PATHS.PLAYERS.DEFAULT;
-      
-        // ✅ Load sprite under a unique key (not just 'player')
         this.scene.load.image(spriteKey, spritePath);
-      
-        // Enemy sprites 
-        const enemyTypes = ['DEFAULT', 'GOBLIN', 'SPIDER', 'WOLF'];
-        enemyTypes.forEach(type => {
-          this.scene.load.image(type.toLowerCase(), ASSET_PATHS.ENEMIES[type]);
-        });
-      
-        // Store the key for use when creating the sprite
         this.playerSpriteKey = spriteKey;
+      
+        // Dynamically preload enemy sprites from ASSET_PATHS.ENEMIES
+        Object.entries(ASSET_PATHS.ENEMIES).forEach(([key, path]) => {
+          this.scene.load.image(key, path); // Use the config key directly
+        });
       }
+    
       
 
     /**
@@ -69,18 +65,17 @@ export default class SpriteManager {
         if (this.enemySprite) {
             this.enemySprite.destroy();
         }
+    
+        // Use the sprite key directly as provided by the enemy data
+        const spriteKey = enemy.sprite || 'DEFAULT';
 
-        // Get sprite key from enemy type
-        const spriteKey = enemy.sprite ? enemy.sprite.replace('-sprite', '') : 
-                         (enemy.type ? enemy.type.toLowerCase() : 'default');
-        
         // Create enemy sprite
         this.enemySprite = this.scene.add.sprite(
             LAYOUT.COMBAT.SPRITES.ENEMY.x,
             LAYOUT.COMBAT.SPRITES.ENEMY.y,
             spriteKey
         ).setScale(1);
-        
+    
         // Add a slight bobbing animation to make the enemy sprite feel alive
         this.scene.tweens.add({
             targets: this.enemySprite,
@@ -90,10 +85,14 @@ export default class SpriteManager {
             repeat: -1,
             ease: 'Sine.easeInOut'
         });
-        
+    
         // Create enemy health bar
         this.createEnemyHealthBar(enemy);
+        if (!this.scene.textures.exists(spriteKey)) {
+            console.warn(`Sprite with key "${spriteKey}" was not preloaded!`);
+        }
     }
+    
     
     /**
      * Create enemy health bar
