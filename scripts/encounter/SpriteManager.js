@@ -143,7 +143,7 @@ export default class SpriteManager {
         const healthText = this.scene.add.text(
             healthBarX,
             healthBarY,
-            `${enemy.health}/${enemy.maxHealth}`,
+            `HP: ${enemy.health}/${enemy.maxHealth}`,
             {
                 fontFamily: "'VT323'",
                 fontSize: '18px',
@@ -158,9 +158,11 @@ export default class SpriteManager {
             healthBarY - 30,
             enemy.name,
             {
-                fontFamily: "'VT323'",
-                fontSize: '24px',
+                fontFamily: "'Press Start 2P'",
+                fontSize: this.scene.ui.fontSize.sm + 'px',
                 fill: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 2,
                 align: 'center'
             }
         ).setOrigin(0.5);
@@ -213,7 +215,7 @@ export default class SpriteManager {
         
         // Update health text
         if (enemy.displayElements.healthText) {
-            enemy.displayElements.healthText.setText(`${adjustedHealth}/${maxHealth}`);
+            enemy.displayElements.healthText.setText(`HP:${adjustedHealth}/${maxHealth}`);
         }
     }
 

@@ -58,14 +58,12 @@ export default class CombatUI {
         const height = this.scene.cameras.main.height;
         const player = gameState.player;
 
-        this.healthBars.player = this.makeHealthBar(width * 0.25, height * 0.3, 150, 15, 0x00ff00);
+        this.healthBars.player = this.makeHealthBar(width * 0.25, height * 0.3, 200, 20, 0x00ff00);
         this.playerHealthText = this.scene.add.text(width * 0.25, height * 0.3, 
             `HP: ${player.health}/${player.maxHealth}`, {
-                fontFamily: "'VT323'",
-                fontSize: this.scene.ui.fontSize.sm + 'px',
+                fontSize: '18px',
                 fill: '#ffffff',
-                stroke: '#000000',
-                strokeThickness: 2
+                align: 'center'
             }).setOrigin(0.5);
     }
 
@@ -74,14 +72,12 @@ export default class CombatUI {
         const height = this.scene.cameras.main.height;
         const player = gameState.player;
 
-        this.manaBars.player = this.makeManaBar(width * 0.25, height * 0.38, 150, 15, 0x0066ff);
+        this.manaBars.player = this.makeManaBar(width * 0.25, height * 0.38, 200, 20, 0x0066ff);
         this.playerManaText = this.scene.add.text(width * 0.25, height * 0.38, 
             `MP: ${player.mana}/${player.maxMana}`, {
-                fontFamily: "'VT323'",
-                fontSize: this.scene.ui.fontSize.sm + 'px',
+                fontSize: '18px',
                 fill: '#ffffff',
-                stroke: '#000000',
-                strokeThickness: 2
+                align: 'center'
             }).setOrigin(0.5);
     }
 
