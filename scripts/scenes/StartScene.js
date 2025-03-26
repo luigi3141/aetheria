@@ -30,7 +30,7 @@ class StartScene extends Phaser.Scene {
 
         
         // Create the title
-        this.ui.createTitle(width/2, height * 0.2, 'Echoes of Aetheria', {
+        this.ui.createTitle(width/2, height * 0.2, 'Gates of Aetheria', {
             fontSize: this.ui.fontSize.xl
         });
         

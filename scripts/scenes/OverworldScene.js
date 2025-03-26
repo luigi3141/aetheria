@@ -16,7 +16,7 @@ class OverworldScene extends Phaser.Scene {
     preload() {
         // Load overworld assets
         this.load.image('overworld-bg', ASSET_PATHS.BACKGROUNDS.OVERWORLD);
-        this.load.image('player-avatar', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        this.load.image('player-avatar', gameState.player.portrait);
     }
 
     create() {
@@ -77,7 +77,7 @@ class OverworldScene extends Phaser.Scene {
         const playerSprite = this.add.image(avatarX, avatarY, 'player-avatar').setDisplaySize(80, 80);
         
         // Add player info text
-        const infoX = width * 0.3;
+        const infoX = width * 0.4;
         const infoY = height * 0.2;
         
         const playerName = gameState.player.name || 'Adventurer';
