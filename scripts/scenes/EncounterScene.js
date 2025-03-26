@@ -5,11 +5,10 @@ import CombatLog from '../encounter/CombatLog.js';
 import CombatAudio from '../encounter/CombatAudio.js';
 import CombatText from '../encounter/CombatText.js';
 import SpriteManager from '../encounter/SpriteManager.js';
-import { getEnemyData } from '../data/enemies.js';
-import { LAYOUT } from '../config/Layout.js';
-import gameState from '../gameState.js';
 import { generateCombatEncounter } from '../encounter/EnemyGenerator.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
+import { calculateDifficulty } from '../utils/DifficultyManager.js';
+import gameState from '../gameState.js';
 
 
 export default class EncounterScene extends BaseScene {
