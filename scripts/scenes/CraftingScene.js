@@ -13,9 +13,15 @@ class CraftingScene extends Phaser.Scene {
 
     preload() {
         // Load crafting assets
-        this.load.image('crafting-bg', 'https://labs.phaser.io/assets/skies/space2.png');
-        this.load.image('item-icon', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('material-icon', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        if (!this.textures.exists('crafting-bg')) {
+            this.load.image('crafting-bg', ASSET_PATHS.BACKGROUNDS.CRAFTING);
+        }
+        if (!this.textures.exists('item-icon')) {
+            this.load.image('item-icon', ASSET_PATHS.SPRITES.ITEM);
+        }
+        if (!this.textures.exists('material-icon')) {
+            this.load.image('material-icon', ASSET_PATHS.SPRITES.MATERIAL);
+        }
     }
 
     create() {

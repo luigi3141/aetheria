@@ -1,4 +1,3 @@
-import { ASSET_PATHS } from '../config/AssetConfig.js';
 import { LAYOUT } from '../ui/layout/LayoutHelper.js';
 import gameState from '../gameState.js';
 

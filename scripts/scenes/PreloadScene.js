@@ -145,6 +145,8 @@ class PreloadScene extends BaseScene {
           tryLoadImage('overworld-bg', ASSET_PATHS.BACKGROUNDS.OVERWORLD);
           tryLoadImage('dungeon-bg', ASSET_PATHS.BACKGROUNDS.DUNGEON);
           tryLoadImage('battle-result-bg', ASSET_PATHS.BACKGROUNDS.BATTLE_RESULT);
+          tryLoadImage('crafting-bg', ASSET_PATHS.BACKGROUNDS.CRAFTING);
+
 
           // Load character portraits
           tryLoadImage('warrior', ASSET_PATHS.PORTRAITS.WARRIOR);
