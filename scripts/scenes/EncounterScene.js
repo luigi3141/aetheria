@@ -7,6 +7,7 @@ import CombatText from '../encounter/CombatText.js';
 import SpriteManager from '../encounter/SpriteManager.js';
 import { generateCombatEncounter } from '../encounter/EnemyGenerator.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
+import { LAYOUT } from '../config/Layout.js';
 import { calculateDifficulty } from '../utils/DifficultyManager.js';
 import gameState from '../gameState.js';
 
@@ -125,12 +126,32 @@ export default class EncounterScene extends BaseScene {
             messageContainer.destroy();
             this.combatEngine.setEnemies(this.enemies);
             this.combatUI.createCombatUI();
+            
+            // Create player and enemy sprites
             this.spriteManager.createPlayerSprite();
             this.spriteManager.createEnemyDisplay(this.enemies[0]);
+            
+            // Create enemy health bar using CombatUI instead of SpriteManager
+            this.combatUI.createEnemyHealthBar(this.enemies[0]);
+            
             this.combatLog.createCombatLog();
             this.combatEngine.startCombat();
             this.combatAudio.playBattleMusic();
         });
+
+        this.input.keyboard.on('keydown-F2', () => {
+            this.ui.toggleDebug();
+        });
+        
+        if (this.ui.debug?.fpsText) {
+            this.time.addEvent({
+                delay: 1000,
+                callback: () => {
+                    this.ui.debug.fpsText.setText(`FPS: ${Math.floor(this.game.loop.actualFps)}`);
+                },
+                loop: true
+            });
+        }
     }
 
     update(time, delta) {}
@@ -186,5 +207,15 @@ export default class EncounterScene extends BaseScene {
         this.combatLog.addLogEntry('You retreat from battle!');
         gameState.combatResult = { outcome: 'retreat' };
         this.scene.start('DefeatScene', { retreated: true });
+    }
+    
+    /**
+     * Update the enemy's health display
+     * @param {object} enemy - The enemy to update
+     */
+    updateEnemyHealth(enemy) {
+        if (enemy && this.combatUI) {
+            this.combatUI.updateEnemyHealthBar(enemy);
+        }
     }
 }

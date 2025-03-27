@@ -25,9 +25,8 @@ export default class SpriteManager {
         Object.entries(ASSET_PATHS.ENEMIES).forEach(([key, path]) => {
           this.scene.load.image(key, path); // Use the config key directly
         });
-      }
+    }
     
-      
 
     /**
      * Create player sprite
@@ -86,139 +85,15 @@ export default class SpriteManager {
             ease: 'Sine.easeInOut'
         });
     
-        // Create enemy health bar
-        this.createEnemyHealthBar(enemy);
+        // Store the sprite reference with the enemy
+        enemy.displayElements = enemy.displayElements || {};
+        enemy.displayElements.sprite = this.enemySprite;
+        
         if (!this.scene.textures.exists(spriteKey)) {
             console.warn(`Sprite with key "${spriteKey}" was not preloaded!`);
         }
     }
     
-    
-    /**
-     * Create enemy health bar
-     */
-    createEnemyHealthBar(enemy) {
-        const width = this.scene.cameras.main.width;
-        const height = this.scene.cameras.main.height;
-        
-        // Health bar dimensions
-        const healthBarWidth = 200;
-        const healthBarHeight = 20;
-        const healthBarX = width * 0.75;
-        const healthBarY = height * 0.3;
-        
-        // Create health bar background
-        const healthBarBg = this.scene.add.rectangle(
-            healthBarX,
-            healthBarY,
-            healthBarWidth,
-            healthBarHeight,
-            0x333333
-        ).setOrigin(0.5);
-        
-        // Create health bar foreground
-        const healthBar = this.scene.add.graphics();
-        
-        // Draw initial health bar
-        const healthPercentage = enemy.health / enemy.maxHealth;
-        healthBar.fillStyle(0xff0000, 1);
-        healthBar.fillRect(
-            healthBarX - healthBarWidth / 2,
-            healthBarY - healthBarHeight / 2,
-            healthBarWidth * healthPercentage,
-            healthBarHeight
-        );
-        
-        // Add border
-        const healthBarBorder = this.scene.add.graphics();
-        healthBarBorder.lineStyle(2, 0xffffff, 1);
-        healthBarBorder.strokeRect(
-            healthBarX - healthBarWidth / 2,
-            healthBarY - healthBarHeight / 2,
-            healthBarWidth,
-            healthBarHeight
-        );
-        
-        // Add health text
-        const healthText = this.scene.add.text(
-            healthBarX,
-            healthBarY,
-            `HP: ${enemy.health}/${enemy.maxHealth}`,
-            {
-                fontFamily: "'VT323'",
-                fontSize: '18px',
-                fill: '#ffffff',
-                align: 'center'
-            }
-        ).setOrigin(0.5);
-        
-        // Add enemy name above health bar
-        const nameText = this.scene.add.text(
-            healthBarX,
-            healthBarY - 30,
-            enemy.name,
-            {
-                fontFamily: "'Press Start 2P'",
-                fontSize: this.scene.ui.fontSize.sm + 'px',
-                fill: '#ffffff',
-                stroke: '#000000',
-                strokeThickness: 2,
-                align: 'center'
-            }
-        ).setOrigin(0.5);
-        
-        // Store display elements with the enemy
-        enemy.displayElements = {
-            sprite: this.enemySprite,
-            nameText: nameText,
-            healthBar: {
-                bg: healthBarBg,
-                bar: healthBar,
-                border: healthBarBorder,
-                x: healthBarX - healthBarWidth / 2,
-                y: healthBarY - healthBarHeight / 2,
-                width: healthBarWidth,
-                height: healthBarHeight,
-                color: 0xff0000
-            },
-            healthText: healthText
-        };
-    }
-
-    /**
-     * Update enemy health bar
-     */
-    updateEnemyHealthBar(enemy) {
-        if (!enemy || !enemy.displayElements || !enemy.displayElements.healthBar) return;
-        
-        const healthBar = enemy.displayElements.healthBar;
-        const currentHealth = enemy.health;
-        const maxHealth = enemy.maxHealth;
-        
-        // Ensure health doesn't exceed maximum
-        const adjustedHealth = Math.min(currentHealth, maxHealth);
-        
-        // Calculate percentage
-        const percentage = Math.max(0, Math.min(adjustedHealth / maxHealth, 1));
-        
-        // Clear previous graphics
-        healthBar.bar.clear();
-        
-        // Draw new health bar - only from left to right
-        healthBar.bar.fillStyle(healthBar.color, 1);
-        healthBar.bar.fillRect(
-            healthBar.x, 
-            healthBar.y, 
-            healthBar.width * percentage, 
-            healthBar.height
-        );
-        
-        // Update health text
-        if (enemy.displayElements.healthText) {
-            enemy.displayElements.healthText.setText(`HP:${adjustedHealth}/${maxHealth}`);
-        }
-    }
-
     /**
      * Animate an attack
      */

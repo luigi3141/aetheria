@@ -1,9 +1,17 @@
 /**
- * UIManager - A utility class for consistent UI creation and management
- * This helps create consistent UI elements with proper spacing and alignment
+ * UIManager - A coordinator for UI components and global UI configuration
+ * This slimmed-down manager focuses on coordinating components rather than creating them directly
  */
 
-import Button from '../ui/components/Button.js';
+// Import component modules
+import Button from './components/Button.js';
+import Panel from './components/Panel.js';
+import StatusBar from './components/StatusBar.js';
+import InputField from './components/InputField.js';
+import DebugOverlay from './components/DebugOverlay.js';
+
+// Import layout utilities
+import { LAYOUT, LayoutHelper } from './layout/LayoutHelper.js';
 
 class UIManager {
     /**
@@ -14,6 +22,9 @@ class UIManager {
         this.scene = scene;
         this.width = scene.cameras.main.width;
         this.height = scene.cameras.main.height;
+        
+        // Initialize layout helper
+        this.layoutHelper = new LayoutHelper(scene);
         
         // Define standard spacing units based on screen size
         this.spacing = {
@@ -44,8 +55,11 @@ class UIManager {
             textDark: 0x333333
         };
         
-        // Track created UI elements for easy updates
+        // Track created UI elements for easy access
         this.elements = {};
+        
+        // Initialize debug overlay
+        this.debug = new DebugOverlay(scene);
     }
     
     /**
@@ -85,6 +99,15 @@ class UIManager {
         return title;
     }
     
+    /**
+     * Create a button with standard styling
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {string} text - Button text
+     * @param {function} callback - Function to call when button is clicked
+     * @param {object} options - Optional configuration
+     * @returns {Button} The created button
+     */
     createButton(x, y, text, callback, options = {}) {
         // Define button options with UIManager defaults
         const buttonOptions = {
@@ -108,8 +131,259 @@ class UIManager {
             this.elements[options.id] = button;
         }
         
-        // Return the Button instance
         return button;
+    }
+    
+    /**
+     * Create a panel with standard styling
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {number} width - Panel width
+     * @param {number} height - Panel height
+     * @param {object} options - Optional configuration
+     * @returns {Panel} The created panel
+     */
+    createPanel(x, y, width, height, options = {}) {
+        const panelOptions = {
+            fillColor: options.fillColor || this.colors.secondary,
+            fillAlpha: options.fillAlpha || 0.8,
+            strokeColor: options.strokeColor || this.colors.accent,
+            ...options
+        };
+        
+        const panel = new Panel(this.scene, x, y, width, height, panelOptions);
+        
+        // Store in elements if an id is provided
+        if (options.id) {
+            this.elements[options.id] = panel;
+        }
+        
+        return panel;
+    }
+    
+    /**
+     * Create a status bar with standard styling
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {number} current - Current value
+     * @param {number} max - Maximum value
+     * @param {object} options - Optional configuration
+     * @returns {StatusBar} The created status bar
+     */
+    createStatusBar(x, y, current, max, options = {}) {
+        const statusBarOptions = {
+            fontSize: options.fontSize || this.fontSize.sm,
+            ...options
+        };
+        
+        const statusBar = new StatusBar(this.scene, x, y, current, max, statusBarOptions);
+        
+        // Store in elements if an id is provided
+        if (options.id) {
+            this.elements[options.id] = statusBar;
+        }
+        
+        return statusBar;
+    }
+    
+    /**
+     * Create an input field with standard styling
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {string} defaultValue - Default text value
+     * @param {function} onChange - Function to call when value changes
+     * @param {object} options - Optional configuration
+     * @returns {InputField} The created input field
+     */
+    createInputField(x, y, defaultValue, onChange, options = {}) {
+        const inputFieldOptions = {
+            fontSize: options.fontSize || this.fontSize.md,
+            borderColor: options.borderColor || this.colors.accent,
+            ...options
+        };
+        
+        const inputField = new InputField(this.scene, x, y, defaultValue, onChange, inputFieldOptions);
+        
+        // Store in elements if an id is provided
+        if (options.id) {
+            this.elements[options.id] = inputField;
+        }
+        
+        return inputField;
+    }
+    
+    /**
+     * Create text with standard styling
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {string} text - Text content
+     * @param {object} options - Optional configuration
+     * @returns {Phaser.GameObjects.Text} The created text object
+     */
+    createText(x, y, text, options = {}) {
+        const textObject = this.scene.add.text(x, y, text, {
+            fontFamily: options.fontFamily || "'Press Start 2P'",
+            fontSize: (options.fontSize || this.fontSize.md) + 'px',
+            fill: options.color || '#ffffff',
+            stroke: options.stroke || '#000000',
+            strokeThickness: options.strokeThickness || 2,
+            align: options.align || 'center'
+        }).setOrigin(0.5);
+        
+        // Store in elements if an id is provided
+        if (options.id) {
+            this.elements[options.id] = textObject;
+        }
+        
+        return textObject;
+    }
+    
+    /**
+     * Create a section label with standard styling
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {string} text - Label text
+     * @param {object} options - Optional configuration
+     * @returns {Phaser.GameObjects.Container} The created container with label
+     */
+    createSectionLabel(x, y, text, options = {}) {
+        const fontSize = options.fontSize || this.fontSize.md;
+        const color = options.color || '#ffffff';
+        const align = options.align || 'left';
+        const addLine = options.addLine !== false;
+        const sideMarkers = options.sideMarkers || false;
+        const animate = options.animate || false;
+        const background = options.background || false;
+        
+        const container = this.scene.add.container(x, y);
+        const elements = [];
+        
+        // Create the label text
+        const label = this.scene.add.text(0, 0, text.toUpperCase(), {
+            fontFamily: options.fontFamily || "'Press Start 2P'",
+            fontSize: fontSize + 'px',
+            fill: color,
+            align: align,
+            resolution: 3
+        }).setOrigin(0, 0.5);
+        
+        elements.push(label);
+        container.add(label);
+        
+        // Add background if requested
+        if (background) {
+            const padding = this.spacing.sm;
+            const bg = this.scene.add.rectangle(
+                0,
+                0,
+                label.width + padding * 2,
+                label.height + padding * 2,
+                this.colors.secondary,
+                0.7
+            ).setOrigin(0, 0.5);
+            
+            // Add background before text (rendering order)
+            container.addAt(bg, 0);
+            elements.push(bg);
+            // Adjust text position for padding
+            label.setPosition(padding, 0);
+        }
+        
+        // Add decorative line if requested
+        if (addLine) {
+            const lineWidth = options.lineWidth || Math.min(300, this.width * 0.4);
+            const lineY = fontSize/2 + this.spacing.sm;
+            const line = this.scene.add.graphics();
+            line.lineStyle(2, this.colors.accent, 1);
+            line.beginPath();
+            line.moveTo(0, lineY);
+            line.lineTo(lineWidth, lineY);
+            line.closePath();
+            line.strokePath();
+            
+            container.add(line);
+            elements.push(line);
+            label.decorativeLine = line;
+        }
+        
+        // Add side markers if requested
+        if (sideMarkers) {
+            const markerSize = this.spacing.sm;
+            const markerSpacing = this.spacing.md;
+            
+            // Left marker
+            const leftMarker = this.scene.add.graphics();
+            leftMarker.fillStyle(this.colors.accent, 1);
+            leftMarker.fillRect(-markerSpacing - markerSize, -markerSize/2, markerSize, markerSize);
+            container.add(leftMarker);
+            elements.push(leftMarker);
+            
+            // Right marker
+            const rightMarker = this.scene.add.graphics();
+            rightMarker.fillStyle(this.colors.accent, 1);
+            rightMarker.fillRect(label.width + markerSpacing, -markerSize/2, markerSize, markerSize);
+            container.add(rightMarker);
+            elements.push(rightMarker);
+            
+            label.sideMarkers = { left: leftMarker, right: rightMarker };
+        }
+        
+        // Add animation if requested
+        if (animate) {
+            // Pulse animation for text
+            this.scene.tweens.add({
+                targets: label,
+                alpha: { from: 1, to: 0.7 },
+                duration: 1500,
+                ease: 'Sine.easeInOut',
+                yoyo: true,
+                repeat: -1
+            });
+            
+            // If side markers are present, add animation for them too
+            if (sideMarkers && label.sideMarkers) {
+                this.scene.tweens.add({
+                    targets: [label.sideMarkers.left, label.sideMarkers.right],
+                    alpha: { from: 1, to: 0.5 },
+                    duration: 1000,
+                    ease: 'Sine.easeInOut',
+                    yoyo: true,
+                    repeat: -1
+                });
+            }
+        }
+        
+        // Store in elements if an id is provided
+        if (options.id) {
+            this.elements[options.id] = container;
+        }
+        
+        // Add public methods to the container
+        container.setText = (newText) => {
+            label.setText(newText.toUpperCase());
+        };
+        
+        // Override the container's destroy method to properly clean up all elements
+        const originalDestroy = container.destroy;
+        container.destroy = function(fromScene) {
+            // If being destroyed from scene cleanup, use original destroy
+            if (fromScene) {
+                originalDestroy.call(this);
+                return;
+            }
+            
+            // Otherwise, manually destroy each element
+            elements.forEach(element => {
+                if (element && element.destroy) {
+                    element.destroy();
+                }
+            });
+            
+            // Call original destroy without recursion
+            originalDestroy.call(this, true);
+        };
+        
+        return container;
     }
     
     /**
@@ -133,23 +407,31 @@ class UIManager {
         const buttons = [];
         let selectedIndex = initialSelection;
         
-        // Calculate grid dimensions
-        const gridWidth = (columns * itemWidth) + ((columns - 1) * spacing);
-        const startX = x - (gridWidth / 2) + (itemWidth / 2);
+        // Calculate grid positions using the layout helper
+        const positions = [];
+        const startX = x - ((columns * itemWidth) + ((columns - 1) * spacing)) / 2 + (itemWidth / 2);
+        const startY = y;
         
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < columns; col++) {
+                positions.push({
+                    x: startX + (col * (itemWidth + spacing)),
+                    y: startY + (row * (itemHeight + spacing))
+                });
+            }
+        }
+        
+        // Create buttons for each item
         items.forEach((item, index) => {
-            // Calculate position in grid
-            const col = index % columns;
-            const row = Math.floor(index / columns);
-            const itemX = startX + (col * (itemWidth + spacing));
-            const itemY = y + (row * (itemHeight + spacing));
+            if (index >= positions.length) return;
             
             const isSelected = index === selectedIndex;
+            const pos = positions[index];
             
             // Create button background
             const bg = this.scene.add.rectangle(
-                itemX, 
-                itemY, 
+                pos.x, 
+                pos.y, 
                 itemWidth, 
                 itemHeight, 
                 isSelected ? this.colors.primary : this.colors.secondary
@@ -159,7 +441,7 @@ class UIManager {
                 .setStrokeStyle(2, isSelected ? this.colors.accent : 0x555555);
                 
             // Create button text
-            const text = this.scene.add.text(itemX, itemY, item, {
+            const text = this.scene.add.text(pos.x, pos.y, item, {
                 fontFamily: "'VT323'",
                 fontSize: fontSize + 'px',
                 fill: '#ffffff',
@@ -198,761 +480,414 @@ class UIManager {
     }
     
     /**
-     * Create a text input field
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     * @param {string} defaultValue - Default text value
-     * @param {function} onChange - Function to call when value changes
-     * @param {object} options - Optional configuration
-     * @returns {object} Input field object
+     * Get position based on layout constants
+     * @param {object} layout - Layout object from LAYOUT constants
+     * @returns {object} Calculated position with x, y, width, height
      */
-    createInputField(x, y, defaultValue, onChange, options = {}) {
-        const width = options.width || Math.min(300, this.width * 0.5);
-        const height = options.height || 40;
-        const fontSize = options.fontSize || this.fontSize.md;
+    getPosition(layout) {
+        return this.layoutHelper.getPosition(layout);
+    }
+    
+    /**
+     * Toggle debug overlay visibility
+     */
+    toggleDebug() {
+        this.debug.toggle();
+    }
+    
+    /**
+     * Build standard combat UI elements
+     * @param {object} data - Combat data including player and enemy
+     * @param {object} options - Optional configuration
+     * @returns {object} Created UI elements
+     */
+    buildCombatUI(data, options = {}) {
+        const { player, enemy } = data;
+        const ui = {};
         
-        // Create input background
-        const bg = this.scene.add.rectangle(x, y, width, height, this.colors.secondary)
-            .setOrigin(0.5)
-            .setInteractive()
-            .setStrokeStyle(2, this.colors.accent);
-            
-        // Create text display
-        const text = this.scene.add.text(x, y, defaultValue, {
-            fontFamily: "'VT323'",
-            fontSize: fontSize + 'px',
-            fill: '#ffffff',
-            align: 'center',
-            resolution: 3
-        }).setOrigin(0.5);
+        // Create player status panel
+        const playerPanelPos = this.getPosition(LAYOUT.COMBAT.PLAYER_PANEL);
+        ui.playerPanel = this.createPanel(
+            playerPanelPos.x, 
+            playerPanelPos.y, 
+            playerPanelPos.width, 
+            playerPanelPos.height, 
+            { id: 'player-panel' }
+        );
         
-        // Add click handler for input
-        bg.on('pointerdown', () => {
-            // Use browser prompt for input
-            // In a real game, you'd use a custom input system
-            const value = prompt(options.promptText || 'Enter value:', text.text);
-            if (value && value.trim() !== '') {
-                text.setText(value.trim());
-                
-                // Call change handler
-                if (onChange) {
-                    onChange(value.trim());
+        // Create player health bar
+        const playerHealthPos = this.getPosition(LAYOUT.COMBAT.PLAYER_HEALTH);
+        ui.playerHealth = this.createStatusBar(
+            playerHealthPos.x,
+            playerHealthPos.y,
+            player.health,
+            player.maxHealth,
+            { 
+                id: 'player-health',
+                width: playerPanelPos.width * 0.8,
+                textPrefix: 'HP'
+            }
+        );
+        
+        // Create player mana bar if applicable
+        if (player.mana !== undefined) {
+            const playerManaPos = this.getPosition(LAYOUT.COMBAT.PLAYER_MANA);
+            ui.playerMana = this.createStatusBar(
+                playerManaPos.x,
+                playerManaPos.y,
+                player.mana,
+                player.maxMana,
+                { 
+                    id: 'player-mana',
+                    width: playerPanelPos.width * 0.8,
+                    textPrefix: 'MP',
+                    barColor: 0x0000ff
                 }
+            );
+        }
+        
+        // Create enemy status panel
+        const enemyPanelPos = this.getPosition(LAYOUT.COMBAT.ENEMY_PANEL);
+        ui.enemyPanel = this.createPanel(
+            enemyPanelPos.x, 
+            enemyPanelPos.y, 
+            enemyPanelPos.width, 
+            enemyPanelPos.height, 
+            { id: 'enemy-panel' }
+        );
+        
+        // Create enemy health bar
+        const enemyHealthPos = this.getPosition(LAYOUT.COMBAT.ENEMY_HEALTH);
+        ui.enemyHealth = this.createStatusBar(
+            enemyHealthPos.x,
+            enemyHealthPos.y,
+            enemy.health,
+            enemy.maxHealth,
+            { 
+                id: 'enemy-health',
+                width: enemyPanelPos.width * 0.8,
+                textPrefix: 'HP',
+                barColor: 0xff0000
             }
-        });
+        );
         
-        // Create input object
-        const input = { 
-            bg, 
-            text,
-            getValue: () => text.text,
-            setValue: (value) => text.setText(value)
-        };
-        
-        // Store in elements if an id is provided
-        if (options.id) {
-            this.elements[options.id] = input;
+        // Create combat log if applicable
+        const logPos = this.getPosition(LAYOUT.COMBAT.LOG);
+        if (logPos) {
+            ui.log = this.createPanel(
+                logPos.x,
+                logPos.y,
+                logPos.width,
+                logPos.height,
+                { id: 'combat-log', fillAlpha: 0.7 }
+            );
+            
+            ui.logText = this.createText(
+                logPos.x,
+                logPos.y,
+                '',
+                {
+                    id: 'combat-log-text',
+                    fontSize: this.fontSize.sm,
+                    align: 'left'
+                }
+            );
+            
+            // Add log text to panel
+            ui.log.add(ui.logText);
         }
         
-        return input;
+        return ui;
     }
     
     /**
-     * Create a panel to group related UI elements
-     * @param {number} x - X position of panel center
-     * @param {number} y - Y position of panel center
-     * @param {number} width - Panel width
-     * @param {number} height - Panel height
-     * @param {object} options - Optional configuration
-     * @returns {Object} An object containing the panel elements
+     * Update combat UI elements with new data
+     * @param {object} ui - UI elements created by buildCombatUI
+     * @param {object} data - Updated combat data
      */
-    createPanel(x, y, width, height, options = {}) {
-        // Create the background rectangle
-        const rectangle = this.scene.add.rectangle(
-            x, 
-            y, 
-            width, 
-            height, 
-            options.fillColor || this.colors.secondary,
-            options.fillAlpha || 0.8
-        ).setOrigin(0.5);
+    updateCombatUI(ui, data) {
+        const { player, enemy } = data;
         
-        // Create border if needed
-        let border = null;
-        if (options.borderColor !== undefined) {
-            border = this.scene.add.rectangle(
-                x,
-                y,
-                width,
-                height
-            )
-            .setStrokeStyle(
-                options.borderThickness || 2, 
-                options.borderColor
-            )
-            .setOrigin(0.5)
-            .setFillStyle(0, 0); // Transparent fill
+        // Update player health
+        if (ui.playerHealth) {
+            ui.playerHealth.update(player.health, player.maxHealth);
         }
         
-        // Create panel object with proper destroy method
-        const panel = {
-            rectangle,
-            border,
-            x, y, width, height,
-            destroy: function() {
-                if (this.rectangle) this.rectangle.destroy();
-                if (this.border) this.border.destroy();
+        // Update player mana if applicable
+        if (ui.playerMana && player.mana !== undefined) {
+            ui.playerMana.update(player.mana, player.maxMana);
+        }
+        
+        // Update enemy health
+        if (ui.enemyHealth && enemy) {
+            ui.enemyHealth.update(enemy.health, enemy.maxHealth);
+        }
+    }
+    
+    /**
+     * Add message to combat log
+     * @param {object} ui - UI elements created by buildCombatUI
+     * @param {string} message - Message to add to the log
+     * @param {object} options - Optional configuration
+     */
+    addCombatLogMessage(ui, message, options = {}) {
+        if (!ui.logText) return;
+        
+        const color = options.color || '#ffffff';
+        const maxLines = options.maxLines || 5;
+        
+        // Get current log text
+        let logContent = ui.logText.text;
+        let lines = logContent ? logContent.split('\n') : [];
+        
+        // Add new message with color
+        lines.push(`${message}`);
+        
+        // Limit to max lines
+        if (lines.length > maxLines) {
+            lines = lines.slice(lines.length - maxLines);
+        }
+        
+        // Update log text
+        ui.logText.setText(lines.join('\n'));
+    }
+    
+    /**
+     * Clean up UI elements when no longer needed
+     * @param {string} id - ID of element to destroy, or null to destroy all
+     */
+    destroy(id = null) {
+        if (id) {
+            // Destroy specific element
+            if (this.elements[id]) {
+                if (typeof this.elements[id].destroy === 'function') {
+                    this.elements[id].destroy();
+                }
+                delete this.elements[id];
             }
-        };
-        
-        // Store in elements if an id is provided
-        if (options.id) {
-            this.elements[options.id] = panel;
-        }
-        
-        return panel;
-    }
-    
-    /**
-     * Add pixel-art style corner decorations
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     * @param {boolean} flipX - Whether to flip horizontally
-     * @param {boolean} flipY - Whether to flip vertically
-     * @param {object} options - Optional configuration
-     * @returns {Phaser.GameObjects.Graphics} The decoration object
-     */
-    addCornerDecoration(x, y, flipX, flipY, options = {}) {
-        const size = options.size || 20;
-        const color = options.color || this.colors.accent;
-        
-        const decoration = this.scene.add.graphics();
-        decoration.lineStyle(2, color, 1);
-        
-        // Draw L-shaped corner
-        decoration.beginPath();
-        decoration.moveTo(x, y);
-        decoration.lineTo(x + (flipX ? -size : size), y);
-        decoration.moveTo(x, y);
-        decoration.lineTo(x, y + (flipY ? -size : size));
-        decoration.closePath();
-        decoration.strokePath();
-        
-        return decoration;
-    }
-    
-    /**
-     * Add decorative corners to the screen - REMOVED FROM ALL SCENES
-     * @param {object} options - Optional configuration
-     * @returns {array} Array of corner decoration objects
-     */
-    addScreenCorners(options = {}) {
-        const padding = options.padding || 20;
-        const corners = [
-            this.addCornerDecoration(padding, padding, false, false, options),
-            this.addCornerDecoration(this.width - padding, padding, true, false, options),
-            this.addCornerDecoration(padding, this.height - padding, false, true, options),
-            this.addCornerDecoration(this.width - padding, this.height - padding, true, true, options)
-        ];
-        
-        return corners;
-    }
-    
-    /**
-     * Create a character preview display
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     * @param {string} spriteKey - Key of the sprite to display
-     * @param {object} options - Optional configuration
-     * @returns {object} Character preview object
-     */
-    createCharacterPreview(x, y, spriteKey, options = {}) {
-        const size = options.size || 200;
-        const borderWidth = options.borderWidth || 4;
-        const borderColor = options.borderColor || this.colors.accent;
-        const bgColor = options.bgColor || 0x222233;
-        
-        // Create a container for all preview elements
-        const container = this.scene.add.container(x, y);
-        
-        // Create background panel
-        const bg = this.scene.add.rectangle(0, 0, size, size, bgColor)
-            .setOrigin(0.5)
-            .setStrokeStyle(borderWidth, borderColor);
-        
-        // Add to container
-        container.add(bg);
-        
-        // Create pixel corners
-        const corners = this.scene.add.graphics();
-        corners.fillStyle(borderColor, 1);
-        
-        // Draw pixel corners (small squares at each corner)
-        const halfSize = size / 2;
-        const cornerSize = 8;
-        
-        corners.fillRect(-halfSize, -halfSize, cornerSize, cornerSize); // Top-left
-        corners.fillRect(halfSize - cornerSize, -halfSize, cornerSize, cornerSize); // Top-right
-        corners.fillRect(-halfSize, halfSize - cornerSize, cornerSize, cornerSize); // Bottom-left
-        corners.fillRect(halfSize - cornerSize, halfSize - cornerSize, cornerSize, cornerSize); // Bottom-right
-        
-        // Add to container
-        container.add(corners);
-        
-        // Create character sprite
-        const sprite = this.scene.add.sprite(0, 0, spriteKey)
-            .setOrigin(0.5)
-            .setDisplaySize(size * 0.8, size * 0.8);
-        
-        // Add to container
-        container.add(sprite);
-        
-        // Create glow effect
-        const glow = this.scene.add.graphics();
-        glow.fillStyle(0xffffff, 0.2);
-        glow.fillCircle(0, 0, size * 0.4);
-        
-        // Add to container (below sprite)
-        container.addAt(glow, 1);
-        
-        // Add a subtle animation to the glow
-        this.scene.tweens.add({
-            targets: glow,
-            alpha: 0.1,
-            duration: 1500,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
-        
-        // Create frame for reference
-        const frame = { width: size, height: size };
-        
-        // Create character preview object with methods
-        const characterPreview = {
-            container,
-            bg,
-            corners,
-            sprite,
-            glow,
-            frame,
-            setSprite: (newSpriteKey) => {
-                sprite.setTexture(newSpriteKey);
-            },
-            setPosition: (newX, newY) => {
-                container.setPosition(newX, newY);
-            }
-        };
-        
-        // Store in elements if an id is provided
-        if (options.id) {
-            this.elements[options.id] = characterPreview;
-        }
-        
-        return characterPreview;
-    }
-    
-    /**
-     * Create a section label with consistent styling
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     * @param {string} text - Label text
-     * @param {object} options - Optional configuration
-     * @returns {object} The created label object
-     */
-    createSectionLabel(x, y, text, options = {}) {
-        const fontSize = options.fontSize || this.fontSize.md;
-        const fontFamily = options.fontFamily || "'Press Start 2P'";
-        const color = options.color || this.colors.textLight;
-        const sideMarkers = options.sideMarkers !== undefined ? options.sideMarkers : false;
-        const markerWidth = options.markerWidth || 20;
-        const markerSpacing = options.markerSpacing || 10;
-        const background = options.background !== undefined ? options.background : true;
-        const animate = options.animate !== undefined ? options.animate : false;
-        
-        // Create a container for all label elements
-        const container = this.scene.add.container(x, y);
-        
-        // Create background panel if enabled
-        let bg = null;
-        if (background) {
-            // Calculate text width for proper background sizing
-            const tempText = this.scene.add.text(0, 0, text, {
-                fontFamily: fontFamily,
-                fontSize: fontSize + 'px',
-                resolution: 3
+        } else {
+            // Destroy all elements
+            Object.values(this.elements).forEach(element => {
+                if (element && typeof element.destroy === 'function') {
+                    element.destroy();
+                }
             });
-            const textWidth = tempText.width;
-            tempText.destroy();
-            
-            // Create background with proper width
-            const bgWidth = textWidth + 40;
-            const bgHeight = fontSize + 16;
-            
-            bg = this.scene.add.rectangle(0, 0, bgWidth, bgHeight, 0x000000, 0.5)
-                .setOrigin(0.5);
-                
-            container.add(bg);
+            this.elements = {};
         }
-        
-        // Create text
-        const textObj = this.scene.add.text(0, 0, text, {
-            fontFamily: fontFamily,
-            fontSize: fontSize + 'px',
-            fill: color,
-            align: 'center',
-            resolution: 3
-        }).setOrigin(0.5);
-        
-        container.add(textObj);
-        
-        // Add side markers if enabled
-        let leftMarker = null;
-        let rightMarker = null;
-        
-        if (sideMarkers) {
-            // Calculate position for markers
-            const textWidth = textObj.width;
-            const markerX = (textWidth / 2) + markerSpacing;
-            
-            // Create left marker
-            leftMarker = this.scene.add.graphics();
-            leftMarker.lineStyle(2, this.colors.accent, 1);
-            leftMarker.lineBetween(-markerX, 0, -markerX - markerWidth, 0);
-            
-            // Create right marker
-            rightMarker = this.scene.add.graphics();
-            rightMarker.lineStyle(2, this.colors.accent, 1);
-            rightMarker.lineBetween(markerX, 0, markerX + markerWidth, 0);
-            
-            // Add markers to container
-            container.add(leftMarker);
-            container.add(rightMarker);
-        }
-        
-        // Add animation if enabled
-        if (animate) {
-            // Subtle pulsing animation
-            this.scene.tweens.add({
-                targets: container,
-                scaleX: 1.05,
-                scaleY: 1.05,
-                duration: 1000,
-                yoyo: true,
-                repeat: -1,
-                ease: 'Sine.easeInOut'
-            });
-        }
-        
-        // Create section label object with methods
-        const sectionLabel = {
-            container,
-            text: textObj,
-            bg,
-            leftMarker,
-            rightMarker,
-            setText: (newText) => {
-                textObj.setText(newText);
-                
-                // Update background size if present
-                if (bg) {
-                    const newWidth = textObj.width + 40;
-                    bg.width = newWidth;
-                }
-                
-                // Update marker positions if present
-                if (sideMarkers) {
-                    const newMarkerX = (textObj.width / 2) + markerSpacing;
-                    
-                    leftMarker.clear();
-                    leftMarker.lineStyle(2, this.colors.accent, 1);
-                    leftMarker.lineBetween(-newMarkerX, 0, -newMarkerX - markerWidth, 0);
-                    
-                    rightMarker.clear();
-                    rightMarker.lineStyle(2, this.colors.accent, 1);
-                    rightMarker.lineBetween(newMarkerX, 0, newMarkerX + markerWidth, 0);
-                }
-            },
-            setPosition: (newX, newY) => {
-                container.setPosition(newX, newY);
-            }
-        };
-        
-        // Store in elements if an id is provided
-        if (options.id) {
-            this.elements[options.id] = sectionLabel;
-        }
-        
-        return sectionLabel;
     }
     
     /**
-     * Create a panel with pixel art styling
+     * Create a character preview panel
      * @param {number} x - X position
      * @param {number} y - Y position
-     * @param {number} width - Panel width
-     * @param {number} height - Panel height
+     * @param {object|string} character - Character data or class name
      * @param {object} options - Optional configuration
-     * @returns {object} Panel container
+     * @returns {object} The created preview elements
      */
-    createPanel(x, y, width, height, options = {}) {
-        const fillColor = options.fillColor !== undefined ? options.fillColor : 0x222233;
-        const fillAlpha = options.fillAlpha !== undefined ? options.fillAlpha : 1;
-        const strokeColor = options.strokeColor !== undefined ? options.strokeColor : this.colors.accent;
-        const strokeWidth = options.strokeWidth !== undefined ? options.strokeWidth : 2;
-        const cornerSize = options.cornerSize !== undefined ? options.cornerSize : 4;
-        const pixelPerfect = options.pixelPerfect !== undefined ? options.pixelPerfect : true;
-        
-        // Create a container for all panel elements
-        const container = this.scene.add.container(x, y);
-        
-        // Create panel background
-        const bg = this.scene.add.rectangle(0, 0, width, height, fillColor, fillAlpha)
-            .setOrigin(0.5)
-            .setStrokeStyle(strokeWidth, strokeColor);
-            
-        // Add to container
-        container.add(bg);
-        
-        // Add pixel corners if pixel perfect is enabled
-        if (pixelPerfect) {
-            const corners = this.scene.add.graphics();
-            corners.fillStyle(strokeColor, 1);
-            
-            // Draw pixel corners (small squares at each corner)
-            const halfWidth = width / 2;
-            const halfHeight = height / 2;
-            
-            corners.fillRect(-halfWidth, -halfHeight, cornerSize, cornerSize); // Top-left
-            corners.fillRect(halfWidth - cornerSize, -halfHeight, cornerSize, cornerSize); // Top-right
-            corners.fillRect(-halfWidth, halfHeight - cornerSize, cornerSize, cornerSize); // Bottom-left
-            corners.fillRect(halfWidth - cornerSize, halfHeight - cornerSize, cornerSize, cornerSize); // Bottom-right
-            
-            // Add to container
-            container.add(corners);
+    createCharacterPreview(x, y, character, options = {}) {
+        // If character is a string, convert it to an object with class property
+        if (typeof character === 'string') {
+            character = {
+                class: character,
+                name: character.charAt(0).toUpperCase() + character.slice(1),
+                sprite: character, // Assuming sprite key matches character class name
+                stats: {
+                    STR: 10,
+                    DEX: 10,
+                    INT: 10,
+                    CON: 10
+                }
+            };
         }
         
-        // Create panel object with methods
-        const panel = {
-            container,
-            bg,
-            width,
-            height,
-            setSize: (newWidth, newHeight) => {
-                bg.width = newWidth;
-                bg.height = newHeight;
-                
-                // Update corners if pixel perfect is enabled
-                if (pixelPerfect) {
-                    const corners = container.list[1];
-                    corners.clear();
-                    corners.fillStyle(strokeColor, 1);
-                    
-                    const halfWidth = newWidth / 2;
-                    const halfHeight = newHeight / 2;
-                    
-                    corners.fillRect(-halfWidth, -halfHeight, cornerSize, cornerSize);
-                    corners.fillRect(halfWidth - cornerSize, -halfHeight, cornerSize, cornerSize);
-                    corners.fillRect(-halfWidth, halfHeight - cornerSize, cornerSize, cornerSize);
-                    corners.fillRect(halfWidth - cornerSize, halfHeight - cornerSize, cornerSize, cornerSize);
-                }
-            },
-            setPosition: (newX, newY) => {
-                container.setPosition(newX, newY);
-            }
+        // Handle size parameter for backward compatibility
+        const size = options.size || Math.min(300, this.width * 0.25);
+        const width = options.width || size;
+        const height = options.height || size * 1.33; // Use 4:3 ratio if only size is provided
+        
+        const panelOptions = {
+            fillColor: options.fillColor || this.colors.secondary,
+            fillAlpha: options.fillAlpha || 0.8,
+            strokeColor: options.strokeColor || this.colors.accent,
+            ...options.panelOptions
         };
         
-        // Store in elements if an id is provided
-        if (options.id) {
-            this.elements[options.id] = panel;
-        }
+        // Create container panel
+        const panel = this.createPanel(x, y, width, height, panelOptions);
+        const elements = [panel];
         
-        return panel;
-    }
-    
-    /**
-     * Add decorative corners to the screen
-     */
-    addScreenCorners() {
-        const addCornerDecoration = (x, y, flipX, flipY) => {
-            const decoration = this.scene.add.graphics();
-            decoration.lineStyle(2, this.colors.accent, 1);
-            
-            // Draw L-shaped corner
-            decoration.beginPath();
-            decoration.moveTo(x, y);
-            decoration.lineTo(x + (flipX ? -20 : 20), y);
-            decoration.moveTo(x, y);
-            decoration.lineTo(x, y + (flipY ? -20 : 20));
-            decoration.closePath();
-            decoration.strokePath();
-        };
-        
-        // Add decorations to all four corners
-        addCornerDecoration(20, 20, false, false);
-        addCornerDecoration(this.width - 20, 20, true, false);
-        addCornerDecoration(20, this.height - 20, false, true);
-        addCornerDecoration(this.width - 20, this.height - 20, true, true);
-    }
-    
-    /**
-     * Create an input field with consistent styling
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     * @param {string} defaultValue - Default text value
-     * @param {function} onChange - Function to call when value changes
-     * @param {object} options - Optional configuration
-     * @returns {object} Input field object
-     */
-    createInputField(x, y, defaultValue, onChange, options = {}) {
-        const width = options.width || 300;
-        const height = options.height || 50;
-        const fontSize = options.fontSize || this.fontSize.md;
-        const promptText = options.promptText || 'Enter text:';
-        
-        // Create a container for all input elements
-        const container = this.scene.add.container(x, y);
-        
-        // Create background panel
-        const bg = this.scene.add.rectangle(0, 0, width, height, 0x222233)
-            .setOrigin(0.5)
-            .setStrokeStyle(2, this.colors.accent);
-        
-        // Add to container
-        container.add(bg);
-        
-        // Create pixel corners
-        const corners = this.scene.add.graphics();
-        corners.fillStyle(this.colors.accent, 1);
-        
-        // Draw pixel corners (small squares at each corner)
-        const halfWidth = width / 2;
-        const halfHeight = height / 2;
-        const cornerSize = 4;
-        
-        corners.fillRect(-halfWidth, -halfHeight, cornerSize, cornerSize); // Top-left
-        corners.fillRect(halfWidth - cornerSize, -halfHeight, cornerSize, cornerSize); // Top-right
-        corners.fillRect(-halfWidth, halfHeight - cornerSize, cornerSize, cornerSize); // Bottom-left
-        corners.fillRect(halfWidth - cornerSize, halfHeight - cornerSize, cornerSize, cornerSize); // Bottom-right
-        
-        // Add to container
-        container.add(corners);
-        
-        // Create text display
-        const text = this.scene.add.text(0, 0, defaultValue, {
-            fontFamily: "'VT323'",
-            fontSize: fontSize + 'px',
-            fill: '#ffffff',
-            align: 'center',
-            resolution: 3
-        }).setOrigin(0.5);
-        
-        // Add to container
-        container.add(text);
-        
-        // Make the background interactive
-        bg.setInteractive({ useHandCursor: true });
-        
-        // Store current value
-        let currentValue = defaultValue;
-        
-        // Handle click to edit
-        bg.on('pointerdown', () => {
-            // Show prompt dialog
-            const newValue = prompt(promptText, currentValue);
-            
-            // Update if value changed and not cancelled
-            if (newValue !== null && newValue !== currentValue) {
-                currentValue = newValue;
-                text.setText(currentValue);
-                
-                // Call onChange callback if provided
-                if (onChange) {
-                    onChange(currentValue);
-                }
-            }
+        // Character name
+        const nameY = y - height/2 + this.spacing.lg;
+        const nameText = this.createText(x, nameY, character.name || "Character", {
+            fontSize: this.fontSize.md,
+            color: options.nameColor || '#ffffff',
+            align: 'center'
         });
+        elements.push(nameText);
         
-        // Create input field object with methods
-        const inputField = {
-            container,
-            bg,
-            text,
-            getValue: () => currentValue,
-            setValue: (newValue) => {
-                currentValue = newValue;
-                text.setText(currentValue);
+        // Character image/sprite
+        const spriteY = y - height/4;
+        let sprite;
+        
+        // Check if character sprite exists in cache
+        if (character.sprite && this.scene.textures.exists(character.sprite)) {
+            sprite = this.scene.add.sprite(x, spriteY, character.sprite);
+            
+            // Scale sprite to fit nicely in the panel
+            if (sprite.width > 0 && sprite.height > 0) {
+                const maxSpriteWidth = width * 0.7;
+                const maxSpriteHeight = height * 0.5;
+                const scale = Math.min(
+                    maxSpriteWidth / sprite.width,
+                    maxSpriteHeight / sprite.height
+                );
+                sprite.setScale(scale);
+            } else {
+                sprite.setScale(options.spriteScale || 2);
             }
-        };
-        
-        // Store in elements if an id is provided
-        if (options.id) {
-            this.elements[options.id] = inputField;
+        } else {
+            // Fallback rectangle if sprite isn't available
+            sprite = this.scene.add.rectangle(x, spriteY, width * 0.4, height * 0.4, 0x666666);
         }
+        elements.push(sprite);
+            
+        // Character stats (if provided)
+        const stats = [];
+        const statsY = y + height/4;
+        const statsSpacing = this.spacing.md;
         
-        return inputField;
-    }
-    
-    /**
-     * Calculate a grid of positions
-     * @param {number} startX - Starting X position
-     * @param {number} startY - Starting Y position
-     * @param {number} columns - Number of columns
-     * @param {number} rows - Number of rows
-     * @param {number} cellWidth - Width of each cell
-     * @param {number} cellHeight - Height of each cell
-     * @param {number} spacing - Spacing between cells
-     * @returns {array} Array of positions {x, y}
-     */
-    calculateGrid(startX, startY, columns, rows, cellWidth, cellHeight, spacing) {
-        const positions = [];
-        
-        for (let row = 0; row < rows; row++) {
-            for (let col = 0; col < columns; col++) {
-                positions.push({
-                    x: startX + (col * (cellWidth + spacing)),
-                    y: startY + (row * (cellHeight + spacing))
+        if (character.stats) {
+            let i = 0;
+            Object.entries(character.stats).forEach(([key, value]) => {
+                const statY = statsY + (i * statsSpacing);
+                const statText = this.createText(x, statY, `${key}: ${value}`, {
+                    fontSize: this.fontSize.sm,
+                    align: 'center'
                 });
-            }
-        }
-        
-        return positions;
-    }
-    
-    /**
-     * Create a layout container with automatic vertical spacing
-     * @param {number} x - X position of container center
-     * @param {number} y - Y position of container top
-     * @param {number} width - Container width
-     * @param {object} options - Optional configuration
-     * @returns {object} Layout container object
-     */
-    createLayout(x, y, width, options = {}) {
-        const spacing = options.spacing || this.spacing.md;
-        let currentY = y;
-        
-        const container = {
-            x,
-            y,
-            width,
-            currentY,
-            spacing,
-            elements: [],
-            
-            /**
-             * Add an element to the layout
-             * @param {function} createFn - Function that creates and returns the element
-             * @param {number} height - Height of the element
-             * @param {object} options - Optional configuration
-             * @returns {object} The created element
-             */
-            addElement: (createFn, height, options = {}) => {
-                // Add spacing if not the first element
-                if (container.elements.length > 0) {
-                    container.currentY += spacing;
-                }
-                
-                // Create element
-                const element = createFn(x, container.currentY, options);
-                
-                // Update current Y position
-                container.currentY += height;
-                
-                // Add to elements
-                container.elements.push(element);
-                
-                return element;
-            }
-        };
-        
-        return container;
-    }
-
-    /**
-     * Add decorative corners to the screen
-     * @param {object} options - Optional configuration
-     * @returns {object} Screen corners object
-     */
-    addScreenCorners(options = {}) {
-        const size = options.size || 20;
-        const thickness = options.thickness || 4;
-        const color = options.color || this.colors.accent;
-        const padding = options.padding || 10;
-        const animate = options.animate !== undefined ? options.animate : true;
-        
-        // Get screen dimensions
-        const width = this.scene.cameras.main.width;
-        const height = this.scene.cameras.main.height;
-        
-        // Create a container for all corner elements
-        const container = this.scene.add.container(0, 0);
-        
-        // Create corners graphics
-        const corners = this.scene.add.graphics();
-        corners.fillStyle(color, 1);
-        
-        // Top-left corner
-        corners.fillRect(padding, padding, size, thickness); // Horizontal
-        corners.fillRect(padding, padding, thickness, size); // Vertical
-        
-        // Top-right corner
-        corners.fillRect(width - padding - size, padding, size, thickness); // Horizontal
-        corners.fillRect(width - padding - thickness, padding, thickness, size); // Vertical
-        
-        // Bottom-left corner
-        corners.fillRect(padding, height - padding - thickness, size, thickness); // Horizontal
-        corners.fillRect(padding, height - padding - size, thickness, size); // Vertical
-        
-        // Bottom-right corner
-        corners.fillRect(width - padding - size, height - padding - thickness, size, thickness); // Horizontal
-        corners.fillRect(width - padding - thickness, height - padding - size, thickness, size); // Vertical
-        
-        // Add to container
-        container.add(corners);
-        
-        // Add subtle pulsing animation if enabled
-        if (animate) {
-            this.scene.tweens.add({
-                targets: corners,
-                alpha: 0.7,
-                duration: 2000,
-                yoyo: true,
-                repeat: -1,
-                ease: 'Sine.easeInOut'
+                stats.push(statText);
+                elements.push(statText);
+                i++;
             });
         }
         
-        // Create screen corners object
-        const screenCorners = {
-            container,
-            corners,
-            setColor: (newColor) => {
-                corners.clear();
-                corners.fillStyle(newColor, 1);
+        // Selection indicator (hidden by default)
+        const indicator = this.scene.add.graphics();
+        indicator.lineStyle(3, this.colors.accent, 1);
+        indicator.strokeRect(x - width/2, y - height/2, width, height);
+        indicator.visible = false;
+        elements.push(indicator);
+        
+        // Group all elements
+        const preview = {
+            panel,
+            nameText,
+            sprite,
+            stats,
+            indicator,
+            
+            // Method to toggle selection
+            setSelected: (selected) => {
+                indicator.visible = selected;
+                panel.bg.setStrokeStyle(2, selected ? 0xffffff : this.colors.accent);
+            },
+            
+            // Method to update character data
+            updateCharacter: (newCharacter) => {
+                // Update name
+                if (newCharacter.name) {
+                    nameText.setText(newCharacter.name);
+                }
                 
-                // Redraw all corners
-                // Top-left corner
-                corners.fillRect(padding, padding, size, thickness);
-                corners.fillRect(padding, padding, thickness, size);
+                // Update sprite if it's different
+                if (newCharacter.sprite && this.scene.textures.exists(newCharacter.sprite) && 
+                    (sprite.texture && sprite.texture.key !== newCharacter.sprite)) {
+                    
+                    // Remove old sprite from elements array
+                    const spriteIndex = elements.indexOf(sprite);
+                    if (spriteIndex !== -1) {
+                        elements.splice(spriteIndex, 1);
+                    }
+                    
+                    // Remove old sprite
+                    sprite.destroy();
+                    
+                    // Create new sprite
+                    sprite = this.scene.add.sprite(x, spriteY, newCharacter.sprite);
+                    
+                    // Scale sprite to fit nicely in the panel
+                    if (sprite.width > 0 && sprite.height > 0) {
+                        const maxSpriteWidth = width * 0.7;
+                        const maxSpriteHeight = height * 0.5;
+                        const scale = Math.min(
+                            maxSpriteWidth / sprite.width,
+                            maxSpriteHeight / sprite.height
+                        );
+                        sprite.setScale(scale);
+                    } else {
+                        sprite.setScale(options.spriteScale || 2);
+                    }
+                    
+                    // Add to panel and elements
+                    panel.add(sprite);
+                    elements.push(sprite);
+                    preview.sprite = sprite;
+                }
                 
-                // Top-right corner
-                corners.fillRect(width - padding - size, padding, size, thickness);
-                corners.fillRect(width - padding - thickness, padding, thickness, size);
-                
-                // Bottom-left corner
-                corners.fillRect(padding, height - padding - thickness, size, thickness);
-                corners.fillRect(padding, height - padding - size, thickness, size);
-                
-                // Bottom-right corner
-                corners.fillRect(width - padding - size, height - padding - thickness, size, thickness);
-                corners.fillRect(width - padding - thickness, height - padding - size, thickness, size);
+                // Update stats if provided
+                if (newCharacter.stats) {
+                    // Remove old stats from elements array
+                    stats.forEach(stat => {
+                        const statIndex = elements.indexOf(stat);
+                        if (statIndex !== -1) {
+                            elements.splice(statIndex, 1);
+                        }
+                    });
+                    
+                    // Clear existing stats
+                    stats.forEach(stat => stat.destroy());
+                    stats.length = 0;
+                    
+                    // Add new stats
+                    let i = 0;
+                    Object.entries(newCharacter.stats).forEach(([key, value]) => {
+                        const statY = statsY + (i * statsSpacing);
+                        const statText = this.createText(x, statY, `${key}: ${value}`, {
+                            fontSize: this.fontSize.sm,
+                            align: 'center'
+                        });
+                        stats.push(statText);
+                        elements.push(statText);
+                        panel.add(statText);
+                        i++;
+                    });
+                    
+                    preview.stats = stats;
+                }
+            },
+            
+            // Method to clean up
+            destroy: () => {
+                // Destroy all elements
+                elements.forEach(element => {
+                    if (element && element.destroy) {
+                        element.destroy();
+                    }
+                });
+                elements.length = 0;
             }
         };
         
-        // Store in elements
-        this.elements['screen-corners'] = screenCorners;
+        // Add elements to panel
+        panel.add(nameText);
+        panel.add(sprite);
+        stats.forEach(stat => panel.add(stat));
         
-        return screenCorners;
+        // Store in elements if an id is provided
+        if (options.id) {
+            this.elements[options.id] = preview;
+        }
+        
+        return preview;
     }
 }
 

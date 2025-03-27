@@ -1,12 +1,12 @@
 import { ASSET_PATHS } from '../config/AssetConfig.js';
+import { LAYOUT } from '../config/Layout.js';
 import gameState from '../gameState.js';
 
 export default class CombatUI {
     constructor(scene) {
         this.scene = scene;
         this.buttons = {};
-        this.healthBars = {};
-        this.manaBars = {};
+        this.statusBars = {}; 
     }
 
     createCombatUI() {
@@ -28,10 +28,10 @@ export default class CombatUI {
         const height = this.scene.cameras.main.height;
 
         this.scene.ui.createPanel(
-            width * 0.25,
-            height * 0.25,
-            width * 0.4,
-            height * 0.2,
+            LAYOUT.COMBAT.PLAYER_PANEL.x || width * 0.25,
+            LAYOUT.COMBAT.PLAYER_PANEL.y || height * 0.25,
+            LAYOUT.COMBAT.PLAYER_PANEL.width || width * 0.4,
+            LAYOUT.COMBAT.PLAYER_PANEL.height || height * 0.2,
             {
                 fillColor: 0x111122,
                 fillAlpha: 0.7,
@@ -40,14 +40,21 @@ export default class CombatUI {
             }
         );
 
-        const playerName = gameState.player.name || 'Adventurer';
-        this.playerNameText = this.scene.add.text(width * 0.25, height * 0.2, playerName, {
-            fontFamily: "'Press Start 2P'",
-            fontSize: this.scene.ui.fontSize.sm + 'px',
-            fill: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 2
-        }).setOrigin(0.5);
+        const player = gameState.player;
+        const playerName = player.name || 'Adventurer';
+        
+        this.playerNameText = this.scene.add.text(
+            LAYOUT.COMBAT.PLAYER_PANEL.x || width * 0.25, 
+            (LAYOUT.COMBAT.PLAYER_PANEL.y || height * 0.25) - 30, 
+            playerName, 
+            {
+                fontFamily: "'Press Start 2P'",
+                fontSize: this.scene.ui.fontSize.sm + 'px',
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 2
+            }
+        ).setOrigin(0.5);
 
         this.createPlayerHealthDisplay();
         this.createPlayerManaDisplay();
@@ -58,13 +65,18 @@ export default class CombatUI {
         const height = this.scene.cameras.main.height;
         const player = gameState.player;
 
-        this.healthBars.player = this.makeHealthBar(width * 0.25, height * 0.3, 200, 20, 0x00ff00);
-        this.playerHealthText = this.scene.add.text(width * 0.25, height * 0.3, 
-            `HP: ${player.health}/${player.maxHealth}`, {
-                fontSize: '18px',
-                fill: '#ffffff',
-                align: 'center'
-            }).setOrigin(0.5);
+        this.statusBars.playerHealth = this.scene.ui.createStatusBar(
+            LAYOUT.COMBAT.PLAYER_HEALTH.x || width * 0.25,
+            LAYOUT.COMBAT.PLAYER_HEALTH.y || height * 0.3,
+            player.health,
+            player.maxHealth,
+            {
+                barColor: 0x00ff00,
+                textPrefix: 'HP',
+                fontFamily: "'Press Start 2P'",
+                fontSize: this.scene.ui.fontSize.sm
+            }
+        );
     }
 
     createPlayerManaDisplay() {
@@ -72,13 +84,18 @@ export default class CombatUI {
         const height = this.scene.cameras.main.height;
         const player = gameState.player;
 
-        this.manaBars.player = this.makeManaBar(width * 0.25, height * 0.38, 200, 20, 0x0066ff);
-        this.playerManaText = this.scene.add.text(width * 0.25, height * 0.38, 
-            `MP: ${player.mana}/${player.maxMana}`, {
-                fontSize: '18px',
-                fill: '#ffffff',
-                align: 'center'
-            }).setOrigin(0.5);
+        this.statusBars.playerMana = this.scene.ui.createStatusBar(
+            LAYOUT.COMBAT.PLAYER_MANA.x || width * 0.25,
+            LAYOUT.COMBAT.PLAYER_MANA.y || height * 0.38,
+            player.mana,
+            player.maxMana,
+            {
+                barColor: 0x0066ff,
+                textPrefix: 'MP',
+                fontFamily: "'Press Start 2P'",
+                fontSize: this.scene.ui.fontSize.sm
+            }
+        );
     }
 
     createEnemyPanel() {
@@ -86,10 +103,10 @@ export default class CombatUI {
         const height = this.scene.cameras.main.height;
 
         this.scene.ui.createPanel(
-            width * 0.75,
-            height * 0.25,
-            width * 0.4,
-            height * 0.2,
+            LAYOUT.COMBAT.ENEMY_PANEL.x || width * 0.75,
+            LAYOUT.COMBAT.ENEMY_PANEL.y || height * 0.25,
+            LAYOUT.COMBAT.ENEMY_PANEL.width || width * 0.4,
+            LAYOUT.COMBAT.ENEMY_PANEL.height || height * 0.2,
             {
                 fillColor: 0x221111,
                 fillAlpha: 0.7,
@@ -115,7 +132,7 @@ export default class CombatUI {
                 fillColor: color,
                 hoverColor: hoverColor
             });
-            return btn; // return full button object, not just .bg
+            return btn; 
         };
 
         this.buttons.attack = createStyledButton(startX, 'Attack', 0x2ecc71, 0x27ae60, () => {
@@ -134,82 +151,65 @@ export default class CombatUI {
         this.buttons.retreat = createStyledButton(startX + spacing * 3, 'Retreat', 0xe74c3c, 0xc0392b, () => {
             this.scene.handleRetreat();
         });
-        
     }
 
     showItemMenu() {}
 
-    makeHealthBar(x, y, width, height, color) {
-        const barX = x - width/2;
-        const barY = y - height/2;
-
-        const bar = {
-            x: barX,
-            y: barY,
-            width: width,
-            height: height,
-            color: color,
-            bg: this.scene.add.rectangle(x, y, width, height, 0x333333).setOrigin(0.5),
-            bar: this.scene.add.graphics(),
-            border: this.scene.add.graphics()
-        };
-
-        bar.bar.fillStyle(color, 1);
-        bar.bar.fillRect(barX, barY, width, height);
-
-        bar.border.lineStyle(2, 0xffffff, 1);
-        bar.border.strokeRect(barX, barY, width, height);
-
-        return bar;
-    }
-
-    makeManaBar(x, y, width, height, color) {
-        return this.makeHealthBar(x, y, width, height, color);
-    }
-
-    updateHealthBar(bar, current, max) {
-        if (!bar || !bar.bar) return;
-
-        current = Math.min(current, max);
-        const percent = Math.max(0, Math.min(current / max, 1));
-
-        bar.bar.clear();
-        bar.bar.fillStyle(bar.color, 1);
-        bar.bar.fillRect(
-            bar.x, 
-            bar.y, 
-            bar.width * percent, 
-            bar.height
-        );
-    }
-
-    updateManaBar(bar, current, max) {
-        this.updateHealthBar(bar, current, max);
-    }
-
     updatePlayerHealth() {
         const player = gameState.player;
-        this.updateHealthBar(this.healthBars.player, player.health, player.maxHealth);
-        this.playerHealthText.setText(`HP: ${player.health}/${player.maxHealth}`);
+        this.statusBars.playerHealth.update(player.health, player.maxHealth);
     }
 
     updatePlayerMana() {
         const player = gameState.player;
-        this.updateManaBar(this.manaBars.player, player.mana, player.maxMana);
-        this.playerManaText.setText(`MP: ${player.mana}/${player.maxMana}`);
+        this.statusBars.playerMana.update(player.mana, player.maxMana);
     }
 
-    updatePlayerStats() {
-        this.updatePlayerHealth();
-        this.updatePlayerMana();
+    createEnemyHealthBar(enemy) {
+        const width = this.scene.cameras.main.width;
+        const height = this.scene.cameras.main.height;
+        
+        const enemyHealthBar = this.scene.ui.createStatusBar(
+            LAYOUT.COMBAT.ENEMY_HEALTH.x || width * 0.75,
+            LAYOUT.COMBAT.ENEMY_HEALTH.y || height * 0.3,
+            enemy.health,
+            enemy.maxHealth,
+            {
+                barColor: 0xff0000,
+                textPrefix: 'HP',
+                fontFamily: "'Press Start 2P'",
+                fontSize: this.scene.ui.fontSize.sm
+            }
+        );
+        
+        const nameText = this.scene.add.text(
+            LAYOUT.COMBAT.ENEMY_HEALTH.x || width * 0.75,
+            (LAYOUT.COMBAT.ENEMY_HEALTH.y || height * 0.3) - 30,
+            enemy.name,
+            {
+                fontFamily: "'Press Start 2P'",
+                fontSize: this.scene.ui.fontSize.sm + 'px',
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 2,
+                align: 'center'
+            }
+        ).setOrigin(0.5);
+        
+        enemy.displayElements = {
+            nameText: nameText,
+            healthBar: enemyHealthBar
+        };
+        
+        return enemyHealthBar;
     }
-
-    updateEnemyHealth(enemy) {
-        if (this.scene.spriteManager) {
-            this.scene.spriteManager.updateEnemyHealthBar(enemy, `HP: ${enemy.health}/${enemy.maxHealth}`);
-        }
+    
+    updateEnemyHealthBar(enemy) {
+        if (!enemy || !enemy.displayElements || !enemy.displayElements.healthBar) return;
+        
+        enemy.displayElements.healthBar.update(enemy.health, enemy.maxHealth);
     }
-
+    
     enableActionButtons() {
         Object.values(this.buttons).forEach(button => button.bg.setInteractive());
     }

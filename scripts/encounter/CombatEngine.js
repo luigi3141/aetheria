@@ -89,7 +89,7 @@ export default class CombatEngine {
         enemy.health = Math.max(0, enemy.health - damage);
         
         // Update enemy health display
-        this.scene.combatUI.updateEnemyHealth(enemy);
+        this.scene.combatUI.updateEnemyHealthBar(enemy);
         
         // Add combat log entry
         const message = this.scene.combatText.getAttackMessage('player', attackType, damage, didCrit);
