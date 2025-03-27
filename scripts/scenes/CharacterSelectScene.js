@@ -15,15 +15,29 @@ class CharacterSelectScene extends Phaser.Scene {
 
     preload() {
         // Load character assets
-        this.load.image('background', ASSET_PATHS.BACKGROUNDS.CHARACTER);
+        if (!this.textures.exists('background')) {
+            this.load.image('background', ASSET_PATHS.BACKGROUNDS.CHARACTER);
+        }
         
         // Load character portraits for different classes
-        this.load.image('warrior', ASSET_PATHS.PLAYERS.WARRIOR);
-        this.load.image('mage', ASSET_PATHS.PLAYERS.MAGE);
-        this.load.image('rogue', ASSET_PATHS.PLAYERS.ROGUE);
-        this.load.image('cleric', ASSET_PATHS.PLAYERS.CLERIC);
-        this.load.image('ranger', ASSET_PATHS.PLAYERS.RANGER);
-        this.load.image('bard', ASSET_PATHS.PLAYERS.BARD);        
+        if (!this.textures.exists('warrior')) {
+            this.load.image('warrior', ASSET_PATHS.PLAYERS.WARRIOR);
+        }
+        if (!this.textures.exists('mage')) {
+            this.load.image('mage', ASSET_PATHS.PLAYERS.MAGE);
+        }
+        if (!this.textures.exists('rogue')) {
+            this.load.image('rogue', ASSET_PATHS.PLAYERS.ROGUE);
+        }
+        if (!this.textures.exists('cleric')) {
+            this.load.image('cleric', ASSET_PATHS.PLAYERS.CLERIC);
+        }
+        if (!this.textures.exists('ranger')) {
+            this.load.image('ranger', ASSET_PATHS.PLAYERS.RANGER);
+        }
+        if (!this.textures.exists('bard')) {
+            this.load.image('bard', ASSET_PATHS.PLAYERS.BARD);
+        }        
     }
 
     create() {

@@ -15,7 +15,9 @@ class CharacterSheetScene extends BaseScene {
 
     preload() {
         // Load character sheet background
-        this.load.image('character-bg', ASSET_PATHS.BACKGROUNDS.CHARACTER);
+        if (!this.textures.exists('character-bg')) {
+            this.load.image('character-bg', ASSET_PATHS.BACKGROUNDS.CHARACTER);
+        }
         
         // Load class-specific character portraits if they don't exist
         if (!this.textures.exists('warrior')) {
