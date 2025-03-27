@@ -171,8 +171,14 @@ class UIManager {
      * @returns {StatusBar} The created status bar
      */
     createStatusBar(x, y, current, max, options = {}) {
+        // Start with default options
+        const defaultOptions = {
+            fontSize: this.fontSize.sm
+        };
+        
+        // Merge with provided options, ensuring options take precedence
         const statusBarOptions = {
-            fontSize: options.fontSize || this.fontSize.sm,
+            ...defaultOptions,
             ...options
         };
         
@@ -525,7 +531,8 @@ class UIManager {
             { 
                 id: 'player-health',
                 width: playerPanelPos.width * 0.8,
-                textPrefix: 'HP'
+                textPrefix: 'HP',
+                fontSize: LAYOUT.COMBAT.PLAYER_HEALTH.style.fontSize
             }
         );
         
@@ -541,7 +548,8 @@ class UIManager {
                     id: 'player-mana',
                     width: playerPanelPos.width * 0.8,
                     textPrefix: 'MP',
-                    barColor: 0x0000ff
+                    barColor: 0x0000ff,
+                    fontSize: LAYOUT.COMBAT.PLAYER_MANA.style.fontSize
                 }
             );
         }
@@ -567,7 +575,8 @@ class UIManager {
                 id: 'enemy-health',
                 width: enemyPanelPos.width * 0.8,
                 textPrefix: 'HP',
-                barColor: 0xff0000
+                barColor: 0xff0000,
+                fontSize: LAYOUT.COMBAT.ENEMY_HEALTH.style.fontSize
             }
         );
         

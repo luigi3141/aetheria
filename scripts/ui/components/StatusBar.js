@@ -63,7 +63,7 @@ class StatusBar {
                 `${this.textPrefix}: ${this.current}/${this.max}`, 
                 {
                     fontFamily: this.fontFamily,
-                    fontSize: this.fontSize + 'px',
+                    fontSize: this.fontSize,
                     fill: this.fontColor,
                     align: 'center'
                 }

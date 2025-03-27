@@ -28,10 +28,10 @@ export default class CombatUI {
         const height = this.scene.cameras.main.height;
 
         this.scene.ui.createPanel(
-            LAYOUT.COMBAT.PLAYER_PANEL.x || width * 0.25,
-            LAYOUT.COMBAT.PLAYER_PANEL.y || height * 0.25,
-            LAYOUT.COMBAT.PLAYER_PANEL.width || width * 0.4,
-            LAYOUT.COMBAT.PLAYER_PANEL.height || height * 0.2,
+            width * LAYOUT.COMBAT.PLAYER_PANEL.x,
+            height * LAYOUT.COMBAT.PLAYER_PANEL.y,
+            width * LAYOUT.COMBAT.PLAYER_PANEL.width,
+            height * LAYOUT.COMBAT.PLAYER_PANEL.height,
             {
                 fillColor: 0x111122,
                 fillAlpha: 0.7,
@@ -44,8 +44,8 @@ export default class CombatUI {
         const playerName = player.name || 'Adventurer';
         
         this.playerNameText = this.scene.add.text(
-            LAYOUT.COMBAT.PLAYER_PANEL.x || width * 0.25, 
-            (LAYOUT.COMBAT.PLAYER_PANEL.y || height * 0.25) - 30, 
+            width * LAYOUT.COMBAT.PLAYER_PANEL.x, 
+            (height * LAYOUT.COMBAT.PLAYER_PANEL.y) - 30, 
             playerName, 
             {
                 fontFamily: "'Press Start 2P'",
@@ -66,15 +66,14 @@ export default class CombatUI {
         const player = gameState.player;
 
         this.statusBars.playerHealth = this.scene.ui.createStatusBar(
-            LAYOUT.COMBAT.PLAYER_HEALTH.x || width * 0.25,
-            LAYOUT.COMBAT.PLAYER_HEALTH.y || height * 0.3,
+            width * LAYOUT.COMBAT.PLAYER_HEALTH.x,
+            height * LAYOUT.COMBAT.PLAYER_HEALTH.y,
             player.health,
             player.maxHealth,
             {
-                barColor: 0x00ff00,
+                ...LAYOUT.COMBAT.PLAYER_HEALTH.style,
                 textPrefix: 'HP',
-                fontFamily: "'Press Start 2P'",
-                fontSize: this.scene.ui.fontSize.sm
+                fontFamily: "'Press Start 2P'"
             }
         );
     }
@@ -85,15 +84,14 @@ export default class CombatUI {
         const player = gameState.player;
 
         this.statusBars.playerMana = this.scene.ui.createStatusBar(
-            LAYOUT.COMBAT.PLAYER_MANA.x || width * 0.25,
-            LAYOUT.COMBAT.PLAYER_MANA.y || height * 0.38,
+            width * LAYOUT.COMBAT.PLAYER_MANA.x,
+            height * LAYOUT.COMBAT.PLAYER_MANA.y,
             player.mana,
             player.maxMana,
             {
-                barColor: 0x0066ff,
+                ...LAYOUT.COMBAT.PLAYER_MANA.style,
                 textPrefix: 'MP',
-                fontFamily: "'Press Start 2P'",
-                fontSize: this.scene.ui.fontSize.sm
+                fontFamily: "'Press Start 2P'"
             }
         );
     }
@@ -103,10 +101,10 @@ export default class CombatUI {
         const height = this.scene.cameras.main.height;
 
         this.scene.ui.createPanel(
-            LAYOUT.COMBAT.ENEMY_PANEL.x || width * 0.75,
-            LAYOUT.COMBAT.ENEMY_PANEL.y || height * 0.25,
-            LAYOUT.COMBAT.ENEMY_PANEL.width || width * 0.4,
-            LAYOUT.COMBAT.ENEMY_PANEL.height || height * 0.2,
+            width * LAYOUT.COMBAT.ENEMY_PANEL.x,
+            height * LAYOUT.COMBAT.ENEMY_PANEL.y,
+            width * LAYOUT.COMBAT.ENEMY_PANEL.width,
+            height * LAYOUT.COMBAT.ENEMY_PANEL.height,
             {
                 fillColor: 0x221111,
                 fillAlpha: 0.7,
@@ -170,21 +168,20 @@ export default class CombatUI {
         const height = this.scene.cameras.main.height;
         
         const enemyHealthBar = this.scene.ui.createStatusBar(
-            LAYOUT.COMBAT.ENEMY_HEALTH.x || width * 0.75,
-            LAYOUT.COMBAT.ENEMY_HEALTH.y || height * 0.3,
+            width * LAYOUT.COMBAT.ENEMY_HEALTH.x,
+            height * LAYOUT.COMBAT.ENEMY_HEALTH.y,
             enemy.health,
             enemy.maxHealth,
             {
-                barColor: 0xff0000,
+                ...LAYOUT.COMBAT.ENEMY_HEALTH.style,
                 textPrefix: 'HP',
-                fontFamily: "'Press Start 2P'",
-                fontSize: this.scene.ui.fontSize.sm
+                fontFamily: "'Press Start 2P'"
             }
         );
         
         const nameText = this.scene.add.text(
-            LAYOUT.COMBAT.ENEMY_HEALTH.x || width * 0.75,
-            (LAYOUT.COMBAT.ENEMY_HEALTH.y || height * 0.3) - 30,
+            width * LAYOUT.COMBAT.ENEMY_HEALTH.x,
+            (height * LAYOUT.COMBAT.ENEMY_HEALTH.y) - 30,
             enemy.name,
             {
                 fontFamily: "'Press Start 2P'",

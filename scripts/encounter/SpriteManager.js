@@ -40,8 +40,8 @@ export default class SpriteManager {
         // Create player sprite
         const key = this.playerSpriteKey || 'player'; // fallback
         this.playerSprite = this.scene.add.sprite(
-          LAYOUT.COMBAT.SPRITES.PLAYER.x,
-          LAYOUT.COMBAT.SPRITES.PLAYER.y,
+          LAYOUT.COMBAT.SPRITES.PLAYER.x * this.scene.scale.width,
+          LAYOUT.COMBAT.SPRITES.PLAYER.y * this.scene.scale.height,
           key
         ).setScale(1);
         
@@ -67,13 +67,20 @@ export default class SpriteManager {
     
         // Use the sprite key directly as provided by the enemy data
         const spriteKey = enemy.sprite || 'DEFAULT';
+        if (!this.scene.textures.exists(spriteKey)) {
+            console.warn(`Sprite with key "${spriteKey}" was not preloaded!`);
+        }
 
         // Create enemy sprite
         this.enemySprite = this.scene.add.sprite(
-            LAYOUT.COMBAT.SPRITES.ENEMY.x,
-            LAYOUT.COMBAT.SPRITES.ENEMY.y,
+            LAYOUT.COMBAT.SPRITES.ENEMY.x * this.scene.scale.width,
+            LAYOUT.COMBAT.SPRITES.ENEMY.y * this.scene.scale.height,
             spriteKey
-        ).setScale(1);
+        ).setScale(1)
+        .setDepth(1000) // Ensure it's above other elements
+        .setVisible(true); // Ensure it's visible
+        console.log('Enemy sprite position:', this.enemySprite.x, this.enemySprite.y);
+
     
         // Add a slight bobbing animation to make the enemy sprite feel alive
         this.scene.tweens.add({
@@ -88,10 +95,6 @@ export default class SpriteManager {
         // Store the sprite reference with the enemy
         enemy.displayElements = enemy.displayElements || {};
         enemy.displayElements.sprite = this.enemySprite;
-        
-        if (!this.scene.textures.exists(spriteKey)) {
-            console.warn(`Sprite with key "${spriteKey}" was not preloaded!`);
-        }
     }
     
     /**
