@@ -90,6 +90,7 @@ class CharacterSelectScene extends Phaser.Scene {
      */
     createCharacterPreviewSection(x, y) {
         // Create section label with enhanced styling
+        /*
         this.characterLabel = this.ui.createSectionLabel(
             x, 
             y - this.ui.spacing.xl * 2, 
@@ -99,7 +100,8 @@ class CharacterSelectScene extends Phaser.Scene {
                 animate: true
             }
         );
-        
+        */
+
         // Create character preview with enhanced visuals
         this.characterPreview = this.ui.createCharacterPreview(
             x, 
@@ -137,13 +139,12 @@ class CharacterSelectScene extends Phaser.Scene {
         const classes = ['Warrior', 'Mage', 'Rogue', 'Cleric', 'Ranger', 'Bard'];
         
         // Create section label with enhanced styling
-        this.classLabel = this.ui.createSectionLabel(
+        this.classLabel = this.ui.createTitle(
             x, 
-            y - this.ui.spacing.xl * 1.5, 
-            'SELECT CLASS',
+            y - this.ui.spacing.xl * 1.8, 
+            'Select Class',
             {
-                sideMarkers: true,
-                animate: true
+                fontSize: this.ui.fontSize.md
             }
         );
         
@@ -174,20 +175,20 @@ class CharacterSelectScene extends Phaser.Scene {
      */
     createNameInputSection(x, y) {
         // Create section label with enhanced styling
-        this.nameLabel = this.ui.createSectionLabel(
-            x, 
-            y - this.ui.spacing.lg, 
-            'ENTER CHARACTER NAME',
+        this.nameLabel = this.ui.createTitle(
+            x*0.5, 
+            y + this.ui.spacing.lg*1, 
+            'Set Name:',
             {
-                sideMarkers: true,
-                animate: true
+                fontSize: this.ui.fontSize.md,
+                padding: this.ui.spacing.md
             }
         );
         
         // Create name input with a more obvious interactive appearance
         this.nameInput = this.ui.createInputField(
-            x,
-            y,
+            x*1.2,
+            y + this.ui.spacing.lg*1,
             'Adventurer',
             (name) => {
                 console.log(`Character name set to: ${name}`);
@@ -197,10 +198,36 @@ class CharacterSelectScene extends Phaser.Scene {
                 width: 300,
                 height: 50,
                 promptText: 'Enter your character name:',
-                id: 'name-input'
+                id: 'name-input',
+                fillColor: 0x111111
             }
         );
+
+        // Create a sliding highlight effect
+        const highlightWidth = 40;
+        const highlightHeight = this.nameInput.height;
+        const startX = this.nameInput.container.x - this.nameInput.width/2 + highlightWidth/2;
+        const endX = this.nameInput.container.x + this.nameInput.width/2 - highlightWidth/2;
         
+        const highlight = this.add.rectangle(
+            startX,
+            this.nameInput.container.y,
+            highlightWidth,
+            highlightHeight,
+            0xffffff,
+            0.1
+        );
+
+        // Add sliding animation
+        this.tweens.add({
+            targets: highlight,
+            x: endX,
+            duration: 2000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+        /*
         // Add a small hint text below the input field
         const hintY = y + this.ui.spacing.md + 30;
         this.nameHint = this.add.text(x, hintY, '(Click to edit)', {
@@ -219,6 +246,7 @@ class CharacterSelectScene extends Phaser.Scene {
             repeat: -1,
             ease: 'Sine.easeInOut'
         });
+        */
     }
     
     /**
