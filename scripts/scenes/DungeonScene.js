@@ -158,17 +158,16 @@ class DungeonScene extends BaseScene {
         HealthManager.validatePlayerHealth();
 
         const player = gameState.player;
-        this.add.text(
-            width * 0.15,
-            height * 0.1,
+        this.ui.createTitle(
+            width * 0.5,
+            height * 0.3,
             `${player.name || 'Adventurer'}\nHP: ${player.health}/${player.maxHealth}\nMP: ${player.mana}/${player.maxMana}`,
-            {
-                fontFamily: "'VT323'",
-                fontSize: '16px',
-                fill: '#ffffff',
-                align: 'center'
+            { 
+                fontSize: this.ui.fontSize.sm,
+                padding: this.ui.spacing.md,
+                lineSpacing: 10
             }
-        ).setOrigin(0.5);
+        );
     }
 }
 

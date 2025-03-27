@@ -72,28 +72,31 @@ class UIManager {
      */
     createTitle(x, y, text, options = {}) {
         const fontSize = options.fontSize || this.fontSize.lg;
+        const padding = options.padding || this.spacing.md * 2;
+        const lineSpacing = options.lineSpacing || 0;
 
-    // Create temporary text to measure width
-    const tempText = this.scene.add.text(0, 0, text, {
-        fontFamily: "'Press Start 2P'",
-        fontSize: fontSize + 'px'
-    });
-    const textWidth = tempText.width;
-    tempText.destroy();
+        // Create temporary text to measure width
+        const tempText = this.scene.add.text(0, 0, text, {
+            fontFamily: "'Press Start 2P'",
+            fontSize: fontSize + 'px',
+            lineSpacing: lineSpacing
+        });
+        const textWidth = tempText.width;
+        const textHeight = tempText.height;
+        tempText.destroy();
 
-    // Create rectangle background
-    const padding = this.spacing.md * 2; // Increased padding
-    const rectWidth = textWidth + padding;
-    const rectHeight = fontSize + padding;
-    const bg = this.scene.add.rectangle(x, y, rectWidth, rectHeight, 0x000000, 0.6)
-        .setOrigin(0.5);
-
+        // Create rectangle background
+        const rectWidth = textWidth + padding * 2;
+        const rectHeight = textHeight + padding * 2;
+        const bg = this.scene.add.rectangle(x, y, rectWidth, rectHeight, 0x000000, 0.6)
+            .setOrigin(0.5);
 
         const title = this.scene.add.text(x, y, text, {
             fontFamily: "'Press Start 2P'",
             fontSize: fontSize + 'px',
             fill: options.color || '#ffffff',
             align: 'center',
+            lineSpacing: lineSpacing,
             resolution: 3
         }).setOrigin(0.5);
         
