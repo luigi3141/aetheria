@@ -45,15 +45,10 @@ class DungeonScene extends BaseScene {
 
         this.safeAddImage(width / 2, height / 2, 'combat-bg', null, { displayWidth: width, displayHeight: height });
 
-        // Add dungeon title with background for contrast
         const dungeon = gameState.currentDungeon;
-        this.add.rectangle(width / 2, height * 0.06, 400, 40, 0x000000, 0.6)
-            .setOrigin(0.5);
-        this.add.text(width / 2, height * 0.06, dungeon.name, {
-            fontFamily: "'Press Start 2P'",
-            fontSize: '24px',
-            fill: '#ffffff'
-        }).setOrigin(0.5);
+        this.ui.createTitle(width / 2, height * 0.06, dungeon.name, {
+            fontSize: this.ui.fontSize.lg
+        });
 
         this.createPlayer();
         this.createExplorationUI();

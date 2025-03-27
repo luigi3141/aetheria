@@ -43,11 +43,23 @@ export default class CombatLog {
     }
     
     /**
+     * Add encounter start message to the log
+     * @param {object} enemy - The enemy encountered
+     * @param {string} difficulty - Difficulty label
+     * @param {string} difficultyColor - Color for difficulty text
+     */
+    addEncounterMessage(enemy, difficulty, difficultyColor) {
+        this.addLogEntry(`You've encountered a ${enemy.name}!`);
+        this.addLogEntry(`Difficulty: ${difficulty}`, false, difficultyColor);
+    }
+
+    /**
      * Add a new entry to the combat log
      * @param {string} text - The text to add
      * @param {boolean} isPlayerAction - Whether this is a player action (affects round counter)
+     * @param {string} color - Optional text color (defaults to white)
      */
-    addLogEntry(text, isPlayerAction = false) {
+    addLogEntry(text, isPlayerAction = false, color = '#ffffff') {
         // Handle round prefix
         let prefix = '';
         if (isPlayerAction || !this.isPlayerTurn) {
@@ -86,27 +98,19 @@ export default class CombatLog {
                 currentLine = currentLine.length === 0 ? word : currentLine + ' ' + word;
             }
         }
-        
-        // Add the last line
-        if (currentLine.length > 0) {
-            wrappedText += currentLine;
-        }
-        
-        // Add new entry to the beginning of the array
-        this.logEntries.unshift(wrappedText);
+        wrappedText += currentLine;
+
+        // Add the wrapped text to the log entries with color
+        this.logEntries.unshift({ text: wrappedText, color });
         
         // Keep only the most recent entries
         if (this.logEntries.length > this.maxEntries) {
-            this.logEntries = this.logEntries.slice(0, this.maxEntries);
+            this.logEntries.pop();
         }
         
-        // Update the display
         this.updateLogDisplay();
-        
-        // Also log to console for debugging
-        console.log(`Combat Log: ${text}`);
     }
-    
+
     /**
      * Update the combat log display
      */
@@ -114,7 +118,8 @@ export default class CombatLog {
         // Update each log text object
         this.logTexts.forEach((text, index) => {
             if (index < this.logEntries.length) {
-                text.setText(this.logEntries[index]);
+                text.setText(this.logEntries[index].text);
+                text.setStyle({ fill: this.logEntries[index].color });
             } else {
                 text.setText('');
             }

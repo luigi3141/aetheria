@@ -72,7 +72,7 @@ export default class EncounterScene extends BaseScene {
         this.combatText = new CombatText(this);
         this.spriteManager = new SpriteManager(this);
         this.spriteManager.playerSpriteKey = this.playerSpriteKey;
-
+      
         this.add.image(0, 0, 'combat-background')
             .setOrigin(0)
             .setDisplaySize(this.cameras.main.width, this.cameras.main.height);
@@ -92,6 +92,10 @@ export default class EncounterScene extends BaseScene {
 
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
+        
+        // Initialize combat log first
+        this.combatLog.createCombatLog();
+        
         const messageContainer = this.add.container(0, 0);
 
         const dimBg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.6);
@@ -121,6 +125,8 @@ export default class EncounterScene extends BaseScene {
         ).setOrigin(0.5);
 
         messageContainer.add([dimBg, box, message, diffText]);
+        this.combatLog.addLogEntry(`You've encountered a ${enemy.name}!`);
+        this.combatLog.addLogEntry(`Difficulty: ${difficulty}`, false, difficultyColor);
 
         this.time.delayedCall(1500, () => {
             messageContainer.destroy();
@@ -134,7 +140,6 @@ export default class EncounterScene extends BaseScene {
             // Create enemy health bar using CombatUI instead of SpriteManager
             this.combatUI.createEnemyHealthBar(this.enemies[0]);
             
-            this.combatLog.createCombatLog();
             this.combatEngine.startCombat();
             this.combatAudio.playBattleMusic();
         });
