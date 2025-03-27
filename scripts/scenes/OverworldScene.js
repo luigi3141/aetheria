@@ -33,7 +33,7 @@ class OverworldScene extends Phaser.Scene {
 
         
         // Create the title
-        this.ui.createTitle(width/2, height * 0.08, 'Aetheria Town', {
+        this.ui.createTitle(width/2, height * 0.08, 'Aetheria Overworld', {
             fontSize: this.ui.fontSize.lg
         });
         
@@ -55,8 +55,8 @@ class OverworldScene extends Phaser.Scene {
         HealthManager.validatePlayerHealth();
         
         // Create player avatar
-        const avatarX = width * 0.15;
-        const avatarY = height * 0.2;
+        const avatarX = width * 0.2;
+        const avatarY = height * 0.3;
         
         // Create avatar container with border
         const avatarContainer = this.ui.createPanel(
@@ -77,16 +77,14 @@ class OverworldScene extends Phaser.Scene {
         const playerSprite = this.add.image(avatarX, avatarY, 'player-avatar').setDisplaySize(80, 80);
         
         // Add player info text
-        const infoX = width * 0.4;
-        const infoY = height * 0.2;
+        const infoX = width * 0.3;
+        const infoY = height * 0.3;
         
         const playerName = gameState.player.name || 'Adventurer';
-        const playerRace = gameState.player.race || 'Human';
         const playerClass = gameState.player.class || 'Warrior';
-        const playerLevel = gameState.player.level || 1;
         
         // Display player stats including health and mana
-        const playerStats = `${playerName}\n${playerRace} ${playerClass}\nLevel ${playerLevel}\nHP: ${gameState.player.health}/${gameState.player.maxHealth}\nMP: ${gameState.player.mana}/${gameState.player.maxMana}`;
+        const playerStats = `${playerName}\n${playerClass}\nHP: ${gameState.player.health}/${gameState.player.maxHealth}\nMP: ${gameState.player.mana}/${gameState.player.maxMana}`;
         
         const playerInfo = this.ui.createSectionLabel(
             infoX,

@@ -302,22 +302,6 @@ class UIManager {
             label.setPosition(padding, 0);
         }
         
-        // Add decorative line if requested
-        if (addLine) {
-            const lineWidth = options.lineWidth || Math.min(300, this.width * 0.4);
-            const lineY = fontSize/2 + this.spacing.sm;
-            const line = this.scene.add.graphics();
-            line.lineStyle(2, this.colors.accent, 1);
-            line.beginPath();
-            line.moveTo(0, lineY);
-            line.lineTo(lineWidth, lineY);
-            line.closePath();
-            line.strokePath();
-            
-            container.add(line);
-            elements.push(line);
-            label.decorativeLine = line;
-        }
         
         // Add side markers if requested
         if (sideMarkers) {
