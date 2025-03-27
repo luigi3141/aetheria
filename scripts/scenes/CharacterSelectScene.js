@@ -69,13 +69,13 @@ class CharacterSelectScene extends Phaser.Scene {
         // === LEFT COLUMN - Character Preview ===
         this.createCharacterPreviewSection(
             leftColumnWidth / 2, 
-            height * 0.38
+            height * 0.4
         );
         
         // === MIDDLE COLUMN - Character Class ===
         this.createClassSelectionSection(
-            leftColumnWidth + (rightColumnWidth / 2), 
-            height * 0.35
+            leftColumnWidth + (rightColumnWidth ), 
+            height * 0.33
         );
         
         // === BOTTOM SECTION - Character Name ===
@@ -142,9 +142,10 @@ class CharacterSelectScene extends Phaser.Scene {
         this.classLabel = this.ui.createTitle(
             x, 
             y - this.ui.spacing.xl * 1.8, 
-            'Select Class',
+            'CHARACTER TYPE',
             {
-                fontSize: this.ui.fontSize.md
+                fontSize: this.ui.fontSize.md,
+                padding: this.ui.spacing.md
             }
         );
         
@@ -162,10 +163,10 @@ class CharacterSelectScene extends Phaser.Scene {
             },
             {
                 columns: 2,
-                itemWidth: 120,
-                itemHeight: 40,
-                spacing: this.ui.spacing.md,
-                fontSize: this.ui.fontSize.md
+                itemWidth: 160,  
+                itemHeight: 45,  
+                spacing: this.ui.spacing.lg,  
+                fontSize: this.ui.fontSize.md * 1.2  
             }
         );
     }
@@ -191,15 +192,17 @@ class CharacterSelectScene extends Phaser.Scene {
             y + this.ui.spacing.lg*1,
             'Adventurer',
             (name) => {
-                console.log(`Character name set to: ${name}`);
-                gameState.player.name = name;
+                const truncatedName = name.slice(0, 20);
+                console.log(`Character name set to: ${truncatedName}`);
+                gameState.player.name = truncatedName;
             },
             {
                 width: 300,
                 height: 50,
                 promptText: 'Enter your character name:',
                 id: 'name-input',
-                fillColor: 0x111111
+                fillColor: 0x111111,
+                maxLength: 20
             }
         );
 

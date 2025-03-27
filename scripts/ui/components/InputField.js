@@ -83,15 +83,17 @@ class InputField {
         // Handle click to edit
         this.bg.on('pointerdown', () => {
             // Show prompt dialog
-            const newValue = prompt(this.promptText, this.value);
+            const newValue = prompt(this.promptText + ' (max 20 characters)', this.value);
             
             // Update if value changed and not cancelled
             if (newValue !== null && newValue !== this.value) {
-                this.setValue(newValue);
+                // Truncate to 20 characters
+                const truncatedValue = newValue.slice(0, 20);
+                this.setValue(truncatedValue);
                 
                 // Call onChange callback if provided
                 if (this.onChange) {
-                    this.onChange(newValue);
+                    this.onChange(truncatedValue);
                 }
             }
         });
