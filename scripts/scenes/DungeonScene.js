@@ -5,6 +5,7 @@ import navigationManager from '../navigation/NavigationManager.js';
 import TransitionManager from '../ui/TransitionManager.js';
 import HealthManager from '../utils/HealthManager.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
+import { getDungeonData } from '../data/DungeonConfig.js';
 import BaseScene from './BaseScene.js';
 
 class DungeonScene extends BaseScene {
@@ -15,28 +16,41 @@ class DungeonScene extends BaseScene {
     preload() {
         const dungeon = gameState.currentDungeon;
         if (dungeon?.backgroundKey) {
-            if (this.textures.exists('combat-bg')) {
-                this.textures.remove('combat-bg');
+            if (!this.textures.exists('combat-bg')) {
+                this.load.image('combat-bg', ASSET_PATHS.BACKGROUNDS[dungeon.backgroundKey.toUpperCase().replace('-BG', '')]);
             }
-            this.load.image('combat-bg', ASSET_PATHS.BACKGROUNDS[dungeon.backgroundKey.toUpperCase().replace('-BG', '')]);
         } else {
-            this.load.image('combat-bg', ASSET_PATHS.BACKGROUNDS.COMBAT);
+            if (!this.textures.exists('combat-bg')) {
+                this.load.image('combat-bg', ASSET_PATHS.BACKGROUNDS.COMBAT);
+            }
         }
 
         const playerClass = gameState.player.class?.toUpperCase() || 'DEFAULT';
         const spriteKey = `player-${playerClass.toLowerCase()}`;
-        const spritePath = ASSET_PATHS.PLAYERS[playerClass] || ASSET_PATHS.PLAYERS.DEFAULT;
-        this.load.image(spriteKey, spritePath);
+        if (!this.textures.exists(spriteKey)) {
+            const spritePath = ASSET_PATHS.PLAYERS[playerClass] || ASSET_PATHS.PLAYERS.DEFAULT;
+            this.load.image(spriteKey, spritePath);
+        }
         this.playerSpriteKey = spriteKey;
     }
 
     init(data) {
-        if (!gameState.currentDungeon) {
+        console.log('DungeonScene init - Player state:', {
+            level: gameState.player.level,
+            name: gameState.player.name,
+            class: gameState.player.class
+        });
+        
+        // Always ensure we have valid dungeon data
+        if (!gameState.currentDungeon || !gameState.currentDungeon.id) {
             this.initializeDungeon();
         }
+        
+        console.log('DungeonScene init - Current dungeon:', gameState.currentDungeon);
     }
 
     create(data) {
+        console.log('DungeonScene create - Starting scene creation');
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
@@ -55,15 +69,21 @@ class DungeonScene extends BaseScene {
     }
 
     initializeDungeon() {
-        let dungeonId = gameState.dungeons?.current || 'verdant-woods';
-        let dungeonTemplate = gameState.dungeonList.find(d => d.id === dungeonId) || gameState.dungeonList[0];
+        const dungeonId = 'verdant-woods'; // Default to Verdant Forest
+        const dungeonData = getDungeonData(dungeonId);
+        
+        if (!dungeonData) {
+            console.error('Failed to load dungeon data for:', dungeonId);
+            return;
+        }
 
         gameState.currentDungeon = {
-            id: dungeonTemplate.id,
-            name: dungeonTemplate.name,
-            level: dungeonTemplate.minLevel || 1,
-            backgroundKey: dungeonTemplate.backgroundKey || 'COMBAT',
-            enemies: dungeonTemplate.enemies || ['goblin']
+            id: dungeonData.id,
+            name: dungeonData.name,
+            level: 1, // Starting level
+            minRooms: dungeonData.minRooms,
+            maxRooms: dungeonData.maxRooms,
+            backgroundKey: dungeonData.backgroundKey
         };
     }
 

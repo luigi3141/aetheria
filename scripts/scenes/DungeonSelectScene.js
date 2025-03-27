@@ -4,7 +4,7 @@ import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import TransitionManager from '../ui/TransitionManager.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
-import { getAllDungeons, canAccessDungeon } from '../data/DungeonConfig.js';
+import { getAllDungeons, canAccessDungeon, getDungeonData } from '../data/DungeonConfig.js';
 import BaseScene from './BaseScene.js';
 
 /**
@@ -17,19 +17,18 @@ class DungeonSelectScene extends BaseScene {
 
     preload() {
         // Load dungeon selection assets with unique keys
-        this.load.image('select-bg', ASSET_PATHS.BACKGROUNDS.TITLE);
+        if (!this.textures.exists('select-bg')) {
+            this.load.image('select-bg', ASSET_PATHS.BACKGROUNDS.TITLE);
+        }
         
         // Load dungeon background images for previews
-        this.load.image('forest-bg', ASSET_PATHS.BACKGROUNDS.FOREST);
-        this.load.image('caverns-bg', ASSET_PATHS.BACKGROUNDS.CAVERNS);
+        if (!this.textures.exists('forest-bg')) {
+            this.load.image('forest-bg', ASSET_PATHS.BACKGROUNDS.FOREST);
+        }
+        if (!this.textures.exists('caverns-bg')) {
+            this.load.image('caverns-bg', ASSET_PATHS.BACKGROUNDS.CAVERNS);
+        }
         
-        // Load transition assets
-        this.load.spritesheet('door', 'https://labs.phaser.io/assets/sprites/metalslug_mummy37x45.png', { 
-            frameWidth: 37, 
-            frameHeight: 45 
-        });
-        this.load.audio('door-open', 'assets/audio/door_open.wav');
-        this.load.audio('combat-start', 'assets/audio/sword.wav');
     }
 
     create() {
@@ -76,6 +75,12 @@ class DungeonSelectScene extends BaseScene {
         
         // Get all available dungeons
         const dungeons = getAllDungeons();
+        
+        console.log('DungeonSelectScene - Player state:', {
+            level: gameState.player.level,
+            name: gameState.player.name,
+            class: gameState.player.class
+        });
         
         // Calculate spacing
         const startY = height * 0.4;
@@ -133,6 +138,8 @@ class DungeonSelectScene extends BaseScene {
             
             // Add enter button - positioned relative to panel edge
             const canAccess = canAccessDungeon(gameState.player, dungeon.id);
+            console.log(`Dungeon ${dungeon.name} - canAccess:`, canAccess, 'player level:', gameState.player.level);
+            
             const buttonX = width * 0.5 + (panelWidth / 2) - 70; // Positioned to right edge of panel
             
             const enterButton = new Button(
@@ -141,19 +148,54 @@ class DungeonSelectScene extends BaseScene {
                 y,
                 'ENTER',
                 () => {
-                    // Set current dungeon in game state
-                    gameState.currentDungeon = {
-                        id: dungeon.id,
-                        name: dungeon.name,
-                        level: 1, // Starting level
-                        minRooms: dungeon.minRooms,
-                        maxRooms: dungeon.maxRooms,
-                        backgroundKey: dungeon.backgroundKey
-                    };
+                    console.log(`Enter button clicked for ${dungeon.name}`);
                     
-                    // Navigate to dungeon
-                    this.transitions.fade(() => {
-                        navigationManager.navigateTo(this, 'DungeonScene');
+                    // Get full dungeon data from config
+                    const dungeonData = getDungeonData(dungeon.id);
+                    if (!dungeonData) {
+                        console.error('Failed to get dungeon data for:', dungeon.id);
+                        return;
+                    }
+                    console.log('Retrieved dungeon data:', dungeonData);
+                    
+                    // Set current dungeon in game state with complete data
+                    gameState.currentDungeon = {
+                        id: dungeonData.id,
+                        name: dungeonData.name,
+                        level: 1, // Starting level
+                        minRooms: dungeonData.minRooms,
+                        maxRooms: dungeonData.maxRooms,
+                        backgroundKey: dungeonData.backgroundKey,
+                        minLevel: dungeonData.minLevel,
+                        maxLevel: dungeonData.maxLevel,
+                        enemies: dungeonData.enemyTypes,
+                        bosses: dungeonData.bossTypes
+                    };
+                    console.log('Set gameState.currentDungeon to:', gameState.currentDungeon);
+                    
+                    // Create a clean fade transition instead of using TransitionManager
+                    const overlay = this.add.rectangle(0, 0, 
+                        this.cameras.main.width, 
+                        this.cameras.main.height, 
+                        0x000000, 0)
+                        .setOrigin(0)
+                        .setDepth(1000)
+                        .setInteractive();
+                    
+                    // Disable input for this scene to prevent multiple clicks
+                    this.input.enabled = false;
+                    
+                    // Fade in the overlay
+                    console.log('Starting fade transition to DungeonScene');
+                    this.tweens.add({
+                        targets: overlay,
+                        alpha: 1,
+                        duration: 400, // Longer fade for smoother experience
+                        ease: 'Power2',
+                        onComplete: () => {
+                            // Navigate to dungeon scene after fade completes
+                            this.scene.start('DungeonScene');
+                        }
                     });
                 },
                 {

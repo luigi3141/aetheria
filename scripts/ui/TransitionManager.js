@@ -207,7 +207,7 @@ class TransitionManager {
      * @param {Function} callback - Function to call after fade completes
      * @param {number} duration - Duration of the fade in milliseconds
      */
-    fade(callback, duration = 250) {
+    fade(callback, duration = 500) {
         if (this.isTransitioning) return;
         this.isTransitioning = true;
         
@@ -220,23 +220,22 @@ class TransitionManager {
             .setOrigin(0)
             .setAlpha(0)
             .setDepth(1000); // Ensure it's above everything
-        
-        // Fade in
+            
+        // Simple fade in and out
         this.scene.tweens.add({
             targets: fadeRect,
             alpha: 1,
             duration: duration,
             onComplete: () => {
-                // Execute callback (scene change)
+                // Execute callback at peak of fade
                 if (callback) callback();
                 
-                // Fade out
+                // Fade out and cleanup
                 this.scene.tweens.add({
                     targets: fadeRect,
                     alpha: 0,
                     duration: duration,
                     onComplete: () => {
-                        // Clean up
                         fadeRect.destroy();
                         this.isTransitioning = false;
                     }
