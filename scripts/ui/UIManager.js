@@ -685,25 +685,23 @@ class UIManager {
      * @returns {object} The created preview elements
      */
     createCharacterPreview(x, y, character, options = {}) {
-        // If character is a string, convert it to an object with class property
+        // If character is a string, convert it to an object
         if (typeof character === 'string') {
             character = {
-                class: character,
                 name: character.charAt(0).toUpperCase() + character.slice(1),
-                sprite: character, // Assuming sprite key matches character class name
-                stats: {
-                    STR: 10,
-                    DEX: 10,
-                    INT: 10,
-                    CON: 10
-                }
+                sprite: character
             };
         }
         
-        // Handle size parameter for backward compatibility
-        const size = options.size || Math.min(300, this.width * 0.25);
+        // Size calculations
+        // 1. Start with base size (25% of screen width or provided size)
+        const baseSize = options.size || Math.min(100, this.width * 0.1);
+        // 2. Apply panel scaling (default 1x)
+        const panelScale = options.panelScale || 1;
+        const size = baseSize * panelScale;
+        // 3. Calculate width and height (4:3 ratio by default)
         const width = options.width || size;
-        const height = options.height || size * 1.33; // Use 4:3 ratio if only size is provided
+        const height = options.height || size * 1.33;
         
         const panelOptions = {
             fillColor: options.fillColor || this.colors.secondary,
@@ -712,31 +710,41 @@ class UIManager {
             ...options.panelOptions
         };
         
+        console.log('Creating character preview:', {
+            character,
+            size,
+            width,
+            height,
+            textureExists: this.scene.textures.exists(character.sprite),
+            spriteKey: character.sprite,
+            allTextures: this.scene.textures.list
+        });
+        
         // Create container panel
         const panel = this.createPanel(x, y, width, height, panelOptions);
         const elements = [panel];
         
-        // Character name
-        const nameY = y - height/2 + this.spacing.lg;
-        const nameText = this.createText(x, nameY, character.name || "Character", {
+        // Character name at top of panel
+        const nameText = this.createText(0, -height/2 + this.spacing.lg, character.name || "Character", {
             fontSize: this.fontSize.md,
             color: options.nameColor || '#ffffff',
             align: 'center'
         });
-        elements.push(nameText);
+        panel.add(nameText);
         
-        // Character image/sprite
-        const spriteY = y - height/4;
+        // Character image/sprite in center of panel
         let sprite;
         
         // Check if character sprite exists in cache
         if (character.sprite && this.scene.textures.exists(character.sprite)) {
-            sprite = this.scene.add.sprite(x, spriteY, character.sprite);
+            sprite = this.scene.add.sprite(0, 0, character.sprite);
+            panel.add(sprite);
             
-            // Scale sprite to fit nicely in the panel
+            // Scale sprite to fit nicely in the panel with padding
             if (sprite.width > 0 && sprite.height > 0) {
-                const maxSpriteWidth = width * 0.7;
-                const maxSpriteHeight = height * 0.5;
+                const padding = this.spacing.md; // Add padding around sprite
+                const maxSpriteWidth = width - (padding * 2);
+                const maxSpriteHeight = height - (padding * 3); // Extra padding for name
                 const scale = Math.min(
                     maxSpriteWidth / sprite.width,
                     maxSpriteHeight / sprite.height
@@ -745,44 +753,33 @@ class UIManager {
             } else {
                 sprite.setScale(options.spriteScale || 2);
             }
-        } else {
-            // Fallback rectangle if sprite isn't available
-            sprite = this.scene.add.rectangle(x, spriteY, width * 0.4, height * 0.4, 0x666666);
-        }
-        elements.push(sprite);
-            
-        // Character stats (if provided)
-        const stats = [];
-        const statsY = y + height/4;
-        const statsSpacing = this.spacing.md;
-        
-        if (character.stats) {
-            let i = 0;
-            Object.entries(character.stats).forEach(([key, value]) => {
-                const statY = statsY + (i * statsSpacing);
-                const statText = this.createText(x, statY, `${key}: ${value}`, {
-                    fontSize: this.fontSize.sm,
-                    align: 'center'
-                });
-                stats.push(statText);
-                elements.push(statText);
-                i++;
+            console.log('Created sprite:', {
+                key: character.sprite,
+                width: sprite.width,
+                height: sprite.height,
+                scale: sprite.scale
             });
+        } else {
+            console.log('Sprite not found:', character.sprite);
+            // Fallback rectangle if sprite isn't available
+            const fallbackWidth = width - (this.spacing.lg * 2);
+            const fallbackHeight = height - (this.spacing.lg * 4);
+            sprite = this.scene.add.rectangle(0, 0, fallbackWidth, fallbackHeight, 0x666666);
+            panel.add(sprite);
         }
         
-        // Selection indicator (hidden by default)
+        // Create selection indicator (hidden by default)
         const indicator = this.scene.add.graphics();
         indicator.lineStyle(3, this.colors.accent, 1);
-        indicator.strokeRect(x - width/2, y - height/2, width, height);
+        indicator.strokeRect(-width/2, -height/2, width, height);
         indicator.visible = false;
-        elements.push(indicator);
+        panel.add(indicator);
         
-        // Group all elements
-        const preview = {
+        // Return preview object with methods
+        return {
             panel,
             nameText,
             sprite,
-            stats,
             indicator,
             
             // Method to toggle selection
@@ -798,96 +795,27 @@ class UIManager {
                     nameText.setText(newCharacter.name);
                 }
                 
-                // Update sprite if it's different
-                if (newCharacter.sprite && this.scene.textures.exists(newCharacter.sprite) && 
-                    (sprite.texture && sprite.texture.key !== newCharacter.sprite)) {
+                // Update sprite if it exists
+                if (newCharacter.sprite && this.scene.textures.exists(newCharacter.sprite)) {
+                    sprite.setTexture(newCharacter.sprite);
                     
-                    // Remove old sprite from elements array
-                    const spriteIndex = elements.indexOf(sprite);
-                    if (spriteIndex !== -1) {
-                        elements.splice(spriteIndex, 1);
-                    }
-                    
-                    // Remove old sprite
-                    sprite.destroy();
-                    
-                    // Create new sprite
-                    sprite = this.scene.add.sprite(x, spriteY, newCharacter.sprite);
-                    
-                    // Scale sprite to fit nicely in the panel
-                    if (sprite.width > 0 && sprite.height > 0) {
-                        const maxSpriteWidth = width * 0.7;
-                        const maxSpriteHeight = height * 0.5;
-                        const scale = Math.min(
-                            maxSpriteWidth / sprite.width,
-                            maxSpriteHeight / sprite.height
-                        );
-                        sprite.setScale(scale);
-                    } else {
-                        sprite.setScale(options.spriteScale || 2);
-                    }
-                    
-                    // Add to panel and elements
-                    panel.add(sprite);
-                    elements.push(sprite);
-                    preview.sprite = sprite;
-                }
-                
-                // Update stats if provided
-                if (newCharacter.stats) {
-                    // Remove old stats from elements array
-                    stats.forEach(stat => {
-                        const statIndex = elements.indexOf(stat);
-                        if (statIndex !== -1) {
-                            elements.splice(statIndex, 1);
-                        }
-                    });
-                    
-                    // Clear existing stats
-                    stats.forEach(stat => stat.destroy());
-                    stats.length = 0;
-                    
-                    // Add new stats
-                    let i = 0;
-                    Object.entries(newCharacter.stats).forEach(([key, value]) => {
-                        const statY = statsY + (i * statsSpacing);
-                        const statText = this.createText(x, statY, `${key}: ${value}`, {
-                            fontSize: this.fontSize.sm,
-                            align: 'center'
-                        });
-                        stats.push(statText);
-                        elements.push(statText);
-                        panel.add(statText);
-                        i++;
-                    });
-                    
-                    preview.stats = stats;
+                    // Rescale sprite to fit
+                    const padding = this.spacing.lg;
+                    const maxSpriteWidth = width - (padding * 2);
+                    const maxSpriteHeight = height - (padding * 4);
+                    const scale = Math.min(
+                        maxSpriteWidth / sprite.width,
+                        maxSpriteHeight / sprite.height
+                    );
+                    sprite.setScale(scale);
                 }
             },
             
             // Method to clean up
             destroy: () => {
-                // Destroy all elements
-                elements.forEach(element => {
-                    if (element && element.destroy) {
-                        element.destroy();
-                    }
-                });
-                elements.length = 0;
+                panel.destroy();
             }
         };
-        
-        // Add elements to panel
-        panel.add(nameText);
-        panel.add(sprite);
-        stats.forEach(stat => panel.add(stat));
-        
-        // Store in elements if an id is provided
-        if (options.id) {
-            this.elements[options.id] = preview;
-        }
-        
-        return preview;
     }
 }
 

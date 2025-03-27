@@ -18,20 +18,12 @@ class CharacterSelectScene extends Phaser.Scene {
         this.load.image('background', ASSET_PATHS.BACKGROUNDS.CHARACTER);
         
         // Load character portraits for different classes
-        this.load.image('warrior', ASSET_PATHS.PORTRAITS.WARRIOR);
-        this.load.image('mage', ASSET_PATHS.PORTRAITS.MAGE);
-        this.load.image('rogue', ASSET_PATHS.PORTRAITS.ROGUE);
-        this.load.image('cleric', ASSET_PATHS.PORTRAITS.CLERIC);
-        this.load.image('ranger', ASSET_PATHS.PORTRAITS.RANGER);
-        this.load.image('bard', ASSET_PATHS.PORTRAITS.BARD);
-        
-        // Load race sprites (using same placeholders for now)
-        this.load.image('human', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('elf', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('dwarf', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('halfling', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-        this.load.image('orc', 'https://labs.phaser.io/assets/sprites/mushroom2.png');
-        this.load.image('dragonborn', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+        this.load.image('warrior', ASSET_PATHS.PLAYERS.WARRIOR);
+        this.load.image('mage', ASSET_PATHS.PLAYERS.MAGE);
+        this.load.image('rogue', ASSET_PATHS.PLAYERS.ROGUE);
+        this.load.image('cleric', ASSET_PATHS.PLAYERS.CLERIC);
+        this.load.image('ranger', ASSET_PATHS.PLAYERS.RANGER);
+        this.load.image('bard', ASSET_PATHS.PLAYERS.BARD);        
     }
 
     create() {
@@ -86,14 +78,6 @@ class CharacterSelectScene extends Phaser.Scene {
             height * 0.35
         );
         
-        // === RIGHT COLUMN - Character Race ===
-        /*
-        this.createRaceSelectionSection(
-            leftColumnWidth + rightColumnWidth + (rightColumnWidth / 2), 
-            height * 0.25
-        );
-        */
-
         // === BOTTOM SECTION - Character Name ===
         this.createNameInputSection(
             width / 2, 
@@ -123,11 +107,14 @@ class CharacterSelectScene extends Phaser.Scene {
             'warrior', // Start with warrior as default
             { 
                 id: 'character-preview',
-                size: Math.min(this.cameras.main.width * 0.22, this.cameras.main.height * 0.25)
+                panelScale: 1.5,
+                size: Math.min(this.cameras.main.width * 0.2, this.cameras.main.height * 0.2),
+                spriteScale: 1 // Increase sprite scale
             }
         );
         
         // Add stats text with enhanced styling
+        /*
         this.statsText = this.ui.createSectionLabel(
             x,
             y + this.ui.spacing.xl * 2,
@@ -139,6 +126,7 @@ class CharacterSelectScene extends Phaser.Scene {
                 animate: false
             }
         );
+        */
     }
     
     /**
@@ -181,47 +169,6 @@ class CharacterSelectScene extends Phaser.Scene {
         );
     }
     
-    /**
-     * Create the race selection section
-
-    createRaceSelectionSection(x, y) {
-        // Available races
-        const races = ['Human', 'Elf', 'Dwarf', 'Halfling', 'Orc', 'Dragonborn'];
-        
-        // Create section label with enhanced styling
-        this.raceLabel = this.ui.createSectionLabel(
-            x, 
-            y - this.ui.spacing.xl * 1.5, 
-            'SELECT RACE',
-            {
-                sideMarkers: true,
-                animate: true
-            }
-        );
-        
-        // Create race selection grid
-        this.raceGrid = new SelectionGrid(
-            this,
-            x,
-            y,
-            races,
-            (raceName, index) => {
-                console.log(`Selected race: ${raceName}`);
-                gameState.player.race = raceName;
-                this.updateCharacterPreview();
-                this.updateRaceDescription(raceName);
-            },
-            {
-                columns: 2,
-                itemWidth: 120,
-                itemHeight: 40,
-                spacing: this.ui.spacing.md,
-                fontSize: this.ui.fontSize.md
-            }
-        );
-    }
-         */
-
     /**
      * Create the name input section
      */
@@ -314,16 +261,13 @@ class CharacterSelectScene extends Phaser.Scene {
                 // Get character info
                 const playerName = this.nameInput.getValue() || 'Adventurer';
                 const playerClass = this.classGrid.getSelectedItem().toLowerCase();
-                //const playerRace = this.raceGrid.getSelectedItem();
                 
                 // Store player class selection properly
                 const playerClassLower = this.classGrid.getSelectedItem().toLowerCase();
-                //const playerRaceLower = this.raceGrid.getSelectedItem().toLowerCase();
                 
                 // Store the player data to use in other scenes
                 gameState.player.name = playerName;
                 gameState.player.class = playerClassLower;
-                //gameState.player.race = playerRaceLower;
                 // Store sprite and portrait paths to use in other scenes
                 gameState.player.sprite = ASSET_PATHS.PLAYERS[playerClassLower.toUpperCase()] || ASSET_PATHS.PLAYERS.DEFAULT;
                 gameState.player.portrait = ASSET_PATHS.PORTRAITS[playerClassLower.toUpperCase()] || ASSET_PATHS.PORTRAITS.DEFAULT;
@@ -352,30 +296,7 @@ class CharacterSelectScene extends Phaser.Scene {
                         agi += 2; int += 3;
                         break;
                 }
-                
-                // Adjust stats based on race
-                /*
-                switch (playerRaceLower) {
-                    case 'human':
-                        str += 1; agi += 1; int += 1; con += 1;
-                        break;
-                    case 'elf':
-                        agi += 2; int += 2; con -= 1;
-                        break;
-                    case 'dwarf':
-                        con += 3; str += 1; agi -= 1;
-                        break;
-                    case 'halfling':
-                        agi += 3; int += 1; str -= 1;
-                        break;
-                    case 'orc':
-                        str += 3; con += 2; int -= 2;
-                        break;
-                    case 'dragonborn':
-                        str += 2; int += 2; con += 1;
-                        break;
-                }
-                */                
+                              
                 // Calculate derived stats
                 const maxHealth = 50 + (con * 5);
                 const maxMana = 20 + (int * 3);
@@ -442,53 +363,28 @@ class CharacterSelectScene extends Phaser.Scene {
     }
     
     /**
-     * Update the race description text
-     * @param {string} raceName - Name of the selected race
-     */
-    updateRaceDescription(raceName) {
-        if (!this.raceDescText) return;
-        
-        let desc = '';
-        switch (raceName) {
-            case 'Human':
-                desc = 'Humans are versatile and\nadaptable to any class.';
-                break;
-            case 'Elf':
-                desc = 'Elves are graceful and magical,\nwith enhanced perception.';
-                break;
-            case 'Dwarf':
-                desc = 'Dwarves are hardy and strong,\nresistant to poison and magic.';
-                break;
-            case 'Halfling':
-                desc = 'Halflings are small but nimble,\nwith uncanny luck.';
-                break;
-            case 'Orc':
-                desc = 'Orcs are mighty warriors with\ngreat strength and endurance.';
-                break;
-            case 'Dragonborn':
-                desc = 'Dragonborn have draconic heritage\nand can breathe elemental energy.';
-                break;
-        }
-        
-        this.raceDescText.setText(desc);
-    }
-    
-    /**
      * Update the character preview based on selections
      */
     updateCharacterPreview() {
-        // In a real implementation, we would update the character sprite
-        // based on the selected class and race
         const playerClass = this.classGrid ? this.classGrid.getSelectedItem().toLowerCase() : 'warrior';
-        const playerRace = this.raceGrid ? this.raceGrid.getSelectedItem().toLowerCase() : 'human';
         
-        // Update character sprite based on class
-        // For now we only have a few placeholder sprites
-        let spriteKey = playerClass;
+        // Create character data object with sprite key
+        const characterData = {
+            name: playerClass.charAt(0).toUpperCase() + playerClass.slice(1),
+            sprite: playerClass // This matches the image keys we loaded in preload()
+        };
+        
+        console.log('Updating character preview:', {
+            class: playerClass,
+            characterData,
+            previewExists: !!this.characterPreview,
+            updateMethodExists: !!(this.characterPreview && this.characterPreview.updateCharacter),
+            loadedTextures: this.textures.list
+        });
         
         // Update the character preview sprite
-        if (this.characterPreview && this.characterPreview.setSprite) {
-            this.characterPreview.setSprite(spriteKey);
+        if (this.characterPreview && this.characterPreview.updateCharacter) {
+            this.characterPreview.updateCharacter(characterData);
         }
         
         // Generate some fake stats based on class and race
@@ -514,33 +410,6 @@ class CharacterSelectScene extends Phaser.Scene {
             case 'bard':
                 agi += 2; int += 3;
                 break;
-        }
-        
-        // Adjust stats based on race
-        switch (playerRace) {
-            case 'human':
-                str += 1; agi += 1; int += 1; con += 1;
-                break;
-            case 'elf':
-                agi += 2; int += 2; con -= 1;
-                break;
-            case 'dwarf':
-                con += 3; str += 1; agi -= 1;
-                break;
-            case 'halfling':
-                agi += 3; int += 1; str -= 1;
-                break;
-            case 'orc':
-                str += 3; con += 2; int -= 2;
-                break;
-            case 'dragonborn':
-                str += 2; int += 2; con += 1;
-                break;
-        }
-        
-        // Update stats text
-        if (this.statsText) {
-            this.statsText.setText(`STATS\nSTR: ${str}  AGI: ${agi}\nINT: ${int}  CON: ${con}`);
         }
     }
 }
