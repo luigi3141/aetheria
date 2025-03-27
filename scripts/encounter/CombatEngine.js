@@ -91,9 +91,9 @@ export default class CombatEngine {
         // Update enemy health display
         this.scene.combatUI.updateEnemyHealthBar(enemy);
         
-        // Add combat log entry
+        // Add combat log entry with isPlayerAction=true
         const message = this.scene.combatText.getAttackMessage('player', attackType, damage, didCrit);
-        this.scene.combatLog.addLogEntry(message);
+        this.scene.combatLog.addLogEntry(message, true);
         
         // Play attack animation and sound
         this.scene.spriteManager.animateAttack('player', () => {
@@ -101,10 +101,8 @@ export default class CombatEngine {
             if (enemy.health <= 0) {
                 this.handleEnemyDefeat(enemy);
             } else {
-                // Start enemy turn
-                this.scene.time.delayedCall(1000, () => {
-                    this.startEnemyTurn();
-                });
+                // Enemy's turn
+                this.startEnemyTurn();
             }
         });
     }
@@ -114,30 +112,29 @@ export default class CombatEngine {
      */
     processEnemyAttack() {
         const enemy = this.enemies[0];
-        if (!enemy || enemy.health <= 0) return;
+        if (!enemy) return;
         
         // Calculate damage
         const damage = this.calculateEnemyDamage();
         
         // Apply damage to player
-        const player = gameState.player;
-        player.health = Math.max(0, player.health - damage);
+        gameState.player.health = Math.max(0, gameState.player.health - damage);
         
-        // Update player health display
+        // Update health display
         this.scene.combatUI.updatePlayerHealth();
         
         // Add combat log entry
         const message = this.scene.combatText.getAttackMessage('enemy', 'basic', damage);
         this.scene.combatLog.addLogEntry(message);
         
-        // Play attack animation and sound
+        // Play attack animation
         this.scene.spriteManager.animateAttack('enemy', () => {
             // Check if player is defeated
-            if (player.health <= 0) {
+            if (gameState.player.health <= 0) {
                 this.handlePlayerDefeat();
             } else {
+                // End turn
                 this.turnInProgress = false;
-                this.currentTurn = 'player';
                 this.enablePlayerActions();
             }
         });
@@ -182,10 +179,15 @@ export default class CombatEngine {
      * Handle player defeat
      */
     handlePlayerDefeat() {
+        // Mark game as over
         this.gameOver = true;
+        
+        // Log defeat
         this.scene.combatLog.addLogEntry(this.scene.combatText.getDefeatMessage('player'));
+        
+        // Animate defeat
         this.scene.spriteManager.animateDefeat('player', () => {
-            this.scene.handleDefeat();
+            this.scene.processDefeat();
         });
     }
     
@@ -200,7 +202,7 @@ export default class CombatEngine {
                 const healAmount = item.value || 20;
                 player.health = Math.min(player.maxHealth, player.health + healAmount);
                 this.scene.combatUI.updatePlayerHealth();
-                this.scene.combatLog.addLogEntry(this.scene.combatText.getItemMessage(item.name, `Healed for ${healAmount}`));
+                this.scene.combatLog.addLogEntry(this.scene.combatText.getItemMessage(item.name, `Healed for ${healAmount}`), true);
                 this.scene.spriteManager.animateHeal('player');
                 break;
                 
@@ -208,18 +210,21 @@ export default class CombatEngine {
                 const manaAmount = item.value || 20;
                 player.mana = Math.min(player.maxMana, player.mana + manaAmount);
                 this.scene.combatUI.updatePlayerMana();
-                this.scene.combatLog.addLogEntry(this.scene.combatText.getItemMessage(item.name, `Restored ${manaAmount} mana`));
+                this.scene.combatLog.addLogEntry(this.scene.combatText.getItemMessage(item.name, `Restored ${manaAmount} mana`), true);
                 this.scene.spriteManager.animateHeal('player', 0x0066ff);
                 break;
         }
         
         // Remove item from inventory
-        const itemIndex = player.inventory.findIndex(i => i.id === item.id);
+        const itemIndex = gameState.inventory.findIndex(i => i.id === item.id);
         if (itemIndex !== -1) {
-            player.inventory.splice(itemIndex, 1);
+            gameState.inventory.splice(itemIndex, 1);
         }
         
         if (callback) callback();
+        
+        // Start enemy turn
+        this.startEnemyTurn();
     }
     
     /**
