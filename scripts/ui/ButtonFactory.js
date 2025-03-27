@@ -1,6 +1,5 @@
 import Button from './components/Button.js';
-import { LAYOUT } from './Layout.js';
-
+import { LAYOUT } from './layout/LayoutHelper.js';
 /**
  * ButtonFactory - Factory class for consistent button creation
  * Standardizes button appearance and behavior across the application

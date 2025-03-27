@@ -7,7 +7,6 @@ import CombatText from '../encounter/CombatText.js';
 import SpriteManager from '../encounter/SpriteManager.js';
 import { generateCombatEncounter } from '../encounter/EnemyGenerator.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
-import { LAYOUT } from '../config/Layout.js';
 import { calculateDifficulty } from '../utils/DifficultyManager.js';
 import gameState from '../gameState.js';
 

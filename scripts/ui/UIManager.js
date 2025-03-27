@@ -8,7 +8,6 @@ import Button from './components/Button.js';
 import Panel from './components/Panel.js';
 import StatusBar from './components/StatusBar.js';
 import InputField from './components/InputField.js';
-import DebugOverlay from './components/DebugOverlay.js';
 
 // Import layout utilities
 import { LAYOUT, LayoutHelper } from './layout/LayoutHelper.js';
@@ -58,8 +57,6 @@ class UIManager {
         // Track created UI elements for easy access
         this.elements = {};
         
-        // Initialize debug overlay
-        this.debug = new DebugOverlay(scene);
     }
     
     /**
@@ -484,14 +481,7 @@ class UIManager {
     getPosition(layout) {
         return this.layoutHelper.getPosition(layout);
     }
-    
-    /**
-     * Toggle debug overlay visibility
-     */
-    toggleDebug() {
-        this.debug.toggle();
-    }
-    
+      
     /**
      * Build standard combat UI elements
      * @param {object} data - Combat data including player and enemy

@@ -1,8 +1,6 @@
 import gameState from '../gameState.js';
-import navigationManager from '../navigation/NavigationManager.js';
 import BaseScene from './BaseScene.js';
-import { LAYOUT } from '../ui/Layout.js';
-import { ASSET_PATHS, AssetHelper } from '../config/AssetConfig.js';
+import { ASSET_PATHS } from '../config/AssetConfig.js';
 import ButtonFactory from '../ui/ButtonFactory.js';
 
 /**

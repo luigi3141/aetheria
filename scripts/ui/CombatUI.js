@@ -1,4 +1,4 @@
-import { LAYOUT } from '../config/Layout.js';
+import { LAYOUT } from './path/to/ui/layout/LayoutHelper.js';
 import gameState from '../gameState.js';
 
 /**
