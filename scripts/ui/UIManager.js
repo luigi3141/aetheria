@@ -72,6 +72,23 @@ class UIManager {
      */
     createTitle(x, y, text, options = {}) {
         const fontSize = options.fontSize || this.fontSize.lg;
+
+    // Create temporary text to measure width
+    const tempText = this.scene.add.text(0, 0, text, {
+        fontFamily: "'Press Start 2P'",
+        fontSize: fontSize + 'px'
+    });
+    const textWidth = tempText.width;
+    tempText.destroy();
+
+    // Create rectangle background
+    const padding = this.spacing.md * 2; // Increased padding
+    const rectWidth = textWidth + padding;
+    const rectHeight = fontSize + padding;
+    const bg = this.scene.add.rectangle(x, y, rectWidth, rectHeight, 0x000000, 0.6)
+        .setOrigin(0.5);
+
+
         const title = this.scene.add.text(x, y, text, {
             fontFamily: "'Press Start 2P'",
             fontSize: fontSize + 'px',
@@ -80,21 +97,8 @@ class UIManager {
             resolution: 3
         }).setOrigin(0.5);
         
-        // Add decorative line under title if requested
-        if (options.addLine !== false) {
-            const lineWidth = options.lineWidth || Math.min(500, this.width * 0.8);
-            const lineY = y + fontSize + this.spacing.md;
-            const line = this.scene.add.graphics();
-            line.lineStyle(2, this.colors.accent, 1);
-            line.beginPath();
-            line.moveTo(x - lineWidth/2, lineY);
-            line.lineTo(x + lineWidth/2, lineY);
-            line.closePath();
-            line.strokePath();
-            
-            // Group title and line
-            title.decorativeLine = line;
-        }
+        // Group background and text
+        title.background = bg;
         
         return title;
     }

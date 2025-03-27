@@ -47,9 +47,8 @@ class DungeonScene extends BaseScene {
 
         // Add dungeon title with background for contrast
         const dungeon = gameState.currentDungeon;
-        const titleBackground = this.add.rectangle(width / 2, height * 0.06, 400, 40, 0x000000, 0.6)
-            .setOrigin(0.5)
-            .setStrokeStyle(2, 0xffffff);
+        this.add.rectangle(width / 2, height * 0.06, 400, 40, 0x000000, 0.6)
+            .setOrigin(0.5);
         this.add.text(width / 2, height * 0.06, dungeon.name, {
             fontFamily: "'Press Start 2P'",
             fontSize: '24px',
