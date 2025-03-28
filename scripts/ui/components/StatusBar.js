@@ -169,10 +169,16 @@ class StatusBar {
      * Clean up all elements
      */
     destroy() {
-        this.bg.destroy();
-        this.bar.destroy();
-        this.border.destroy();
+        if (this.bg) this.bg.destroy();
+        if (this.bar) this.bar.destroy();
+        if (this.border) this.border.destroy();
         if (this.text) this.text.destroy();
+        // Nullify references
+        this.scene = null;
+        this.bg = null;
+        this.bar = null;
+        this.border = null;
+        this.text = null;
     }
 }
 
