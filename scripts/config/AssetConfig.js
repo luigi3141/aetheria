@@ -32,16 +32,26 @@ export const ASSET_PATHS = {
     
     // Enemy sprites
     ENEMIES: {
-        DEFAULT: 'assets/sprites/enemies/goblin-sprite.png',
+        DEFAULT: 'assets/sprites/enemies/default-enemy.png',
+        BANDIT: 'assets/sprites/enemies/bandit-sprite.png',
+        BAT: 'assets/sprites/enemies/bat-sprite.png',
+        BRIAR_SPIRIT: 'assets/sprites/enemies/briar-spirit-sprite.png',
+        ENTLING: 'assets/sprites/enemies/entling-sprite.png',
+        FERAL_DRUID: 'assets/sprites/enemies/feral-druid-sprite.png',
+        FOREST_WYRMLING: 'assets/sprites/enemies/forest-wyrmling-sprite.png',
         GOBLIN: 'assets/sprites/enemies/goblin-sprite.png',
-        SPIDER: 'assets/sprites/enemies/spider-sprite.png',
-        WOLF: 'assets/sprites/enemies/wolf-sprite.png',
+        GOBLIN_CHIEF: 'assets/sprites/enemies/goblin-chief-sprite.png',
+        HORNED_STAG: 'assets/sprites/enemies/horned-stag.png',
+        MOSS_TROLL: 'assets/sprites/enemies/moss-troll-sprite.png',
+        MUSHROOM: 'assets/sprites/enemies/mushroom-sprite.png',
+        OWLBEAR_CUB: 'assets/sprites/enemies/owlbear-cub-sprite.png',
         SKELETON: 'assets/sprites/enemies/skeleton-sprite.png',
         SLIME: 'assets/sprites/enemies/slime-sprite.png',
-        BAT: 'assets/sprites/enemies/bat-sprite.png',
-        MUSHROOM: 'assets/sprites/enemies/mushroom-sprite.png',
-        BANDIT: 'assets/sprites/enemies/bandit-sprite.png',
-        GOBLIN_CHIEF: 'assets/sprites/enemies/goblin-chief-sprite.png'
+        SPIDER: 'assets/sprites/enemies/spider-sprite.png',
+        THORN_LURKER: 'assets/sprites/enemies/thorn-lurker-sprite.png',
+        WILD_BOAR: 'assets/sprites/enemies/wild-boar-sprite.png',
+        WITCH_HARE: 'assets/sprites/enemies/witch-hare-sprite.png',
+        WOLF: 'assets/sprites/enemies/wolf-sprite.png'
     },
     
     // Effect sprites
