@@ -83,26 +83,12 @@ class CombatResultScene extends Phaser.Scene {
         const isRetreat = combatResult.outcome === 'retreat';
         const isDefeat = combatResult.outcome === 'defeat';
         
-        // Get enemy data - handle both single enemy and multiple enemies
-        let enemy = null;
-        let enemies = [];
-        
-        if (combatResult.enemy) {
-            // Single enemy format
-            enemy = combatResult.enemy;
-            enemies = [enemy];
-        } else if (combatResult.enemies && Array.isArray(combatResult.enemies)) {
-            // Multiple enemies format (legacy)
-            enemies = combatResult.enemies;
-            enemy = enemies[0];
-        }
-        
         // Create title for the results
         let resultTitle;
         if (isRetreat) {
             resultTitle = 'You managed to escape safely!';
         } else if (isVictory) {
-            resultTitle = `You defeated the ${enemy ? enemy.name : 'enemy'}!`;
+            resultTitle = `You defeated the ${combatResult.enemyName || 'enemy'}!`;
         } else if (isDefeat) {
             resultTitle = 'You were defeated in battle!';
         } else {
@@ -117,8 +103,8 @@ class CombatResultScene extends Phaser.Scene {
         }).setOrigin(0.5);
         
         // Add experience gained
-        if (combatResult.loot) {
-            this.add.text(width/2, height * 0.27, `Experience gained: ${combatResult.loot.experience}`, {
+        if (isVictory) {
+            this.add.text(width/2, height * 0.27, `Experience gained: ${combatResult.experienceGained}`, {
                 fontFamily: "'VT323'",
                 fontSize: this.ui.fontSize.md + 'px',
                 fill: '#00ff00',
@@ -126,7 +112,7 @@ class CombatResultScene extends Phaser.Scene {
             }).setOrigin(0.5);
             
             // Add gold gained
-            this.add.text(width/2, height * 0.32, `Gold gained: ${combatResult.loot.gold}`, {
+            this.add.text(width/2, height * 0.32, `Gold gained: ${combatResult.goldGained}`, {
                 fontFamily: "'VT323'",
                 fontSize: this.ui.fontSize.md + 'px',
                 fill: '#ffff00',
@@ -135,8 +121,8 @@ class CombatResultScene extends Phaser.Scene {
         }
         
         // Update player stats
-        if (combatResult.loot) {
-            this.updatePlayerStats(combatResult.loot);
+        if (isVictory) {
+            this.updatePlayerStats(combatResult);
         }
     }
     
@@ -149,7 +135,7 @@ class CombatResultScene extends Phaser.Scene {
         
         // Get loot data
         const combatResult = gameState.combatResult || {};
-        const loot = combatResult.loot || { gold: 0, items: [], experience: 0 };
+        const lootItemsArray = combatResult.loot || [];
         
         // Create a panel for the loot
         const panel = this.ui.createPanel(
@@ -174,15 +160,15 @@ class CombatResultScene extends Phaser.Scene {
         }).setOrigin(0.5);
         
         // Display items or "No items" message
-        if (loot.items && loot.items.length > 0) {
+        if (lootItemsArray.length > 0) {
             // Display up to 5 items
-            const displayItems = loot.items.slice(0, 5);
+            const displayItems = lootItemsArray.slice(0, 5);
             const startY = height * 0.5;
             const spacing = 30;
             
-            displayItems.forEach((item, index) => {
-                // Try to get item name from templates
-                let itemName = item;
+            displayItems.forEach((itemId, index) => {
+                // Display the item ID (or fetch item name from an item database if available)
+                let itemName = itemId; // Replace with item lookup if you have item data
                 
                 this.add.text(width/2, startY + (index * spacing), `- ${itemName}`, {
                     fontFamily: "'VT323'",
@@ -193,8 +179,8 @@ class CombatResultScene extends Phaser.Scene {
             });
             
             // If there are more items, show a message
-            if (loot.items.length > 5) {
-                const moreCount = loot.items.length - 5;
+            if (lootItemsArray.length > 5) {
+                const moreCount = lootItemsArray.length - 5;
                 this.add.text(width/2, startY + (5 * spacing), `...and ${moreCount} more items`, {
                     fontFamily: "'VT323'",
                     fontSize: this.ui.fontSize.sm + 'px',
@@ -216,24 +202,34 @@ class CombatResultScene extends Phaser.Scene {
     /**
      * Update player stats with loot
      */
-    updatePlayerStats(loot) {
-        // Add experience
-        gameState.player.experience += loot.experience;
+    updatePlayerStats(combatResult) {
+        // Add experience and gold
+        if (combatResult.experienceGained) {
+            gameState.player.experience = (gameState.player.experience || 0) + combatResult.experienceGained;
+        }
+        
+        if (combatResult.goldGained) {
+            gameState.player.gold = (gameState.player.gold || 0) + combatResult.goldGained;
+        }
         
         // Check for level up
         if (gameState.player.experience >= gameState.player.experienceToNextLevel) {
             this.handleLevelUp();
         }
         
-        // Add gold
-        gameState.player.gold += loot.gold;
-        
         // Add items to inventory
-        if (loot.items && loot.items.length > 0) {
-            loot.items.forEach(item => {
+        const lootItemsArray = combatResult.loot || [];
+        if (lootItemsArray.length > 0) {
+            // Ensure inventory structure exists
+            if (!gameState.player.inventory) gameState.player.inventory = { items: [], maxItems: 20, equipped: {} };
+            if (!gameState.player.inventory.items) gameState.player.inventory.items = [];
+            
+            lootItemsArray.forEach(itemId => {
                 // Only add if there's space
                 if (gameState.player.inventory.items.length < gameState.player.inventory.maxItems) {
-                    gameState.player.inventory.items.push(item);
+                    // Add the item ID (or a placeholder object)
+                    // TODO: Replace this with proper item object creation if you have an item database
+                    gameState.player.inventory.items.push({ id: itemId, name: itemId, type: 'Unknown' });
                 }
             });
         }

@@ -162,10 +162,17 @@ export default class EncounterScene extends BaseScene {
 
     processVictory() {
         const enemy = this.enemies[0];
-        const experienceReward = enemy.experienceReward || 10;
-        const goldReward = enemy.goldReward ? 
-            Math.floor(Math.random() * (enemy.goldReward.max - enemy.goldReward.min + 1)) + enemy.goldReward.min :
-            Math.floor(Math.random() * 10) + 5;
+        let experienceReward = 10; // Default experience
+        let goldReward = Math.floor(Math.random() * 10) + 5; // Default gold
+
+        if (enemy.lootTable) {
+            if (enemy.lootTable.experience) {
+                experienceReward = Math.floor(Math.random() * (enemy.lootTable.experience.max - enemy.lootTable.experience.min + 1)) + enemy.lootTable.experience.min;
+            }
+            if (enemy.lootTable.gold) {
+                goldReward = Math.floor(Math.random() * (enemy.lootTable.gold.max - enemy.lootTable.gold.min + 1)) + enemy.lootTable.gold.min;
+            }
+        }
 
         if (gameState.player) {
             gameState.player.experience = (gameState.player.experience || 0) + experienceReward;
@@ -174,20 +181,23 @@ export default class EncounterScene extends BaseScene {
             this.combatLog.addLogEntry(`You gained ${experienceReward} experience and ${goldReward} gold!`);
 
             let lootItems = [];
-            if (enemy.loot && enemy.loot.length > 0) {
-                enemy.loot.forEach(lootItem => {
+            if (enemy.lootTable && enemy.lootTable.items && enemy.lootTable.items.length > 0) {
+                enemy.lootTable.items.forEach(lootItem => {
                     if (Math.random() <= lootItem.chance) {
-                        if (!gameState.player.inventory) gameState.player.inventory = [];
-                        gameState.player.inventory.push({ id: lootItem.item, name: lootItem.item });
-                        lootItems.push(lootItem.item);
-                        this.combatLog.addLogEntry(`You found a ${lootItem.item}!`);
+                        // Ensure inventory exists
+                        if (!gameState.player.inventory) gameState.player.inventory = { items: [], maxItems: 20, equipped: {} };
+                        if (!gameState.player.inventory.items) gameState.player.inventory.items = [];
+                        
+                        // Add item ID to loot list and log
+                        lootItems.push(lootItem.id);
+                        this.combatLog.addLogEntry(`You found a ${lootItem.id}!`);
                     }
                 });
             }
 
             gameState.combatResult = {
                 outcome: 'victory',
-                enemy: enemy.name,
+                enemyName: enemy.name,
                 experienceGained: experienceReward,
                 goldGained: goldReward,
                 loot: lootItems
