@@ -95,29 +95,25 @@ class CombatResultScene extends Phaser.Scene {
             resultTitle = 'Battle concluded.';
         }
         
-        this.add.text(width/2, height * 0.2, resultTitle, {
-            fontFamily: "'VT323'",
-            fontSize: this.ui.fontSize.md + 'px',
-            fill: '#ffffff',
-            align: 'center'
-        }).setOrigin(0.5);
+        this.ui.createTitle(width/2, height * 0.2, resultTitle, {
+            fontSize: this.ui.fontSize.md,
+            padding: 10
+        });
         
         // Add experience gained
         if (isVictory) {
-            this.add.text(width/2, height * 0.27, `Experience gained: ${combatResult.experienceGained}`, {
-                fontFamily: "'VT323'",
-                fontSize: this.ui.fontSize.md + 'px',
-                fill: '#00ff00',
-                align: 'center'
-            }).setOrigin(0.5);
+            this.ui.createTitle(width/2, height * 0.27, `Experience gained: ${combatResult.experienceGained}`, {
+                fontSize: this.ui.fontSize.md,
+                color: '#00ff00',
+                padding: 5
+            });
             
             // Add gold gained
-            this.add.text(width/2, height * 0.32, `Gold gained: ${combatResult.goldGained}`, {
-                fontFamily: "'VT323'",
-                fontSize: this.ui.fontSize.md + 'px',
-                fill: '#ffff00',
-                align: 'center'
-            }).setOrigin(0.5);
+            this.ui.createTitle(width/2, height * 0.32, `Gold gained: ${combatResult.goldGained}`, {
+                fontSize: this.ui.fontSize.md,
+                color: '#ffff00',
+                padding: 5
+            });
         }
         
         // Update player stats
@@ -140,9 +136,9 @@ class CombatResultScene extends Phaser.Scene {
         // Create a panel for the loot
         const panel = this.ui.createPanel(
             width/2,
-            height * 0.6,
-            width * 0.8,
-            height * 0.3,
+            height * 0.5,
+            width * 0.5,
+            height * 0.2,
             {
                 fillColor: 0x111122,
                 fillAlpha: 0.8,
@@ -154,7 +150,7 @@ class CombatResultScene extends Phaser.Scene {
         // Create title for the loot
         this.add.text(width/2, height * 0.45, 'Items Acquired', {
             fontFamily: "'VT323'",
-            fontSize: this.ui.fontSize.md + 'px',
+            fontSize: this.ui.fontSize.lg + 'px',
             fill: '#ffffff',
             align: 'center'
         }).setOrigin(0.5);
@@ -181,19 +177,18 @@ class CombatResultScene extends Phaser.Scene {
             // If there are more items, show a message
             if (lootItemsArray.length > 5) {
                 const moreCount = lootItemsArray.length - 5;
-                this.add.text(width/2, startY + (5 * spacing), `...and ${moreCount} more items`, {
-                    fontFamily: "'VT323'",
-                    fontSize: this.ui.fontSize.sm + 'px',
-                    fill: '#aaaaaa',
-                    align: 'center'
-                }).setOrigin(0.5);
+                this.ui.createTitle(width/2, startY + (5 * spacing), `...and ${moreCount} more items`, {
+                    fontSize: this.ui.fontSize.sm,
+                    color: '#aaaaaa',
+                    padding: 5
+                });
             }
         } else {
             // No items message
             this.add.text(width/2, height * 0.55, 'No items found', {
                 fontFamily: "'VT323'",
                 fontSize: this.ui.fontSize.md + 'px',
-                fill: '#aaaaaa',
+                fill: '#ffffff',
                 align: 'center'
             }).setOrigin(0.5);
         }
@@ -307,7 +302,7 @@ class CombatResultScene extends Phaser.Scene {
             this,
             width * 0.35,
             height * 0.85,
-            'Continue Exploring',
+            'Explore',
             () => {
                 this.transitions.fade(() => {
                     navigationManager.navigateTo(this, 'DungeonScene', {}, 'Next Level');
@@ -325,7 +320,7 @@ class CombatResultScene extends Phaser.Scene {
             this,
             width * 0.65,
             height * 0.85,
-            'Return to Town',
+            'Overworld',
             () => {
                 this.transitions.fade(() => {
                     navigationManager.navigateTo(this, 'OverworldScene');
