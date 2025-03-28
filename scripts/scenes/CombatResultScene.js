@@ -284,6 +284,9 @@ class CombatResultScene extends Phaser.Scene {
 
         // Add items to inventory
         const lootItemsArray = combatResult.loot || [];
+        console.log("CombatResultScene - Initial inventory state:", JSON.parse(JSON.stringify(gameState.player.inventory?.items || [])));
+        console.log("CombatResultScene - Loot items to add:", lootItemsArray);
+
         if (lootItemsArray.length > 0) {
             // Ensure inventory structure exists
             if (!gameState.player.inventory) gameState.player.inventory = { items: [], maxItems: 20, equipped: {} };
@@ -292,12 +295,20 @@ class CombatResultScene extends Phaser.Scene {
             lootItemsArray.forEach(itemId => {
                 if (gameState.player.inventory.items.length >= gameState.player.inventory.maxItems) {
                     console.warn("Inventory is full, cannot add item:", itemId);
-                    // Optionally, drop the item on the ground or handle differently
                     return;
                 }
 
                 const itemData = getItemData(itemId);
-                if (!itemData) return; // Skip if item data not found
+                if (!itemData) {
+                    console.warn(`Item data not found for ID: ${itemId} during loot addition. Full item lookup:`, itemId);
+                    return;
+                }
+
+                console.log(`Processing item: ${itemId}`, {
+                    itemData: itemData,
+                    type: itemData.type,
+                    stackable: itemData.stackable
+                });
 
                 // Handle stackable items
                 if (itemData.stackable) {
@@ -309,15 +320,15 @@ class CombatResultScene extends Phaser.Scene {
                     } else {
                         // Add new stack
                         gameState.player.inventory.items.push({ itemId: itemId, quantity: 1 });
-                         console.log(`Added new stack for ${itemId}.`);
+                        console.log(`Added new stack for ${itemId} with quantity 1`);
                     }
                 } else {
                     // Add non-stackable item as a new entry
-                    gameState.player.inventory.items.push({ itemId: itemId, quantity: 1 }); // Non-stackable items still have quantity 1
-                     console.log(`Added non-stackable item ${itemId}.`);
+                    gameState.player.inventory.items.push({ itemId: itemId, quantity: 1 });
+                    console.log(`Added non-stackable item ${itemId}`);
                 }
             });
-            console.log("Player Inventory after adding loot:", JSON.parse(JSON.stringify(gameState.player.inventory.items)));
+            console.log("CombatResultScene - Final inventory state:", JSON.parse(JSON.stringify(gameState.player.inventory.items)));
         }
     }
 

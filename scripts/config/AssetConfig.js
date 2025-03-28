@@ -103,7 +103,9 @@ export const ASSET_PATHS = {
         HP_POTION: 'assets/sprites/icons/hp-potion-sprite.png',
         MANA_POTION: 'assets/sprites/icons/mana-potion-sprite.png',
         SLOT_HEAD: 'assets/sprites/icons/slot-head-placeholder.png',
-        SLOT_ACCESSORY: 'assets/sprites/icons/slot-accessory-placeholder.png'
+        SLOT_ACCESSORY: 'assets/sprites/icons/slot-accessory-placeholder.png',
+        SLOT_RANGED: 'assets/sprites/icons/slot-ranged-placeholder.png',
+        SLOT_WAND: 'assets/sprites/icons/slot-wand-placeholder.png'
     },
     
     // Audio for combat

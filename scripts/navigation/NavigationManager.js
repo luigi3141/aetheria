@@ -16,6 +16,8 @@ class NavigationManager {
             { from: "DungeonSelectScene", to: "DungeonScene" },
             { from: "DungeonSelectScene", to: "OverworldScene" },
             { from: "DungeonScene", to: "EncounterScene" },
+            { from: "DungeonScene", to: "InventoryScene" },
+            { from: "InventoryScene", to: "DungeonScene" },
             { from: "EncounterScene", to: "DungeonScene" },
             { from: "EncounterScene", to: "CombatResultScene" },
             { from: "DungeonScene", to: "CombatResultScene" },

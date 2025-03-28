@@ -50,6 +50,8 @@ class InventoryScene extends BaseScene {
         const placeholderSlots = {
             SLOT_HEAD: 'assets/sprites/icons/slot-head-placeholder.png',
             SLOT_ACCESSORY: 'assets/sprites/icons/slot-accessory-placeholder.png',
+            SLOT_RANGED: 'assets/sprites/icons/slot-ranged-placeholder.png',
+            SLOT_WAND: 'assets/sprites/icons/slot-wand-placeholder.png'
         };
         for (const key in placeholderSlots) if (!this.textures.exists(key)) this.load.image(key, placeholderSlots[key]);
         console.log("InventoryScene Preload End");
@@ -209,11 +211,10 @@ class InventoryScene extends BaseScene {
         this.equipmentListContainer.setVisible(true);
     }
 
-    // createEquipmentSlotsDisplay should be called ONCE in create()
-    createEquipmentSlotsDisplay(container) { /* ... Keep as is ... */
+    createEquipmentSlotsDisplay(container) {
         if (!container) { console.error("Equipment slots container is invalid in createEquipmentSlotsDisplay."); return; }
         const slotSize = 60; const slotSpacing = 15;
-        const slots = ['head', 'body', 'weapon', 'shield', 'accessory1', 'accessory2']; // Example slots
+        const slots = ['armour', 'melee', 'ranged', 'wand'];
         const panelWidth = 220; const panelHeight = (slots.length * (slotSize + slotSpacing)) + slotSpacing;
         const panel = this.ui.createPanel(0, 0, panelWidth, panelHeight, {fillColor: 0x111111, fillAlpha: 0.6});
         if(panel?.container) container.add(panel.container);
@@ -238,19 +239,17 @@ class InventoryScene extends BaseScene {
         this.updateEquipmentSlotsDisplay(); // Initial population
     }
 
-    // updateEquipmentSlotsDisplay - unchanged, but called more deliberately
-    updateEquipmentSlotsDisplay() { /* ... Keep as is ... */
-         if (!this.equipmentSlotsDisplay || Object.keys(this.equipmentSlotsDisplay).length === 0) {
-            // console.warn("Equipment slot display not initialized or empty when trying to update.");
+    updateEquipmentSlotsDisplay() {
+        if (!this.equipmentSlotsDisplay || Object.keys(this.equipmentSlotsDisplay).length === 0) {
             return; // Don't try to update if not ready
-         }
+        }
         const equipped = gameState.player.inventory.equipped || {};
 
         for (const slotKey in this.equipmentSlotsDisplay) {
             const slotDisplay = this.equipmentSlotsDisplay[slotKey];
             if (!slotDisplay || !slotDisplay.bg || !slotDisplay.icon || !slotDisplay.nameText) {
-                 console.warn(`Display elements missing for slotKey: ${slotKey} during update`);
-                 continue;
+                console.warn(`Display elements missing for slotKey: ${slotKey} during update`);
+                continue;
             }
 
             const equippedItemId = equipped[slotKey];
@@ -260,18 +259,29 @@ class InventoryScene extends BaseScene {
                 if (itemData) {
                     let iconKey = itemData.iconKey;
                     let slotIconKey = '';
-                    if (itemData.equipSlot === 'weapon' && itemData.category === 'Sharps') slotIconKey = 'SLOT_MELEE_WEAPON';
-                    else if (itemData.equipSlot === 'weapon' && itemData.category === 'Branches') slotIconKey = 'SLOT_WAND';
-                    else if (itemData.equipSlot === 'body') slotIconKey = 'SLOT_ARMOUR';
-                    else if (itemData.equipSlot === 'head') slotIconKey = 'SLOT_HEAD';
-                    else if (itemData.equipSlot && itemData.equipSlot.startsWith('accessory')) slotIconKey = 'SLOT_ACCESSORY';
+                    
+                    // Map equipment types to slot icons
+                    switch(slotKey) {
+                        case 'armour':
+                            slotIconKey = 'SLOT_HEAD';
+                            break;
+                        case 'melee':
+                            slotIconKey = 'SLOT_ACCESSORY';
+                            break;
+                        case 'ranged':
+                            slotIconKey = 'SLOT_RANGED';
+                            break;
+                        case 'wand':
+                            slotIconKey = 'SLOT_WAND';
+                            break;
+                    }
 
                     if (slotIconKey && this.textures.exists(slotIconKey)) iconKey = slotIconKey;
                     else if (!this.textures.exists(iconKey)) iconKey = '';
 
                     if (iconKey) {
-                        slotDisplay.icon.setTexture(iconKey); // This is where the error happened
-                        slotDisplay.icon.setVisible(true).setAlpha(1); // Reset alpha
+                        slotDisplay.icon.setTexture(iconKey);
+                        slotDisplay.icon.setVisible(true).setAlpha(1);
                     } else {
                         slotDisplay.icon.setVisible(false);
                     }
@@ -283,16 +293,28 @@ class InventoryScene extends BaseScene {
                     slotDisplay.bg.setStrokeStyle(1, 0xff0000);
                 }
             } else {
+                // Set empty slot placeholder icons
                 let placeholderKey = '';
-                if(slotKey === 'head') placeholderKey = 'SLOT_HEAD';
-                else if (slotKey.startsWith('accessory')) placeholderKey = 'SLOT_ACCESSORY';
-                 // ... other placeholders
+                switch(slotKey) {
+                    case 'armour':
+                        placeholderKey = 'SLOT_HEAD';
+                        break;
+                    case 'melee':
+                        placeholderKey = 'SLOT_ACCESSORY';
+                        break;
+                    case 'ranged':
+                        placeholderKey = 'SLOT_RANGED';
+                        break;
+                    case 'wand':
+                        placeholderKey = 'SLOT_WAND';
+                        break;
+                }
 
                 if (placeholderKey && this.textures.exists(placeholderKey)) {
-                     slotDisplay.icon.setTexture(placeholderKey);
-                     slotDisplay.icon.setVisible(true).setAlpha(0.5);
+                    slotDisplay.icon.setTexture(placeholderKey);
+                    slotDisplay.icon.setVisible(true).setAlpha(0.5);
                 } else {
-                     slotDisplay.icon.setVisible(false);
+                    slotDisplay.icon.setVisible(false);
                 }
                 slotDisplay.nameText.setText('(Empty)');
                 slotDisplay.bg.setStrokeStyle(1, 0x555555);
@@ -324,27 +346,40 @@ class InventoryScene extends BaseScene {
          this.tweens.add({ targets: targetIcon, scaleX: originalScaleX, scaleY: originalScaleY, alpha: 1, duration: 500, ease: 'Back.easeOut' });
     }
 
-    // displayMaterialsTab - unchanged (except cleanup handled in setActiveTab)
-    displayMaterialsTab() { /* ... Keep as is, BUT remove the initial this.materialsListContainer.destroy() line ... */
+    displayMaterialsTab() {
         const width = this.cameras.main.width; const height = this.cameras.main.height;
         const listWidth = width * 0.8; const listHeight = height * 0.55;
         const listX = width * 0.5; const listY = height * 0.5;
 
         this.materialsListContainer = new ScrollableContainer(this, listX, listY, listWidth, listHeight, { padding: 15, backgroundColor: 0x2e1a2e, borderColor: 0xbf7fbf });
-        // No need to add to tabContentGroup if cleanup is manual
 
-        const messageY = listY + listHeight / 2 + 30;
-        // Store reference to the message for cleanup
+        const messageY = listY + listHeight / 2 - 20;
         this.materialsInfoMessage = this.add.text(listX, messageY,
-            "Crafting materials can be used at the Crafting Workshop.",
+            "Crafting materials can be used at the Crafting Workshop to create equipment",
             { fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm, fill: '#cccccc', align: 'center', fontStyle: 'italic'}
         ).setOrigin(0.5);
 
         const inventory = gameState.player.inventory.items || [];
-        const materialItems = inventory.filter(itemInstance => { /* ... filter logic ... */
+        console.log("Materials Tab - Initial inventory:", JSON.parse(JSON.stringify(inventory)));
+
+        const materialItems = inventory.filter(itemInstance => {
             const itemData = getItemData(itemInstance.itemId);
-            return itemData && (itemData.type === 'material' || ['Armour', 'Branches', 'Sharps', 'Strings', 'Gem', 'Material'].includes(itemData.category));
+            console.log(`Checking item ${itemInstance.itemId}:`, {
+                itemData: itemData,
+                type: itemData?.type,
+                category: itemData?.category,
+                isValid: itemData && (
+                    itemData.type === 'material' || 
+                    ['Armour', 'Branches', 'Sharps', 'Strings', 'Gem', 'Material'].includes(itemData.category)
+                )
+            });
+            return itemData && (
+                itemData.type === 'material' || 
+                ['Armour', 'Branches', 'Sharps', 'Strings', 'Gem', 'Material'].includes(itemData.category)
+            );
         });
+
+        console.log("Materials Tab - Filtered items:", JSON.parse(JSON.stringify(materialItems)));
 
         if (materialItems.length === 0) {
             this.materialsListContainer.addText('No materials found.', { fill: '#aaaaaa', fontSize: this.ui.fontSize.sm });
