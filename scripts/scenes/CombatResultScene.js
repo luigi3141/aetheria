@@ -177,11 +177,12 @@ class CombatResultScene extends Phaser.Scene {
             // If there are more items, show a message
             if (lootItemsArray.length > 5) {
                 const moreCount = lootItemsArray.length - 5;
-                this.ui.createTitle(width/2, startY + (5 * spacing), `...and ${moreCount} more items`, {
-                    fontSize: this.ui.fontSize.sm,
-                    color: '#aaaaaa',
-                    padding: 5
-                });
+                this.add.text(width/2, startY + (5 * spacing), `...and ${moreCount} more items`, {
+                    fontFamily: "'VT323'",
+                    fontSize: this.ui.fontSize.md + 'px',
+                    fill: '#ffffff',
+                    align: 'center'
+                }).setOrigin(0.5);
             }
         } else {
             // No items message
