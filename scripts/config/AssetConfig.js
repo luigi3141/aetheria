@@ -15,7 +15,8 @@ export const ASSET_PATHS = {
         DUNGEON: 'assets/sprites/backgrounds/dungeon-bg.png',
         BATTLE_RESULT: 'assets/sprites/backgrounds/battle-result-bg.png',
         FOREST: 'assets/sprites/backgrounds/forest-bg.png',
-        CAVERNS: 'assets/sprites/backgrounds/caverns-bg.png'
+        CAVERNS: 'assets/sprites/backgrounds/caverns-bg.png',
+        CRAFTING: 'assets/sprites/backgrounds/workshop-bg.png'
     },
     
     // Character sprites
@@ -59,6 +60,28 @@ export const ASSET_PATHS = {
     UI: {
         HEALTH_BAR: 'assets/sprites/ui/health-bar.png',
         MANA_BAR: 'assets/sprites/ui/mana-bar.png'
+    },
+    
+    // UI sprites
+    SPRITES: {
+        ITEM: 'assets/sprites/ui/item-icon.png',
+        MATERIAL: 'assets/sprites/ui/material-icon.png'
+    },
+    
+    // Equipment sprites
+    EQUIPMENT: {
+        ARMOUR: 'assets/sprites/equipment/armour-sprite.png',
+        MELEE_WEAPON: 'assets/sprites/equipment/melee-weapon-sprite.png',
+        RANGED_WEAPON: 'assets/sprites/equipment/ranged-weapon-sprite.png',
+        WAND: 'assets/sprites/equipment/wand-sprite.png'
+    },
+
+    // Crafting material sprites
+    MATERIALS: {
+        ARMOUR: 'assets/sprites/loot-materials/armour-crafting-sprite.png',
+        BRANCHES: 'assets/sprites/loot-materials/branches-crafting-sprite.png',
+        SHARPS: 'assets/sprites/loot-materials/sharps-crafting-sprite.png',
+        STRINGS: 'assets/sprites/loot-materials/strings-crafting-sprite.png'
     },
     
     // Audio for combat

@@ -2,6 +2,7 @@ import UIManager from '../ui/UIManager.js';
 import Button from '../ui/components/Button.js';
 import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
+import { ASSET_PATHS } from '../config/AssetConfig.js';
 
 /**
  * CraftingScene - Scene for crafting items from materials
@@ -12,15 +13,37 @@ class CraftingScene extends Phaser.Scene {
     }
 
     preload() {
-        // Load crafting assets
+        // Load crafting background
         if (!this.textures.exists('crafting-bg')) {
             this.load.image('crafting-bg', ASSET_PATHS.BACKGROUNDS.CRAFTING);
         }
-        if (!this.textures.exists('item-icon')) {
-            this.load.image('item-icon', ASSET_PATHS.SPRITES.ITEM);
+
+        // Load equipment sprites
+        if (!this.textures.exists('armour')) {
+            this.load.image('armour', ASSET_PATHS.EQUIPMENT.ARMOUR);
         }
-        if (!this.textures.exists('material-icon')) {
-            this.load.image('material-icon', ASSET_PATHS.SPRITES.MATERIAL);
+        if (!this.textures.exists('melee-weapon')) {
+            this.load.image('melee-weapon', ASSET_PATHS.EQUIPMENT.MELEE_WEAPON);
+        }
+        if (!this.textures.exists('ranged-weapon')) {
+            this.load.image('ranged-weapon', ASSET_PATHS.EQUIPMENT.RANGED_WEAPON);
+        }
+        if (!this.textures.exists('wand')) {
+            this.load.image('wand', ASSET_PATHS.EQUIPMENT.WAND);
+        }
+
+        // Load crafting material sprites
+        if (!this.textures.exists('material-armour')) {
+            this.load.image('material-armour', ASSET_PATHS.MATERIALS.ARMOUR);
+        }
+        if (!this.textures.exists('material-branches')) {
+            this.load.image('material-branches', ASSET_PATHS.MATERIALS.BRANCHES);
+        }
+        if (!this.textures.exists('material-sharps')) {
+            this.load.image('material-sharps', ASSET_PATHS.MATERIALS.SHARPS);
+        }
+        if (!this.textures.exists('material-strings')) {
+            this.load.image('material-strings', ASSET_PATHS.MATERIALS.STRINGS);
         }
     }
 
