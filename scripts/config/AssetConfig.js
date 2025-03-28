@@ -94,6 +94,15 @@ export const ASSET_PATHS = {
         SHARPS: 'assets/sprites/loot-materials/sharps-crafting-sprite.png',
         STRINGS: 'assets/sprites/loot-materials/strings-crafting-sprite.png'
     },
+
+    // Crafting material sprites
+    ITEMS: {
+        GOLD: 'assets/sprites/icons/gold-icon-sprite.png',
+        HP_ICON: 'assets/sprites/icons/hp-icon-sprite.png',
+        MANA_ICON: 'assets/sprites/icons/mana-icon-sprite.png',
+        HP_POTION: 'assets/sprites/icons/hp-potion-sprite.png',
+        MANA_POTION: 'assets/sprites/icons/mana-potion-sprite.png'
+    },
     
     // Audio for combat
     SOUNDS: {
