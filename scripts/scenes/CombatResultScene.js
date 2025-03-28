@@ -248,7 +248,7 @@ class CombatResultScene extends Phaser.Scene {
             
             // Increase stats
             gameState.player.maxHealth += 10;
-            gameState.player.health = gameState.player.maxHealth;
+            gameState.player.health += 10;
             gameState.player.maxMana += 5;
             gameState.player.mana = gameState.player.maxMana;
             gameState.player.strength += 2;
