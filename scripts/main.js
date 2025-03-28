@@ -51,7 +51,6 @@ window.addEventListener('load', function() {
             height: 600,
             parent: 'game-container',
             scene: [
-                modules.PreloadScene,
                 modules.StartScene, 
                 modules.CharacterSelectScene,
                 modules.OverworldScene,
@@ -64,6 +63,7 @@ window.addEventListener('load', function() {
                 modules.CraftingScene,
                 modules.CharacterSheetScene,
                 modules.DefeatScene,
+                modules.PreloadScene,
             ],
             backgroundColor: '#000000',
             pixelArt: true,

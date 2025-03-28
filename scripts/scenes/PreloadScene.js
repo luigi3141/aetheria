@@ -156,14 +156,7 @@ class PreloadScene extends BaseScene {
           tryLoadImage('ranger', ASSET_PATHS.PORTRAITS.RANGER);
           tryLoadImage('bard', ASSET_PATHS.PORTRAITS.BARD);
 
-          // Load icons
-          tryLoadImage('player-icon', ASSET_PATHS.ICONS.PLAYER);
-          tryLoadImage('health-icon', ASSET_PATHS.ICONS.HEALTH);
-          tryLoadImage('mana-icon', ASSET_PATHS.ICONS.MANA);
-          tryLoadImage('strength-icon', ASSET_PATHS.ICONS.STRENGTH);
-          tryLoadImage('agility-icon', ASSET_PATHS.ICONS.AGILITY);
-          tryLoadImage('intelligence-icon', ASSET_PATHS.ICONS.INTELLIGENCE);
-          tryLoadImage('constitution-icon', ASSET_PATHS.ICONS.CONSTITUTION);
+
 
           // Load effects
           tryLoadImage('slash-effect', ASSET_PATHS.EFFECTS.SLASH);
