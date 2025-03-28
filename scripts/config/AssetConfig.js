@@ -49,9 +49,10 @@ export const ASSET_PATHS = {
         SLIME: 'assets/sprites/enemies/slime-sprite.png',
         SPIDER: 'assets/sprites/enemies/spider-sprite.png',
         THORN_LURKER: 'assets/sprites/enemies/thorn-lurker-sprite.png',
-        WILD_BOAR: 'assets/sprites/enemies/wild-boar-sprite.png',
+        BOAR: 'assets/sprites/enemies/wild-boar-sprite.png',
         WITCH_HARE: 'assets/sprites/enemies/witch-hare-sprite.png',
-        WOLF: 'assets/sprites/enemies/wolf-sprite.png'
+        WOLF: 'assets/sprites/enemies/wolf-sprite.png',
+        FOREST_WYRMLING: 'assets/sprites/enemies/forest-wyrmling-sprite.png'
     },
     
     // Effect sprites

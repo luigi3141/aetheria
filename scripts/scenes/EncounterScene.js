@@ -209,11 +209,15 @@ export default class EncounterScene extends BaseScene {
         });
     }
 
+    processDefeat() {
+        this.scene.start('DefeatScene');
+    }
+
     handleDefeat() {
         this.combatLog.addLogEntry('You have been defeated!');
         gameState.combatResult = { outcome: 'defeat' };
         this.time.delayedCall(1500, () => {
-            this.scene.start('DefeatScene', { retreated: false });
+            this.processDefeat();
         });
     }
 
