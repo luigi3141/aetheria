@@ -90,12 +90,10 @@ class CombatResultScene extends Phaser.Scene {
         if (!this.combatResult) {
             console.error("No combat result data found!");
             // Show error message instead of crashing
-            this.add.text(width/2, height/2, 'Error: Combat data not found', {
-                fontFamily: "'VT323'",
-                fontSize: '32px',
-                fill: '#ff0000',
-                align: 'center'
-            }).setOrigin(0.5);
+            this.ui.createTitle(width/2, height/2, 'Error: Combat data not found', {
+                fontSize: 32,
+                color: '#ff0000'
+            });
 
             // Add continue button that returns to dungeon
             this.ui.createButton({
@@ -125,11 +123,10 @@ class CombatResultScene extends Phaser.Scene {
             titleColor = '#ff0000'; // Red for defeat
         }
 
-        this.add.text(width/2, height * 0.1, titleText, {
-            fontFamily: "'Press Start 2P'",
-            fontSize: '48px',
-            fill: titleColor
-        }).setOrigin(0.5);
+        this.ui.createTitle(width/2, height * 0.1, titleText, {
+            fontSize: this.ui.fontSize.lg,
+            color: titleColor
+        });
 
         // Create the results display
         this.createResultsDisplay();
@@ -175,43 +172,37 @@ class CombatResultScene extends Phaser.Scene {
         const height = this.cameras.main.height;
 
         const isVictory = this.combatResult.outcome === 'victory';
-        // const isRetreat = this.combatResult.outcome === 'retreat';
         const isDefeat = this.combatResult.outcome === 'defeat';
 
         let resultTitleText = 'Battle Concluded.';
-         if (isVictory) {
-             resultTitleText = `You defeated ${this.combatResult.enemyName || 'the enemy'}!`;
-         } else if (isDefeat) {
-             resultTitleText = 'You were defeated in battle!';
-         } else { // Retreat or unknown
-             resultTitleText = 'You escaped from the battle.';
-         }
+        if (isVictory) {
+            resultTitleText = `You defeated ${this.combatResult.enemyName || 'the enemy'}!`;
+        } else if (isDefeat) {
+            resultTitleText = 'You were defeated in battle!';
+        } else { // Retreat or unknown
+            resultTitleText = 'You escaped from the battle.';
+        }
 
-        this.add.text(width/2, height * 0.18, resultTitleText, {
-            fontFamily: "'Press Start 2P'",
-            fontSize: this.ui.fontSize.md + 'px',
-            fill: '#ffffff',
-            align: 'center'
-        }).setOrigin(0.5);
+        this.ui.createTitle(width/2, height * 0.18, resultTitleText, {
+            fontSize: this.ui.fontSize.md
+        });
 
         // Display XP and Gold only on Victory
         if (isVictory) {
             const xpGained = this.combatResult.experienceGained || 0;
             const goldGained = this.combatResult.goldGained || 0;
 
-            this.add.text(width/2, height * 0.25, `Experience: +${xpGained}`, {
-                fontFamily: "'VT323'",
-                fontSize: this.ui.fontSize.md + 'px',
-                fill: '#00ff00', // Green for XP
-                align: 'center'
-            }).setOrigin(0.5);
+            this.ui.createTitle(width/2, height * 0.25, `Experience: +${xpGained}`, {
+                fontSize: this.ui.fontSize.xs,
+                color: '#00ff00', // Green for XP
+                padding: { x: 5, y: 5 }
+            });
 
-             this.add.text(width/2, height * 0.30, `Gold: +${goldGained}`, {
-                fontFamily: "'VT323'",
-                fontSize: this.ui.fontSize.md + 'px',
-                fill: '#ffff00', // Yellow for Gold
-                align: 'center'
-            }).setOrigin(0.5);
+            this.ui.createTitle(width/2, height * 0.30, `Gold: +${goldGained}`, {
+                fontSize: this.ui.fontSize.xs,
+                color: '#ffff00', // Yellow for Gold
+                padding: { x: 5, y: 5 }
+            });
         }
     }
 
@@ -243,76 +234,84 @@ class CombatResultScene extends Phaser.Scene {
         );
 
         // --- Create Title ---
-        this.add.text(panelX, panelY - (panelHeight / 2) - 20, 'Items Acquired', { // Position title above panel
-            fontFamily: "'Press Start 2P'",
-            fontSize: this.ui.fontSize.md + 'px',
-            fill: '#ffffff',
-            align: 'center'
-        }).setOrigin(0.5);
+        this.ui.createTitle(panelX, panelY - (panelHeight / 2) - 20, 'Items Acquired', {
+            fontSize: this.ui.fontSize.xs,
+            padding: { x: 5, y: 5 }
+        });
 
         // --- Display Items ---
         const maxItemsToShow = 4; // Limit visible items directly
-        const itemSpacingY = 45; // Vertical space between items
-        const itemIconSize = 32; // Size of the icon
-        const itemTextOffsetX = 25; // Horizontal space between icon and text
-        const startY = panelY - (panelHeight / 2) + 35; // Start Y inside the panel
+        const itemSpacing = 60; // Vertical spacing between items
+        const startY = panelY - (panelHeight / 4); // Start position for items
 
-        if (lootItemsArray.length > 0) {
-            const displayItems = lootItemsArray.slice(0, maxItemsToShow);
+        if (lootItemsArray.length === 0) {
+            // No items found message
+            this.add.text(panelX, panelY, 'No items found', {
+                fontFamily: "'VT323'",
+                fontSize: this.ui.fontSize.xs + 'px',
+                fill: '#aaaaaa',
+                align: 'center',
+                padding: { x: 5, y: 5 }
+            }).setOrigin(0.5);
+        } else {
+            // Display items with icons
+            const visibleItems = lootItemsArray.slice(0, maxItemsToShow);
+            const itemIconSize = 24;
+            let itemY;
 
-            displayItems.forEach((itemId, index) => {
-                const itemData = getItemData(itemId); // Fetch details from item database
-
+            visibleItems.forEach((itemId, index) => {
+                itemY = startY + (index * itemSpacing);
+                const itemData = getItemData(itemId);
+                
                 if (!itemData) {
                     console.warn(`Could not find item data for ID: ${itemId}`);
                     // Display placeholder if item data is missing
-                     this.add.text(panelX, startY + (index * itemSpacingY), `- Unknown Item (${itemId})`, {
-                        fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm + 'px', fill: '#ff8888', align: 'center'
+                    this.add.text(panelX, itemY, `- Unknown Item (${itemId})`, {
+                        fontFamily: "'VT323'",
+                        fontSize: this.ui.fontSize.xs + 'px',
+                        fill: '#ff8888',
+                        align: 'center',
+                        padding: { x: 5, y: 5 }
                     }).setOrigin(0.5);
                     return; // Skip to next item
                 }
 
-                const itemY = startY + (index * itemSpacingY);
-                const itemStartX = panelX - (panelWidth / 2) + 40; // Start X inside panel
+                // Create container for item name and icon
+                const container = this.add.container(panelX, itemY);
 
-                // Display Icon
-                if (itemData.iconKey && this.textures.exists(itemData.iconKey)) {
-                     this.add.image(itemStartX, itemY, itemData.iconKey)
+                // Add item name text
+                const itemText = this.add.text(0, 0, itemData.inGameName, {
+                    fontFamily: "'VT323'",
+                    fontSize: this.ui.fontSize.xs + 'px',
+                    fill: '#ffffff',
+                    align: 'center',
+                    padding: { x: 5, y: 5 }
+                }).setOrigin(0.5);
+
+                // Add category icon if it exists
+                const typeIconKey = itemData.category?.toUpperCase();
+                if (typeIconKey && this.textures.exists(typeIconKey)) {
+                    const icon = this.add.image(-itemText.width/2 - 15, 0, typeIconKey)
                         .setDisplaySize(itemIconSize, itemIconSize)
                         .setOrigin(0.5);
-                } else {
-                     console.warn(`Icon key "${itemData.iconKey}" not found for item "${itemData.inGameName}". Add to AssetConfig & preload.`);
-                     // Optional: Add a placeholder rectangle/sprite if icon missing
-                     this.add.rectangle(itemStartX, itemY, itemIconSize, itemIconSize, 0x555555).setOrigin(0.5);
+                    container.add(icon);
                 }
 
-                // Display Name
-                this.add.text(itemStartX + itemTextOffsetX, itemY, itemData.inGameName, {
-                    fontFamily: "'VT323'",
-                    fontSize: this.ui.fontSize.sm + 'px',
-                    fill: '#ffffff', // Could add tier color here later if needed
-                    align: 'left'
-                }).setOrigin(0, 0.5); // Align left, vertically centered
+                // Add text to container
+                container.add(itemText);
             });
 
             // --- Handle Overflow ---
             if (lootItemsArray.length > maxItemsToShow) {
                 const moreCount = lootItemsArray.length - maxItemsToShow;
-                this.add.text(panelX, startY + (maxItemsToShow * itemSpacingY), `...and ${moreCount} more items`, {
+                this.add.text(panelX, startY + (maxItemsToShow * itemSpacing), `...and ${moreCount} more items`, {
                     fontFamily: "'VT323'",
-                    fontSize: this.ui.fontSize.sm + 'px',
+                    fontSize: this.ui.fontSize.xs + 'px',
                     fill: '#cccccc',
-                    align: 'center'
+                    align: 'center',
+                    padding: { x: 5, y: 5 }
                 }).setOrigin(0.5);
             }
-        } else {
-            // --- No Items Message ---
-            this.add.text(panelX, panelY, 'No items found', {
-                fontFamily: "'VT323'",
-                fontSize: this.ui.fontSize.md + 'px',
-                fill: '#aaaaaa',
-                align: 'center'
-            }).setOrigin(0.5);
         }
     }
 
@@ -483,15 +482,11 @@ class CombatResultScene extends Phaser.Scene {
             const width = this.cameras.main.width;
             const height = this.cameras.main.height;
 
-            const levelText = this.add.text(width/2, height * 0.38, // Adjusted Y position
+            const levelText = this.ui.createTitle(width/2, height * 0.38, // Adjusted Y position
                 `LEVEL UP! You are now level ${gameState.player.level}`, {
-                fontFamily: "'Press Start 2P'",
-                fontSize: this.ui.fontSize.md + 'px',
-                fill: '#ffff00', // Bright Yellow
-                align: 'center',
-                stroke: '#000000',
-                strokeThickness: 3
-            }).setOrigin(0.5).setAlpha(0).setDepth(100); // Ensure it's visible
+                fontSize: this.ui.fontSize.sm,
+                color: '#ffff00', // Bright Yellow
+            });
 
             // Animate the level up text
             this.tweens.add({
@@ -527,8 +522,7 @@ class CombatResultScene extends Phaser.Scene {
         // Get combat result data
         const combatResult = this.combatResult;
         const isVictory = combatResult.outcome === 'victory';
-        // const isRetreat = combatResult.outcome === 'retreat'; // We might handle retreat differently later
-        // const isDefeat = combatResult.outcome === 'defeat'; // Defeat usually goes to DefeatScene directly
+        const isDefeat = combatResult.outcome === 'defeat';
 
         // Default button positions
         const buttonY = height * 0.85; // Position buttons lower
