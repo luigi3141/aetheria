@@ -1,3 +1,5 @@
+import gameState from '../gameState.js';
+
 /**
  * NavigationManager.js
  * Handles scene transitions and navigation flow throughout the game
@@ -37,27 +39,27 @@ class NavigationManager {
 
     /**
      * Navigate from one scene to another
-     * @param {Phaser.Scene} currentScene - The current scene
-     * @param {string} targetSceneName - The name of the scene to navigate to
+     * @param {Phaser.Scene} fromScene - The current scene
+     * @param {string} targetSceneKey - The key of the scene to navigate to
      * @param {object} data - Optional data to pass to the next scene
-     * @param {string} condition - Optional condition for conditional navigation
      */
-    navigateTo(currentScene, targetSceneName, data = {}, condition = null) {
-        const currentSceneName = currentScene.constructor.name;
+    navigateTo(fromScene, targetSceneKey, data = {}) {
+        console.log(`Navigating from ${fromScene.scene.key} to ${targetSceneKey}`);
         
-        // Check if the navigation is allowed
-        const isValidNavigation = this.isValidNavigation(currentSceneName, targetSceneName, condition);
+        // Store previous scene for back navigation
+        gameState.previousScene = fromScene.scene.key;
         
-        if (isValidNavigation) {
-            console.log(`Navigating from ${currentSceneName} to ${targetSceneName}`);
-            currentScene.scene.start(targetSceneName, data);
-        } else {
-            console.warn(`Invalid navigation attempt from ${currentSceneName} to ${targetSceneName}`);
-            // Fallback: Allow navigation anyway in case our flow map is incomplete
-            // This ensures the game doesn't get stuck
-            console.log(`Fallback: Allowing navigation from ${currentSceneName} to ${targetSceneName}`);
-            currentScene.scene.start(targetSceneName, data);
+        // Check if the target scene is CombatResultScene and ensure combat result data is passed
+        if (targetSceneKey === 'CombatResultScene' && gameState.combatResult) {
+            // Add combat result to data if it exists in gameState but not in data
+            if (!data.combatResult) {
+                data.combatResult = gameState.combatResult;
+                console.log("Adding combat result data from gameState:", data.combatResult);
+            }
         }
+        
+        // Navigate to the target scene
+        fromScene.scene.start(targetSceneKey, data);
     }
 
     /**

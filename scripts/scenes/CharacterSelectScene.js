@@ -298,6 +298,10 @@ class CharacterSelectScene extends Phaser.Scene {
             () => {
                 console.log('Start game button clicked');
                 
+                // Clear any existing game data when starting a new game
+                localStorage.removeItem('gameState');
+                console.log('Cleared previous game state from localStorage');
+                
                 // Initialize player object if it doesn't exist
                 if (!gameState.player) {
                     gameState.player = {};

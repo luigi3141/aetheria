@@ -35,37 +35,72 @@ class DungeonScene extends BaseScene {
     }
 
     init(data) {
-        console.log('DungeonScene init - Player state:', {
-            level: gameState.player.level,
-            name: gameState.player.name,
-            class: gameState.player.class
+        console.log("DungeonScene init - Player state:", {
+            level: gameState.player?.level,
+            name: gameState.player?.name,
+            class: gameState.player?.class
         });
-        
-        // Always ensure we have valid dungeon data
-        if (!gameState.currentDungeon || !gameState.currentDungeon.id) {
-            this.initializeDungeon();
+
+        // Load saved state
+        const savedState = window.localStorage.getItem('gameState');
+        if (savedState) {
+            const parsedState = JSON.parse(savedState);
+            if (parsedState.player) {
+                // Update only inventory and stats, not scene-specific data
+                gameState.player.inventory = parsedState.player.inventory;
+                gameState.player.gold = parsedState.player.gold;
+                gameState.player.experience = parsedState.player.experience;
+                gameState.player.experienceToNextLevel = parsedState.player.experienceToNextLevel;
+            }
         }
-        
-        console.log('DungeonScene init - Current dungeon:', gameState.currentDungeon);
+
+        console.log("DungeonScene init - Inventory state:", {
+            itemCount: gameState.player.inventory?.items?.length || 0,
+            items: JSON.parse(JSON.stringify(gameState.player.inventory?.items || [])),
+            equipped: gameState.player.inventory?.equipped || {}
+        });
+
+        if (data?.currentDungeon) {
+            gameState.currentDungeon = data.currentDungeon;
+        }
+        console.log("DungeonScene init - Current dungeon:", gameState.currentDungeon);
     }
 
-    create(data) {
+    create() {
         console.log('DungeonScene create - Starting scene creation');
+        
+        // Initialize base scene components first
+        this.initializeScene();
+        
+        // Log inventory state at the start of scene creation
+        console.log('DungeonScene create - Inventory state:', {
+            itemCount: gameState.player.inventory?.items?.length || 0,
+            items: JSON.parse(JSON.stringify(gameState.player.inventory?.items || [])),
+            equipped: gameState.player.inventory?.equipped || {}
+        });
+        
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
-        this.ui = new UIManager(this);
-        this.transitions = new TransitionManager(this);
+        // Background
+        const bg = this.add.image(width / 2, height / 2, 'combat-bg');
+        bg.setDisplaySize(width, height);
 
-        this.safeAddImage(width / 2, height / 2, 'combat-bg', null, { displayWidth: width, displayHeight: height });
+        // Create player sprite
+        const playerSprite = this.add.image(width * 0.5, height * 0.6, this.playerSpriteKey);
+        playerSprite.setScale(2);
 
-        const dungeon = gameState.currentDungeon;
-        this.ui.createTitle(width / 2, height * 0.06, dungeon.name, {
-            fontSize: this.ui.fontSize.lg
-        });
+        // Create UI elements
+        this.createUI();
 
-        this.createPlayer();
-        this.createExplorationUI();
+        // Create enemy encounter button
+        this.createEncounterButton();
+
+        // Create return button
+        this.createReturnButton();
+
+        // Create inventory button
+        this.createInventoryButton();
     }
 
     initializeDungeon() {
@@ -87,34 +122,82 @@ class DungeonScene extends BaseScene {
         };
     }
 
-    createPlayer() {
+    createUI() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
-        this.player = this.add.sprite(
-            width / 2,
-            height * 0.6,
-            this.playerSpriteKey
-        ).setScale(2);
+        this.ui = new UIManager(this);
+        this.transitions = new TransitionManager(this);
 
-        const playerHighlight = this.add.circle(
-            width / 2,
-            height * 0.75,
-            25,
-            0xffff00,
-            0.3
-        );
-
-        this.tweens.add({
-            targets: playerHighlight,
-            alpha: 0.5,
-            duration: 1000,
-            yoyo: true,
-            repeat: -1
+        const dungeon = gameState.currentDungeon;
+        this.ui.createTitle(width / 2, height * 0.06, dungeon.name, {
+            fontSize: this.ui.fontSize.lg
         });
+
+        const player = gameState.player;
+        this.ui.createTitle(
+            width * 0.5,
+            height * 0.3,
+            `${player.name || 'Adventurer'}\nHP: ${player.health}/${player.maxHealth}\nMP: ${player.mana}/${player.maxMana}`,
+            { 
+                fontSize: this.ui.fontSize.sm,
+                padding: this.ui.spacing.md,
+                lineSpacing: 10
+            }
+        );
     }
 
-    createExplorationUI() {
+    createEncounterButton() {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        const buttonY = height * 0.9;
+        const buttonSpacing = width * 0.2;
+
+        new Button(
+            this,
+            width * 0.5,
+            buttonY,
+            'ADVANCE',
+            () => {
+                this.transitions.fade(() => {
+                    navigationManager.navigateTo(this, 'EncounterScene');
+                });
+            },
+            {
+                width: 160,
+                height: 50,
+                fillColor: 0x00cc00,
+                hoverColor: 0x009900
+            }
+        );
+    }
+
+    createReturnButton() {
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        const buttonY = height * 0.9;
+        const buttonSpacing = width * 0.2;
+
+        new Button(
+            this,
+            width * 0.8,
+            buttonY,
+            'RETREAT',
+            () => {
+                this.transitions.fade(() => {
+                    navigationManager.navigateTo(this, 'OverworldScene');
+                });
+            },
+            {
+                width: 160,
+                height: 50,
+                fillColor: 0xcc0000,
+                hoverColor: 0x990000
+            }
+        );
+    }
+
+    createInventoryButton() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         const buttonY = height * 0.9;
@@ -136,56 +219,6 @@ class DungeonScene extends BaseScene {
                 height: 50,
                 fillColor: 0x999999,
                 hoverColor: 0x777777
-            }
-        );
-
-        new Button(
-            this,
-            width * 0.5,
-            buttonY,
-            'ADVANCE',
-            () => {
-                this.transitions.fade(() => {
-                    navigationManager.navigateTo(this, 'EncounterScene');
-                });
-            },
-            {
-                width: 160,
-                height: 50,
-                fillColor: 0x00cc00,
-                hoverColor: 0x009900
-            }
-        );
-
-        new Button(
-            this,
-            width * 0.8,
-            buttonY,
-            'RETREAT',
-            () => {
-                this.transitions.fade(() => {
-                    navigationManager.navigateTo(this, 'OverworldScene');
-                });
-            },
-            {
-                width: 160,
-                height: 50,
-                fillColor: 0xcc0000,
-                hoverColor: 0x990000
-            }
-        );
-
-        HealthManager.validatePlayerHealth();
-
-        const player = gameState.player;
-        this.ui.createTitle(
-            width * 0.5,
-            height * 0.3,
-            `${player.name || 'Adventurer'}\nHP: ${player.health}/${player.maxHealth}\nMP: ${player.mana}/${player.maxMana}`,
-            { 
-                fontSize: this.ui.fontSize.sm,
-                padding: this.ui.spacing.md,
-                lineSpacing: 10
             }
         );
     }

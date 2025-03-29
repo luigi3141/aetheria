@@ -87,6 +87,12 @@ export const ASSET_PATHS = {
         WAND: 'assets/sprites/equipment/wand-sprite.png'
     },
 
+    // Equipment slot icons
+    EQUIPMENT_SLOTS: {
+        ARMOUR: 'assets/sprites/icons/slot-head-placeholder.png',
+        ACCESSORY: 'assets/sprites/icons/slot-accessory-placeholder.png'
+    },
+    
     // Crafting material sprites
     MATERIALS: {
         ARMOUR: 'assets/sprites/loot-materials/armour-crafting-sprite.png',
