@@ -1,308 +1,228 @@
+// Inside CharacterManager.js
+
 import gameState from '../gameState.js';
 import HealthManager from './HealthManager.js';
+import { getItemData } from '../data/items.js'; // Import getItemData
 
-/**
- * CharacterManager - Utility for character stat calculations and updates
- * Centralizes character-related logic to prevent duplication across scenes
- */
 class CharacterManager {
-    /**
-     * Calculate base stats for a character class
-     * @param {string} characterClass - Character class (warrior, mage, etc.)
-     * @returns {object} Base stats for the class
-     */
+    // --- Keep these if needed for initial character creation ---
     static getBaseStatsForClass(characterClass) {
-        // Default base stats
-        const defaultStats = {
-            strength: 10,
-            agility: 10,
-            intelligence: 10,
-            constitution: 10,
-            maxHealth: 100,
-            maxMana: 50
-        };
-        
-        // Class-specific stat modifiers
+        // Define base primary stats and HP/MP per class
+        // NOTE: Base defense is removed/set to 0 implicitly later
         const classStats = {
-            warrior: {
-                strength: 14,
-                agility: 12,
-                intelligence: 8,
-                constitution: 14,
-                maxHealth: 120,
-                maxMana: 30
-            },
-            mage: {
-                strength: 6,
-                agility: 8,
-                intelligence: 16,
-                constitution: 8,
-                maxHealth: 80,
-                maxMana: 120
-            },
-            rogue: {
-                strength: 10,
-                agility: 16,
-                intelligence: 12,
-                constitution: 8,
-                maxHealth: 90,
-                maxMana: 40
-            },
-            cleric: {
-                strength: 8,
-                agility: 10,
-                intelligence: 14,
-                constitution: 12,
-                maxHealth: 100,
-                maxMana: 80
-            },
-            ranger: {
-                strength: 12,
-                agility: 14,
-                intelligence: 10,
-                constitution: 10,
-                maxHealth: 95,
-                maxMana: 45
-            },
-            bard: {
-                strength: 8,
-                agility: 12,
-                intelligence: 14,
-                constitution: 10,
-                maxHealth: 90,
-                maxMana: 70
-            }
+            warrior: { strength: 14, agility: 12, intelligence: 8, constitution: 14, baseMaxHealth: 120, baseMaxMana: 30 },
+            mage:    { strength: 6,  agility: 8,  intelligence: 16, constitution: 8,  baseMaxHealth: 80,  baseMaxMana: 120 },
+            rogue:   { strength: 10, agility: 16, intelligence: 12, constitution: 8,  baseMaxHealth: 90,  baseMaxMana: 40 },
+            cleric:  { strength: 8,  agility: 10, intelligence: 14, constitution: 12, baseMaxHealth: 100, baseMaxMana: 80 },
+            ranger:  { strength: 12, agility: 14, intelligence: 10, constitution: 10, baseMaxHealth: 95,  baseMaxMana: 45 },
+            bard:    { strength: 8,  agility: 12, intelligence: 14, constitution: 10, baseMaxHealth: 90,  baseMaxMana: 70 }
         };
-        
-        // Return class stats or default stats if class not found
-        return classStats[characterClass] || defaultStats;
+        return classStats[characterClass] || { strength: 10, agility: 10, intelligence: 10, constitution: 10, baseMaxHealth: 100, baseMaxMana: 50 };
     }
-    
-    /**
-     * Initialize a new character with base stats
-     * @param {string} name - Character name
-     * @param {string} characterClass - Character class
-     * @returns {object} New character object
-     */
+
     static createNewCharacter(name, characterClass) {
-        // Get base stats for class
-        const baseStats = this.getBaseStatsForClass(characterClass);
-        
-        // Create character object
+        const baseData = this.getBaseStatsForClass(characterClass);
         const character = {
-            name: name,
-            class: characterClass,
-            level: 1,
-            experience: 0,
-            experienceToNextLevel: 100,
-            gold: 50,
-            inventory: [],
-            equipment: {
-                weapon: null,
-                armor: null,
-                accessory: null
-            },
-            skills: [],
-            ...baseStats
+            name: name, class: characterClass, level: 1,
+            experience: 0, experienceToNextLevel: 100, gold: 50,
+            inventory: { items: [], maxItems: 20, equipped: { weapon: null, body: null, head: null /* other slots */ } },
+            abilities: [], // Add class-specific starting abilities if needed
+            // Assign base stats
+            strength: baseData.strength, agility: baseData.agility,
+            intelligence: baseData.intelligence, constitution: baseData.constitution,
+            // Store base max HP/MP for reference if needed for recalculation
+            baseMaxHealth: baseData.baseMaxHealth, baseMaxMana: baseData.baseMaxMana,
+            // Initialize current stats (calculated on demand or here)
+            health: baseData.baseMaxHealth, maxHealth: baseData.baseMaxHealth,
+            mana: baseData.baseMaxMana, maxMana: baseData.baseMaxMana,
+            // Current combat stats start based on initial calculation
+            currentAttack: 0, // Will be calculated
+            currentMagicAttack: 0, // Will be calculated
+            currentDefense: 0, // Starts at 0
         };
-        
-        // Initialize health and mana to max values
-        character.health = character.maxHealth;
-        character.mana = character.maxMana;
-        
+        this.recalculatePlayerStats(character); // Calculate initial current stats
         console.log(`Created new character: ${name} the ${characterClass}`);
-        console.log('Character stats:', character);
-        
+        console.log('Initial Character stats:', character);
         return character;
     }
-    
+    // --- End character creation helpers ---
+
+
     /**
-     * Calculate derived stats based on primary stats and equipment
-     * @param {object} character - Character object
-     * @returns {object} Derived stats
+     * Calculate the player's current total stats, including equipment bonuses.
+     * Stores the calculated values directly in gameState.player.
+     * Accepts optional character object for use during creation before gameState is set.
+     * @param {object} [character=gameState.player] - The character object to recalculate for. Defaults to gameState.player.
      */
-    static calculateDerivedStats(character) {
-        // Ensure character object exists
+    static recalculatePlayerStats(character = gameState.player) {
         if (!character) {
-            console.error('Cannot calculate derived stats for undefined character');
-            return {};
-        }
-        
-        // Extract base stats
-        const strength = character.strength || 10;
-        const agility = character.agility || 10;
-        const intelligence = character.intelligence || 10;
-        const constitution = character.constitution || 10;
-        
-        // Calculate derived stats
-        const derivedStats = {
-            attackPower: Math.floor(strength * 1.5),
-            defense: Math.floor(constitution * 0.8 + agility * 0.2),
-            magicPower: Math.floor(intelligence * 1.2),
-            critChance: Math.min(5 + Math.floor(agility * 0.25), 30), // Cap at 30%
-            dodgeChance: Math.min(Math.floor(agility * 0.2), 20), // Cap at 20%
-            healthRegen: Math.floor(constitution * 0.1),
-            manaRegen: Math.floor(intelligence * 0.2)
-        };
-        
-        // Add equipment bonuses if any
-        if (character.equipment) {
-            // Process weapon
-            if (character.equipment.weapon) {
-                derivedStats.attackPower += character.equipment.weapon.attackPower || 0;
-                derivedStats.magicPower += character.equipment.weapon.magicPower || 0;
-            }
-            
-            // Process armor
-            if (character.equipment.armor) {
-                derivedStats.defense += character.equipment.armor.defense || 0;
-            }
-            
-            // Process accessory
-            if (character.equipment.accessory) {
-                // Apply accessory-specific bonuses
-                const accessory = character.equipment.accessory;
-                if (accessory.critBonus) derivedStats.critChance += accessory.critBonus;
-                if (accessory.dodgeBonus) derivedStats.dodgeChance += accessory.dodgeBonus;
-            }
-        }
-        
-        return derivedStats;
-    }
-    
-    /**
-     * Apply level up bonuses to a character
-     * @param {object} character - Character object
-     * @returns {object} Character with applied level up bonuses
-     */
-    static applyLevelUp(character) {
-        // Ensure character object exists
-        if (!character) {
-            console.error('Cannot apply level up to undefined character');
-            return null;
-        }
-        
-        // Calculate stat increases based on class
-        const statIncreases = this.getLevelUpBonuses(character.class);
-        
-        // Apply stat increases
-        character.strength += statIncreases.strength;
-        character.agility += statIncreases.agility;
-        character.intelligence += statIncreases.intelligence;
-        character.constitution += statIncreases.constitution;
-        
-        // Update max health and mana
-        character.maxHealth += statIncreases.maxHealth;
-        character.maxMana += statIncreases.maxMana;
-        
-        // Restore health and mana to max
-        character.health = character.maxHealth;
-        character.mana = character.maxMana;
-        
-        // Increment level
-        character.level += 1;
-        
-        // Calculate new experience threshold (increases each level)
-        character.experienceToNextLevel = Math.floor(character.experienceToNextLevel * 1.5);
-        
-        // Reset current experience
-        character.experience = 0;
-        
-        console.log(`Character ${character.name} leveled up to ${character.level}!`);
-        
-        return character;
-    }
-    
-    /**
-     * Get level up bonuses for a specific class
-     * @param {string} characterClass - Character class
-     * @returns {object} Stat bonuses for level up
-     */
-    static getLevelUpBonuses(characterClass) {
-        // Default level up bonuses
-        const defaultBonuses = {
-            strength: 1,
-            agility: 1,
-            intelligence: 1,
-            constitution: 1,
-            maxHealth: 10,
-            maxMana: 5
-        };
-        
-        // Class-specific level up bonuses
-        const classBonuses = {
-            warrior: {
-                strength: 2,
-                agility: 1,
-                intelligence: 0,
-                constitution: 2,
-                maxHealth: 15,
-                maxMana: 3
-            },
-            mage: {
-                strength: 0,
-                agility: 1,
-                intelligence: 3,
-                constitution: 1,
-                maxHealth: 7,
-                maxMana: 15
-            },
-            rogue: {
-                strength: 1,
-                agility: 3,
-                intelligence: 1,
-                constitution: 0,
-                maxHealth: 9,
-                maxMana: 5
-            },
-            cleric: {
-                strength: 0,
-                agility: 1,
-                intelligence: 2,
-                constitution: 2,
-                maxHealth: 12,
-                maxMana: 10
-            },
-            ranger: {
-                strength: 1,
-                agility: 2,
-                intelligence: 1,
-                constitution: 1,
-                maxHealth: 10,
-                maxMana: 5
-            },
-            bard: {
-                strength: 0,
-                agility: 1,
-                intelligence: 2,
-                constitution: 1,
-                maxHealth: 8,
-                maxMana: 10
-            }
-        };
-        
-        // Return class bonuses or default bonuses if class not found
-        return classBonuses[characterClass] || defaultBonuses;
-    }
-    
-    /**
-     * Updates the player character in gameState
-     * @param {object} updatedCharacter - Updated character data
-     */
-    static updatePlayerCharacter(updatedCharacter) {
-        if (!gameState.player) {
-            console.error('Player state not initialized');
+            console.error("Cannot recalculate stats: Invalid character object provided.");
             return;
         }
-        
-        // Update player in gameState
-        Object.assign(gameState.player, updatedCharacter);
-        
-        // Validate health and mana values
-        HealthManager.validatePlayerHealth();
-        
-        console.log('Player character updated:', gameState.player);
+
+        // --- Base Primary Stats (from level ups, base class) ---
+        const baseStrength = character.strength || 10;
+        const baseAgility = character.agility || 10;
+        const baseIntelligence = character.intelligence || 10;
+        const baseConstitution = character.constitution || 10;
+
+        // --- Initialize Current Combat Stats ---
+        let currentDefense = 0; // Player base defense is 0
+        let currentAttackBonus = 0; // Flat bonus from non-wand weapons
+        let currentMagicAttackBonus = 0; // Flat bonus from wands/staves
+
+        // Add other stat bonuses if needed (crit, dodge, etc.)
+        let bonusMaxHealth = 0;
+        let bonusMaxMana = 0;
+
+        // --- Equipment Bonuses ---
+        if (character.inventory && character.inventory.equipped) {
+            for (const slot in character.inventory.equipped) {
+                const itemId = character.inventory.equipped[slot];
+                if (itemId) {
+                    const itemData = getItemData(itemId);
+                    if (itemData && itemData.effects) {
+                        console.log(`Applying effects from ${itemData.inGameName} in slot ${slot}:`, itemData.effects);
+
+                        // --- Apply DEFENSE bonus (only from items) ---
+                        currentDefense += itemData.effects.defense || 0;
+
+                        // --- Apply WEAPON bonuses ---
+                        if (slot === 'weapon') {
+                             // Check if it's a magic weapon (wand/staff etc.)
+                             // Assuming iconKey tells us the type based on items.js setup
+                            if (itemData.iconKey === categoryIconKeys.Weapon.Wand) { // Use the mapping from items.js
+                                currentMagicAttackBonus += itemData.effects.magicAttack || 0;
+                                // Wands might also add intelligence, apply that to base for recalculation below?
+                                // baseIntelligence += itemData.effects.intelligence || 0;
+                            } else {
+                                // Assume other weapons add physical attack
+                                currentAttackBonus += itemData.effects.attack || 0;
+                                // Physical weapons might add strength etc.
+                                // baseStrength += itemData.effects.strength || 0;
+                            }
+                        }
+
+                         // --- Apply other bonuses ---
+                         bonusMaxHealth += itemData.effects.health || 0; // Flat health bonus from items
+                         bonusMaxMana += itemData.effects.mana || 0; // Flat mana bonus
+                         // Add crit, dodge, primary stat bonuses from items if they exist
+                         // currentCritChance += itemData.effects.critChance || 0;
+                         // currentDodgeChance += itemData.effects.dodgeChance || 0;
+                         // baseAgility += itemData.effects.agility || 0; // Example if boots add agility
+                    }
+                }
+            }
+        }
+
+        // --- Final Derived Stat Calculations ---
+
+        // Max Health/Mana: Base + Stat Scaling + Flat Item Bonus + Level Bonus
+        character.maxHealth = (character.baseMaxHealth || 100) + (baseConstitution * 5) + bonusMaxHealth + (character.level * 10);
+        character.maxMana = (character.baseMaxMana || 50) + (baseIntelligence * 3) + bonusMaxMana + (character.level * 5);
+
+        // Current Attack: Base STR scaling + Flat Weapon Bonus
+        character.currentAttack = Math.floor(baseStrength * 1.5) + currentAttackBonus;
+
+        // Current Magic Attack: Base INT scaling + Flat Wand Bonus
+        character.currentMagicAttack = Math.floor(baseIntelligence * 1.2) + currentMagicAttackBonus;
+
+        // Current Defense: JUST from items
+        character.currentDefense = currentDefense;
+
+        // Ensure current health/mana aren't exceeding new max
+        character.health = Math.min(character.health ?? character.maxHealth, character.maxHealth); // Default to full if undefined
+        character.mana = Math.min(character.mana ?? character.maxMana, character.maxMana); // Default to full if undefined
+
+
+        // --- Log Updated Stats ---
+        console.log("Recalculated Player Stats:", {
+            HP: `${character.health}/${character.maxHealth}`,
+            MP: `${character.mana}/${character.maxMana}`,
+            Attack: character.currentAttack,
+            MagicAttack: character.currentMagicAttack,
+            Defense: character.currentDefense,
+            // Add others...
+        });
+
+        // --- Update UI (If possible and needed) ---
+        // This part remains tricky without a direct reference or event system
+        const currentScene = window.game?.scene.getScenes(true)[0]; // Attempt to find active scene
+        if (currentScene) {
+             // Update Combat UI if relevant
+             if (currentScene.scene.key === 'EncounterScene' && currentScene.combatUI) {
+                 currentScene.combatUI.updatePlayerHealth();
+                 currentScene.combatUI.updatePlayerMana();
+             }
+             // Update Inventory Potion Tab UI if relevant
+             else if (currentScene.scene.key === 'InventoryScene' && currentScene.currentTab === 'Potions') {
+                  if(currentScene.potionsHpBar) currentScene.potionsHpBar.update(character.health, character.maxHealth);
+                  if(currentScene.potionsMpBar) currentScene.potionsMpBar.update(character.mana, character.maxMana);
+             }
+             // Update Overworld/Dungeon UI? Needs specific implementation in those scenes
+        }
     }
+
+     /**
+      * Apply level up bonuses to a character and recalculate stats.
+      * @param {object} [character=gameState.player] - Character object to level up.
+      * @returns {object} Character with applied level up bonuses.
+      */
+     static applyLevelUp(character = gameState.player) {
+         if (!character) return null;
+
+         // Get stat increases based on class
+         const statIncreases = this.getLevelUpBonuses(character.class); // Keep this helper
+
+         // Apply base stat increases
+         character.strength = (character.strength || 10) + (statIncreases.strength || 0);
+         character.agility = (character.agility || 10) + (statIncreases.agility || 0);
+         character.intelligence = (character.intelligence || 10) + (statIncreases.intelligence || 0);
+         character.constitution = (character.constitution || 10) + (statIncreases.constitution || 0);
+
+         // Store base HP/MP increases separate from calculation if needed, or just recalculate total
+         // character.baseMaxHealth = (character.baseMaxHealth || 100) + (statIncreases.maxHealth || 0);
+         // character.baseMaxMana = (character.baseMaxMana || 50) + (statIncreases.maxMana || 0);
+
+         // Increment level BEFORE recalculating stats that depend on level
+         character.level += 1;
+
+         // Calculate new experience threshold
+         character.experienceToNextLevel = Math.floor(character.experienceToNextLevel * 1.5); // Or your formula
+         // character.experience = 0; // Reset XP overflow if needed, or handle in CombatResultScene
+
+         // --- Recalculate all stats including new level and base stats ---
+         this.recalculatePlayerStats(character);
+
+         // Restore health and mana fully on level up AFTER recalculating max values
+         character.health = character.maxHealth;
+         character.mana = character.maxMana;
+
+
+         console.log(`Character ${character.name} leveled up to ${character.level}! Stats recalculated.`);
+         return character;
+     }
+
+     // Helper to get level up bonuses (keep this or adjust as needed)
+     static getLevelUpBonuses(characterClass) {
+          const classBonuses = {
+              warrior: { strength: 2, agility: 1, intelligence: 0, constitution: 2, /*maxHealth: 15, maxMana: 3*/ }, // HP/MP now derived
+              mage:    { strength: 0, agility: 1, intelligence: 3, constitution: 1, /*maxHealth: 7, maxMana: 15*/ },
+              rogue:   { strength: 1, agility: 3, intelligence: 1, constitution: 0, /*maxHealth: 9, maxMana: 5*/ },
+              cleric:  { strength: 0, agility: 1, intelligence: 2, constitution: 2, /*maxHealth: 12, maxMana: 10*/ },
+              ranger:  { strength: 1, agility: 2, intelligence: 1, constitution: 1, /*maxHealth: 10, maxMana: 5*/ },
+              bard:    { strength: 0, agility: 1, intelligence: 2, constitution: 1, /*maxHealth: 8, maxMana: 10*/ }
+          };
+          return classBonuses[characterClass] || { strength: 1, agility: 1, intelligence: 1, constitution: 1 };
+     }
+
+    // updatePlayerCharacter is essentially replaced by recalculatePlayerStats
+    // static updatePlayerCharacter(updatedCharacter) { ... }
 }
+
+// Need categoryIconKeys from items.js for weapon type checking
+// It's better to pass itemData directly or check itemData.category/keywords
+// Let's import it here for the recalculate function
+import { categoryIconKeys } from '../data/items.js'; // Adjust path
 
 export default CharacterManager;

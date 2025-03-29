@@ -9,6 +9,7 @@ import { ASSET_PATHS } from '../config/AssetConfig.js';
 import { getItemData } from '../data/items.js';
 import HealthManager from '../utils/HealthManager.js';
 import BaseScene from './BaseScene.js';
+import CharacterManager from '../utils/CharacterManager.js';
 
 class InventoryScene extends BaseScene {
     constructor() {
@@ -308,32 +309,90 @@ class InventoryScene extends BaseScene {
     }
 
     equipItem(itemId) {
-        const itemData = getItemData(itemId);
-        if (!itemData) return;
+        // 1. Validate Player and Inventory State
+        if (!gameState.player?.inventory) {
+             console.error("Cannot equip: Player or inventory not found in gameState.");
+             return;
+        }
 
-        let slot;
-        if (itemData.category === 'Armour') {
-            slot = 'armour';
-        } else if (['Melee', 'Ranged', 'Wand'].includes(itemData.category)) {
-            slot = 'accessory';
-            // Unequip any existing accessory
-            if (gameState.player.inventory.equipped.accessory) {
-                const oldItemId = gameState.player.inventory.equipped.accessory;
-                const oldItemData = getItemData(oldItemId);
-                console.log(`Unequipping ${oldItemData.name} from accessory slot`);
-                gameState.player.inventory.equipped.accessory = null;
-            }
-        } else {
-            console.warn(`Cannot equip item of category ${itemData.category}`);
+        // 2. Get Item Data
+        const itemData = getItemData(itemId);
+
+        // 3. Validate Item Data and Equip Slot
+        // Check if item exists and has a defined 'equipSlot' property
+        if (!itemData || !itemData.equipSlot) {
+            console.warn(`Cannot equip item ${itemId}: Item data missing or item is not equippable (no equipSlot defined).`, itemData);
             return;
         }
 
-        gameState.player.inventory.equipped[slot] = itemId;
-        console.log(`Equipped ${itemData.name} to ${slot} slot`);
-        this.updateEquipmentSlotsDisplay();
-        const slotToAnimate = this.equipmentSlots[slot];
-        if (slotToAnimate?.background) this.playEquipAnimation(slotToAnimate.background);
+        const targetSlot = itemData.equipSlot; // e.g., 'weapon', 'body', 'head', 'accessory1'
+
+        // 4. Ensure the 'equipped' object exists
+        if (!gameState.player.inventory.equipped) {
+            gameState.player.inventory.equipped = {};
+        }
+
+        // 5. Equip the Item
+        // Directly assign the itemId to the target slot.
+        // This automatically replaces anything previously in that slot.
+        // (No need to manually unequip first unless you want to return the old item to the main list)
+        const previouslyEquippedId = gameState.player.inventory.equipped[targetSlot];
+        gameState.player.inventory.equipped[targetSlot] = itemId;
+
+        if (previouslyEquippedId) {
+            const prevItemData = getItemData(previouslyEquippedId);
+            console.log(`Replaced ${prevItemData?.inGameName || 'previous item'} in ${targetSlot} slot.`);
+        }
+        console.log(`Equipped ${itemData.inGameName} to ${targetSlot} slot.`);
+
+        // 6. Recalculate Player Stats
+        CharacterManager.recalculatePlayerStats(); // Crucial step!
+
+        // 7. Update the Equipment Slots UI
+        this.updateEquipmentSlotsDisplay(); // Refresh the visual display of equipped items
+
+        // 8. Play Equip Animation
+        const slotToAnimate = this.equipmentSlotsDisplay[targetSlot];
+        // Animate the ICON within the slot, not the background
+        if (slotToAnimate?.icon && slotToAnimate.icon.visible) { // Check icon exists and is visible
+            this.playEquipAnimation(slotToAnimate.icon);
+        } else {
+            console.warn(`Could not find valid icon to animate for slot: ${targetSlot}`);
+        }
+
+        // 9. Optional: Update other UI if needed
+        // If HP/MP bars are visible (e.g., Potions tab), update them after stat recalc
+        if (this.currentTab === 'Potions') {
+            if(this.potionsHpBar) this.potionsHpBar.update(gameState.player.health, gameState.player.maxHealth);
+            if(this.potionsMpBar) this.potionsMpBar.update(gameState.player.mana, gameState.player.maxMana);
+       }
     }
+
+// playEquipAnimation method (ensure it targets the icon)
+playEquipAnimation(targetIcon) {
+    if (!targetIcon || !targetIcon.scene || targetIcon.scene !== this || !targetIcon.active) {
+        console.warn("playEquipAnimation: Invalid targetIcon provided or scene context lost.");
+        return;
+    }
+
+    // Use current scale as the final target scale
+    const finalScaleX = targetIcon.scaleX;
+    const finalScaleY = targetIcon.scaleY;
+
+    // Start slightly larger and faded
+    targetIcon.setScale(finalScaleX * 1.5, finalScaleY * 1.5);
+    targetIcon.setAlpha(0.5);
+
+    // Tween back to normal scale and full alpha
+    this.tweens.add({
+        targets: targetIcon,
+        scaleX: finalScaleX,
+        scaleY: finalScaleY,
+        alpha: 1,
+        duration: 500, // Adjust duration as needed
+        ease: 'Back.easeOut', // Gives a nice little bounce effect
+    });
+}
 
     displayMaterialsTab() {
         const width = this.cameras.main.width; const height = this.cameras.main.height;
