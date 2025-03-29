@@ -4,7 +4,8 @@ import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import TransitionManager from '../ui/TransitionManager.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
-import { getItemData } from '../data/items.js';
+import items from '../data/items.js';
+const { getItemData } = items;
 
 /**
  * CombatResultScene - Scene that shows the results of combat encounters

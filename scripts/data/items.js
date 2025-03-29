@@ -4,7 +4,7 @@
  */
 
 // Mapping from Item Category to AssetConfig key for icons
-export const categoryIconKeys = {
+const categoryIconKeys = {
     Armour: 'ARMOUR',
     Branches: 'BRANCHES',
     Sharps: 'SHARPS',
@@ -52,7 +52,7 @@ const getEquipmentIconKey = (itemName, category) => {
 // Placeholder Gold Value based on Tier (Adjust these values as needed)
 const tierValueMap = { 1: 15, 2: 40, 3: 100, 4: 300, 5: 1000 };
 
-export const itemDatabase = {
+const itemDatabase = {
     // --- Crafting Materials (IDs 1-1000) ---
     // (Keep all your existing material definitions here, ensuring they have type: 'material' and stackable: true)
     'bandit-armour': { itemId: 1, itemName: 'bandit-armour', inGameName: 'Bandit Leather Scrap', category: 'Armour', iconKey: categoryIconKeys['Armour'], value: 5, tier: 2, description: 'Tattered leather scrap from bandit armour.', stackable: true, type: 'material' }, // Renamed slightly for clarity
@@ -200,7 +200,6 @@ export const itemDatabase = {
 
 };
 
-
 // --- HELPER FUNCTIONS ---
 
 
@@ -209,7 +208,7 @@ export const itemDatabase = {
  * Get all defined Item IDs
  * @returns {string[]} - An array of all item IDs in the database
  */
-export function getAllItemIds() {
+function getAllItemIds() {
     return Object.keys(itemDatabase);
 }
 
@@ -218,7 +217,7 @@ export function getAllItemIds() {
  * @param {string} category - The category name (e.g., 'Armour', 'Sharps')
  * @returns {object[]} - An array of item data objects matching the category
  */
-export function getItemsByCategory(category) {
+function getItemsByCategory(category) {
     return Object.values(itemDatabase)
         .filter(item => item.category === category)
         .map(item => JSON.parse(JSON.stringify(item))); // Return copies
@@ -229,7 +228,7 @@ export function getItemsByCategory(category) {
  * @param {number} tier - The item tier (1-5)
  * @returns {object[]} - An array of item data objects matching the tier
  */
-export function getItemsByTier(tier) {
+function getItemsByTier(tier) {
     return Object.values(itemDatabase)
         .filter(item => item.tier === tier)
         .map(item => JSON.parse(JSON.stringify(item))); // Return copies
@@ -241,7 +240,7 @@ export function getItemsByTier(tier) {
  * @param {string} itemId - The backend ID of the item (e.g., 'goblin-leather', 'rusted-shortsword')
  * @returns {object|null} - The item data object or null if not found
  */
-export function getItemData(itemId) {
+function getItemData(itemId) {
     const item = itemDatabase[itemId];
     if (!item) {
         console.warn(`Item data not found for ID: ${itemId}`);
@@ -250,10 +249,9 @@ export function getItemData(itemId) {
     return JSON.parse(JSON.stringify(item));
 }
 
-
-
 export default {
     itemDatabase,
+    categoryIconKeys,
     getItemData,
     getAllItemIds,
     getItemsByCategory,

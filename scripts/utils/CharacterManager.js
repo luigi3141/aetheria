@@ -2,7 +2,8 @@
 
 import gameState from '../gameState.js';
 import HealthManager from './HealthManager.js';
-import { getItemData } from '../data/items.js'; // Import getItemData
+import items from '../data/items.js';
+const { getItemData, categoryIconKeys } = items;
 
 class CharacterManager {
     // --- Keep these if needed for initial character creation ---
@@ -219,10 +220,5 @@ class CharacterManager {
     // updatePlayerCharacter is essentially replaced by recalculatePlayerStats
     // static updatePlayerCharacter(updatedCharacter) { ... }
 }
-
-// Need categoryIconKeys from items.js for weapon type checking
-// It's better to pass itemData directly or check itemData.category/keywords
-// Let's import it here for the recalculate function
-import { categoryIconKeys } from '../data/items.js'; // Adjust path
 
 export default CharacterManager;

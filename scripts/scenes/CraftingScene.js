@@ -3,7 +3,8 @@ import Button from '../ui/components/Button.js';
 import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
-import { getItemData } from '../data/items.js';
+import items from '../data/items.js';
+const { getItemData } = items;
 
 /**
  * CraftingScene - Scene for crafting items from materials
