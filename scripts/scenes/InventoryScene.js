@@ -143,7 +143,8 @@ class InventoryScene extends BaseScene {
         // --- Create Static Equipment Slots Container ---
         this.equipmentSlotsContainer = this.add.container(width * 0.75, height * 0.5);
         this.createEquipmentSlotsDisplay(this.equipmentSlotsContainer); // Create the visual slots
-        this.updateEquipmentSlotsDisplay(); // Populate with current equipment
+        this.updateEquipmentSlotsDisplay(); // Populate slots based on current state
+        this.updateTotalStatsDisplay();    // Populate total stats based on current state
         // Initially hide it if the default tab is not Equipment
         this.equipmentSlotsContainer.setVisible(this.currentTab === 'Equipment');
 
@@ -230,311 +231,362 @@ class InventoryScene extends BaseScene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
-        // Equipment Slots container is static, ensure it's visible and updated
+        // Ensure slots container is visible and updated
         this.equipmentSlotsContainer?.setVisible(true);
-        this.updateEquipmentSlotsDisplay(); // Refresh content based on gameState
+        this.updateEquipmentSlotsDisplay(); // Update slots based on gameState
 
         // Create NEW Scrollable Equipment List
-        const listWidth = width * 0.4; const listHeight = height * 0.6;
-        const listX = width * 0.3; const listY = height * 0.55;
+        const listWidth = width * 0.4;
+        const listHeight = height * 0.6;
+        const listX = width * 0.3;
+        const listY = height * 0.55;
         this.equipmentListContainer = new ScrollableContainer(this, listX, listY, listWidth, listHeight, { padding: 10, backgroundColor: 0x1a1a2e, borderColor: 0x7f7fbf });
 
+        // Ensure container was created before proceeding
+         if (!this.equipmentListContainer || !this.equipmentListContainer.valid) {
+             console.error("Failed to create equipmentListContainer in displayEquipmentTab.");
+             return;
+         }
+
+        // Remove previous listener if it exists (safety check)
+        if (this.equipmentListContainer.interactiveArea) {
+             this.equipmentListContainer.interactiveArea.removeListener('pointerdown');
+        } else {
+             console.warn("equipmentListContainer.interactiveArea not found when trying to remove listener.");
+        }
+
+
         const inventory = gameState.player.inventory.items || [];
-        // Filter for items that can go in the 'body' or 'accessory' slots
         const equipmentItems = inventory.filter(itemInstance => {
-             const itemData = getItemData(itemInstance.itemId);
-             return itemData && itemData.equipSlot && ['body', 'accessory', 'weapon'].includes(itemData.equipSlot); 
+            const itemData = getItemData(itemInstance.itemId);
+            return itemData && itemData.equipSlot && ['body', 'accessory', 'weapon'].includes(itemData.equipSlot);
         });
 
-        console.log("Equipment Tab - Filtered items:", JSON.parse(JSON.stringify(equipmentItems))); // Add log to verify filter
+        console.log("Equipment Tab - Filtered items (includes weapons):", JSON.parse(JSON.stringify(equipmentItems)));
 
         if (equipmentItems.length === 0) {
             this.equipmentListContainer.addText('No equippable items found.', { fill: '#aaaaaa', fontSize: this.ui.fontSize.sm });
         } else {
-            let currentY = 0;
             const itemHeight = 40;
 
             equipmentItems.forEach(itemInstance => {
                 const itemData = getItemData(itemInstance.itemId);
                 if (!itemData) return;
-                const itemRow = this.add.container(0, currentY); // Position container at currentY
 
-
-                const itemBg = this.add.rectangle(0, 0, listWidth - 20, itemHeight, 0x2a2a3e, 0).setOrigin(0, 0); 
+                // Create row container, position will be handled by addItem
+                const itemRow = this.add.container(0, 0); 
+                // Elements relative to itemRow (0,0)
+                const itemBg = this.add.rectangle(0, 0, listWidth - 20, itemHeight, 0x2a2a3e, 0).setOrigin(0, 0);
                 const nameText = this.add.text(10, itemHeight / 2, itemData.inGameName, { fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm, fill: '#ffffff' }).setOrigin(0, 0.5);
                 let statsString = itemData.effects ? Object.entries(itemData.effects).map(([stat, value]) => `${stat.charAt(0).toUpperCase() + stat.slice(1)}: ${value > 0 ? '+' : ''}${value}`).join(', ') : '';
                 const statsText = this.add.text(listWidth - 30, itemHeight / 2, statsString, { fontFamily: "'VT323'", fontSize: this.ui.fontSize.xs, fill: '#aaffaa', align: 'right' }).setOrigin(1, 0.5);
 
                 itemRow.add([itemBg, nameText, statsText]);
-                try {
-                    // Define the hit area using the row's calculated size
-                    itemRow.setSize(listWidth - 20, itemHeight); // Important: Set container size!
-                    itemRow.setInteractive({ useHandCursor: true }); // Use default shape (its size)
-                     console.log(`[Row Interactive] Set interactive for item ID: ${itemInstance.itemId}`);
+                itemRow.setSize(listWidth - 20, itemHeight); // Set size for bounds checking
+                itemRow.setData('itemId', itemInstance.itemId); // Store ID for lookup
 
-                    // Clear potential old listeners
-                    itemRow.off('pointerover');
-                    itemRow.off('pointerout');
-                    itemRow.off('pointerdown');
+                // Optional: Add hover effect via the main listener later if desired
+                // We are NOT making itemRow interactive here directly
 
-                    // Attach listeners to itemRow
-                    itemRow.on('pointerover', () => {
-                        if (itemRow.active) itemBg.setFillStyle(0x3a3a4e, 0.7); // Still control bg visual
-                    });
-                    itemRow.on('pointerout', () => {
-                        if (itemRow.active) itemBg.setFillStyle(0x2a2a3e, 0); // Revert bg visual
-                    });
-                    itemRow.on('pointerdown', (pointer) => {
-                        console.log(`[Row Pointer Down] Item ID: ${itemInstance.itemId}`);
-                        pointer.event?.stopPropagation();
-                        if (itemRow.active) {
-                            this.safePlaySound('button-click', { volume: 0.3 });
-                            this.equipItem(itemInstance.itemId);
-                        }
-                    });
-                     console.log(`[Row Interactive] Listeners attached for item ID: ${itemInstance.itemId}`);
-                } catch (e) {
-                    console.warn(`Error setting interactivity on itemRow for ${itemInstance.itemId}:`, e);
-                }
-                this.equipmentListContainer.addItem(itemRow); // Let ScrollableContainer manage Y
-                // --- ATTACH LISTENERS IMMEDIATELY TO itemBg ---
-             try {
-                // Define the hit area based on the background's dimensions
-                const hitAreaRect = new Phaser.Geom.Rectangle(-itemBg.width / 2, -itemBg.height / 2, itemBg.width, itemBg.height);
-                
-                // Set itemBg interactive within its container (itemRow)
-                itemBg.setInteractive(hitAreaRect, Phaser.Geom.Rectangle.Contains).setScrollFactor(0); // Prevent scroll factor issues
-                itemBg.input.cursor = 'pointer'; // Set cursor explicitly
-
-                console.log(`[Immediate Attach] Set interactive for item ID: ${itemInstance.itemId}`); // Log
-
-                // Clear previous listeners if any (important if refreshing)
-                itemBg.off('pointerover');
-                itemBg.off('pointerout');
-                itemBg.off('pointerdown');
-
-                // Attach new listeners
-                itemBg.on('pointerover', () => {
-                    // console.log(`[Hover Over] Item ID: ${itemInstance.itemId}`); // Optional log
-                    if (itemBg.active) itemBg.setFillStyle(0x3a3a4e, 0.7); // Use fill color for hover
-                });
-                itemBg.on('pointerout', () => {
-                    // console.log(`[Hover Out] Item ID: ${itemInstance.itemId}`); // Optional log
-                    if (itemBg.active) itemBg.setFillStyle(0x2a2a3e, 0); // Revert to transparent/original fill
-                });
-                itemBg.on('pointerdown', (pointer) => {
-                    console.log(`[Pointer Down] Item ID: ${itemInstance.itemId}`); // Log click
-                    pointer.event?.stopPropagation(); // Stop propagation to scroll container
-                    if (itemBg.active) {
-                        this.safePlaySound('button-click', { volume: 0.3 });
-                        this.equipItem(itemInstance.itemId);
-                    }
-                });
-                console.log(`[Immediate Attach] Listeners attached for item ID: ${itemInstance.itemId}`); // Log success
-            } catch (e) {
-                console.warn(`Error setting interactivity/listeners for equip item ${itemInstance.itemId}:`, e);
-            }
-                currentY += itemHeight + 5;
+                this.equipmentListContainer.addItem(itemRow); // Add row to scroll container
             });
 
+            // --- ADD SINGLE LISTENER TO SCROLLABLE CONTAINER'S *INTERACTIVE AREA* ---
+             if (this.equipmentListContainer && this.equipmentListContainer.interactiveArea) {
+                  
+                  this.equipmentListContainer.interactiveArea.setInteractive(); // Ensure it's interactive
+                  this.equipmentListContainer.interactiveArea.input.cursor = 'default'; // Default cursor for the area
 
+                  this.equipmentListContainer.interactiveArea.on('pointerdown', (pointer) => {
+                      // Check if click is within the main container bounds first
+                      const scrollContainerBounds = this.equipmentListContainer.background.getBounds(); 
+                      if (!Phaser.Geom.Rectangle.Contains(scrollContainerBounds, pointer.worldX, pointer.worldY)) {
+                          return; 
+                      }
+
+                      // Manually check against the VISIBLE bounds of each item row
+                      const itemsInView = this.equipmentListContainer.getItems ? this.equipmentListContainer.getItems() : []; 
+                      let clickedItemId = null;
+
+                      for (const row of itemsInView) {
+                           if (!row || !row.visible || !row.active) continue; // Skip invisible/inactive rows
+
+                           const rowBounds = row.getBounds(); 
+                           
+                           // Check pointer against the row's world bounds
+                           if (Phaser.Geom.Rectangle.Contains(rowBounds, pointer.worldX, pointer.worldY)) {
+                                clickedItemId = row.getData('itemId');
+                                console.log(`[SC Listener - Manual Check] Pointer hit row bounds for item ID: ${clickedItemId}`);
+                                // Optional: Visual feedback on the specific row's BG
+                                // const bgOfClickedRow = row.list.find(el => el instanceof Phaser.GameObjects.Rectangle);
+                                // if(bgOfClickedRow) { /* briefly change color */ } 
+                                break; 
+                           }
+                      }
+
+                      if (clickedItemId) {
+                           console.log(`[SC Listener - Manual Check] Click confirmed for item ID: ${clickedItemId}`);
+                           pointer.event?.stopPropagation(); 
+                           this.safePlaySound('button-click', { volume: 0.3 });
+                           this.equipItem(clickedItemId);
+                      } else {
+                          console.log("[SC Listener - Manual Check] Clicked inside container, but not on any item bounds.");
+                      }
+                  });
+                  console.log("Attached manual check pointerdown listener to scrollable container's interactive area.");
+             } else {
+                  console.error("Cannot attach equipment list listener: ScrollableContainer or its interactive area is missing.");
+             }
         }
 
-        this.equipmentListContainer.updateMaxScroll();
-        this.equipmentListContainer.setVisible(true);
+        this.equipmentListContainer?.updateMaxScroll();
+        this.equipmentListContainer?.setVisible(true);
     }
 
     createEquipmentSlotsDisplay(container) {
         // --- Background Panel for the whole section ---
-        const panelWidth = 240; // Adjust as needed
-        const panelHeight = 250; // Adjusted height for two slots
-        const panel = this.add.rectangle(0, 0, panelWidth, panelHeight, 0x111111, 0.6)
-            .setStrokeStyle(1, 0x333333);
-        container.add(panel);
+        const panelWidth = 240;
+        const panelHeight = 350; // Adjusted height for slots + stats
+        // Create panel safely
+        try {
+             const panel = this.add.rectangle(0, 0, panelWidth, panelHeight, 0x111111, 0.6)
+                 .setStrokeStyle(1, 0x333333);
+             container.add(panel);
+        } catch (e) {
+             console.error("Error creating equipment slots panel background:", e);
+             // Optionally return or handle the error to prevent further issues
+             return; 
+        }
 
-        // --- Define ONLY the Armour (Body) and Accessory Slots ---
+
+        // --- Define ONLY the Body (Armour) and Accessory Slots ---
         const slotData = [
-             { key: 'body', name: 'Armour', x: 0, y: -60, placeholderTexture: 'slot-body' }, // Use 'slot-body' texture key (head image)
-             { key: 'accessory', name: 'Accessory', x: 0, y: 60, placeholderTexture: 'slot-accessory' }
+             { key: 'body', name: 'Armour', x: 0, y: -80, placeholderTexture: 'slot-body' }, // Adjusted Y slightly up
+             { key: 'accessory', name: 'Accessory/Weapon', x: 0, y: 20, placeholderTexture: 'slot-accessory' } // Adjusted Y slightly up
         ];
 
-        this.equipmentSlots = {}; // Reset object
+        // Reset equipmentSlots references IF creating slots fresh (e.g., in create, not just update)
+        // If this function is ONLY called once in create(), this reset is fine here.
+        // If it can be called multiple times to recreate slots, move reset elsewhere or handle carefully.
+        this.equipmentSlots = {}; 
 
         slotData.forEach(slot => {
-            const slotContainer = this.add.container(slot.x, slot.y); // Position relative to the main container
+             try { // Add try...catch around individual slot creation for robustness
+                 const slotContainer = this.add.container(slot.x, slot.y);
+                 const slotBorder = this.add.rectangle(0, 0, 64, 64, 0x222222, 0.8)
+                    .setStrokeStyle(1, 0x555555);
+                 const placeholderIconKey = slot.placeholderTexture;
+                 const iconDisplay = this.add.image(0, 0, placeholderIconKey);
+                 iconDisplay.setScale(0.8);
+                 if (!this.textures.exists(placeholderIconKey)) {
+                     iconDisplay.setVisible(false);
+                     console.warn(`Placeholder texture missing for slot ${slot.key}: ${placeholderIconKey}`);
+                 }
+                 // Label for Item Name + Modifiers (will be updated later)
+                 const label = this.add.text(0, 45, slot.name, { // Position below icon
+                    fontSize: '11px', // Start with smaller size
+                    fill: '#ffffff',
+                    align: 'center',
+                    wordWrap: { width: 70 }, // Allow wrapping for long names/stats
+                    lineSpacing: 4
+                 }).setOrigin(0.5);
 
-            // --- Slot Background/Border ---
-            const slotBorder = this.add.rectangle(0, 0, 64, 64, 0x222222, 0.8)
-                .setStrokeStyle(1, 0x555555); // Default border
+                 slotContainer.add([slotBorder, iconDisplay, label]);
+                 container.add(slotContainer); // Add slot container to main equipment container
 
-            // --- Slot Icon Display (starts as placeholder) ---
-            const placeholderIconKey = slot.placeholderTexture; // Use defined placeholder texture key
-            const iconDisplay = this.add.image(0, 0, placeholderIconKey);
-            iconDisplay.setScale(0.8); // Adjust scale as needed
-             // Ensure placeholder exists, otherwise hide it
-             if (!this.textures.exists(placeholderIconKey)) {
-                 console.warn(`Placeholder texture '${placeholderIconKey}' not found for slot '${slot.key}'. Hiding icon.`);
-                 iconDisplay.setVisible(false);
+                 // Store references including the default slot name
+                 this.equipmentSlots[slot.key] = {
+                    container: slotContainer,
+                    iconDisplay: iconDisplay,
+                    border: slotBorder,
+                    label: label, // Store label reference
+                    placeholderTexture: placeholderIconKey,
+                    name: slot.name // Store default name ('Armour' or 'Accessory/Weapon')
+                };
+
+                 // Add unequip listener to the border
+                 slotBorder.setInteractive({ useHandCursor: true })
+                     .on('pointerdown', () => {
+                         console.log(`Clicked slot: ${slot.key}`);
+                         this.unequipItem(slot.key);
+                     });
+
+             } catch (e) {
+                  console.error(`Error creating UI elements for slot ${slot.key}:`, e);
              }
+        }); // End forEach slotData
 
-            // --- Slot Label ---
-            const label = this.add.text(0, 40, slot.name, { // Position below the icon
-                fontSize: '14px',
-                fill: '#ffffff',
-                align: 'center'
-            }).setOrigin(0.5);
+         // --- STATS DISPLAY (Robust Creation/Adding) ---
+         const statsY = panelHeight / 2 - 40; // Adjust Y to be near the bottom of the panel
 
-            // --- Add elements to the slot's container ---
-            slotContainer.add([slotBorder, iconDisplay, label]);
-            container.add(slotContainer); // Add the slot's container to the main equipment container
-
-            // --- ADD STATS DISPLAY ---
-            const statsY = 150; // Position below the slots
-            const statsText = this.add.text(0, statsY, '', { // Start empty
-                 fontSize: '12px', fill: '#aaffaa', align: 'center', lineSpacing: 4
-            }).setOrigin(0.5);
-            container.add(statsText);
-            this.equipmentStatsText = statsText; // Store reference
-            this.updateEquipmentSlotsDisplay(); // Call initially to populate slots AND stats
-
-            // --- Store references ---
-            this.equipmentSlots[slot.key] = {
-                container: slotContainer,
-                iconDisplay: iconDisplay, // Reference to the Image object that shows the icon/placeholder
-                border: slotBorder,
-                label: label,
-                placeholderTexture: placeholderIconKey // Store the placeholder key for resetting
-            };
-            slotBorder.setInteractive({ useHandCursor: true })
-                .on('pointerdown', () => {
-                    console.log(`Clicked slot: ${slot.key}`);
-                    this.unequipItem(slot.key); // Call a new unequip function
-                });
-        });
-    }
-    unequipItem(slotKey) {
-        console.log(`Attempting to unequip from slot: ${slotKey}`);
-        const equipped = gameState.player.inventory?.equipped || {};
-        let itemIdToUnequip = null;
-
-        // Determine which actual state slot corresponds to the visual slot clicked
-        if (slotKey === 'body' && equipped.body) {
-            itemIdToUnequip = equipped.body;
-            equipped.body = null; // Clear the state slot
-        } else if (slotKey === 'accessory') { // Visual 'accessory' slot clicked
-            if (equipped.weapon) {          // Check if weapon is equipped first
-                itemIdToUnequip = equipped.weapon;
-                equipped.weapon = null;      // Clear weapon state
-            } else if (equipped.accessory) { // Otherwise check accessory state
-                itemIdToUnequip = equipped.accessory;
-                equipped.accessory = null;   // Clear accessory state
-            }
-        }
-
-        if (itemIdToUnequip) {
-             const itemData = getItemData(itemIdToUnequip);
-             console.log(`Unequipping ${itemData?.inGameName || itemIdToUnequip}`);
-
-             // Add the item back to the main inventory list
-             if (!gameState.player.inventory.items) gameState.player.inventory.items = [];
-             gameState.player.inventory.items.push({ itemId: itemIdToUnequip, quantity: 1 });
-
-             this.safePlaySound('button-click', { volume: 0.2 }); // Play a sound
-
-             // Recalculate stats
-             CharacterManager.recalculatePlayerStats();
-
-             // Refresh UI
-             this.updateEquipmentSlotsDisplay(); // Update the slots visuals
-              if (this.currentTab === 'Equipment' && this.equipmentListContainer) { // Refresh list only if on equipment tab
-                  this.equipmentListContainer.destroy();
-                  this.equipmentListContainer = null;
-                  this.displayEquipmentTab();
+         // Check if the text object exists AND is still active in the scene
+         // Use optional chaining for safety in case this.equipmentStatsText is null/undefined
+         if (this.equipmentStatsText?.scene) { 
+             console.log("equipmentStatsText exists and is in scene.");
+             // Ensure it's positioned correctly and part of the container
+             // Check if container exists before accessing its list
+             if (container && !container.list.includes(this.equipmentStatsText)) {
+                  console.log("Adding existing equipmentStatsText back to container.");
+                  try {
+                       container.add(this.equipmentStatsText); // Add if not already present
+                  } catch (e) {
+                       console.error("Error re-adding existing statsText to container:", e);
+                       // If re-adding fails, maybe the text object is truly broken
+                       if(this.equipmentStatsText) this.equipmentStatsText.destroy();
+                       this.equipmentStatsText = null; 
+                  }
+             }
+             // Only reposition/set active if it's still valid
+             if (this.equipmentStatsText) { 
+                  this.equipmentStatsText.setPosition(0, statsY); // Ensure position is correct
+                  this.equipmentStatsText.setActive(true).setVisible(true); // Ensure visible/active
+             }
+         } 
+         
+         // If it doesn't exist OR adding it back failed, create a NEW one
+         if (!this.equipmentStatsText) { 
+              console.log("Creating NEW equipmentStatsText.");
+              let statsText = null; // Declare outside try
+              try {
+                   statsText = this.add.text(0, statsY, '', { 
+                        fontSize: '12px', fill: '#aaffaa', align: 'center', lineSpacing: 4 
+                   }).setOrigin(0.5);
+                   
+                   // Attempt to add to container, handle potential errors
+                   if (container) {
+                        container.add(statsText); 
+                        this.equipmentStatsText = statsText; // Store reference ONLY if added successfully
+                   } else {
+                        console.error("Cannot add statsText: Main container is invalid.");
+                        if(statsText) statsText.destroy(); // Clean up if container missing
+                        this.equipmentStatsText = null;
+                   }
+              } catch (e) {
+                   console.error("Error creating/adding new statsText:", e);
+                   if(statsText) statsText.destroy(); // Clean up if add failed
+                   this.equipmentStatsText = null; // Ensure reference is nullified
               }
-        } else {
-            console.log(`Nothing to unequip in slot: ${slotKey}`);
-        }
+         }
+         // --- END STATS DISPLAY ---
+
+         // Initial update (safe to call even if text wasn't created due to error)
+         this.updateTotalStatsDisplay(); 
     }
     updateEquipmentSlotsDisplay() {
         console.log("Updating Equipment Slots Display...");
-    const equipped = gameState.player.inventory?.equipped || {};
+        const equipped = gameState.player.inventory?.equipped || {};
 
-    // --- Handle 'body' slot (Armour) - No change ---
-    const bodySlotKey = 'body';
-    const bodyElements = this.equipmentSlots[bodySlotKey];
-    if (bodyElements) {
-        const bodyItemId = equipped[bodySlotKey];
-        if (bodyItemId) {
-            const itemData = getItemData(bodyItemId);
-            if (itemData && itemData.equipSlot === bodySlotKey) {
-                // Display equipped body item (icon, name, border)
+        // Iterate ONLY over the defined slots (body, accessory)
+        Object.entries(this.equipmentSlots).forEach(([slotKey, elements]) => {
+            // Safety check for elements - ensure all expected parts exist
+            if (!elements || !elements.iconDisplay || !elements.label || !elements.border || !elements.placeholderTexture || !elements.name) {
+                console.warn(`Missing UI elements or default name for slot key: ${slotKey}. Skipping update for this slot.`);
+                return; // Skip this iteration if elements are missing
+            }
+
+            let itemIdToDisplay = null;
+            let itemData = null;
+
+            // Determine which item ID (if any) should be displayed in this visual slot
+            if (slotKey === 'body' && equipped.body) {
+                itemIdToDisplay = equipped.body;
+                // console.log(`Slot ${slotKey}: Checking equipped item ${itemIdToDisplay}`);
+            } else if (slotKey === 'accessory') {
+                // Check weapon first, then accessory for the shared visual slot
+                itemIdToDisplay = equipped.weapon || equipped.accessory;
+                // if (itemIdToDisplay) console.log(`Slot ${slotKey}: Checking equipped item ${itemIdToDisplay} (from weapon or accessory state)`);
+            }
+
+            // Get item data if an ID was found for the slot
+            if (itemIdToDisplay) {
+                itemData = getItemData(itemIdToDisplay);
+                 if (!itemData) {
+                     console.warn(`Could not retrieve item data for equipped ID: ${itemIdToDisplay} in slot ${slotKey}. Resetting slot.`);
+                 }
+            }
+
+            // Update the slot based on the found and valid itemData
+            if (itemData) {
+                // Item IS equipped in this slot
+
+                // 1. Update Icon
                 const itemIconKey = itemData.iconKey;
+                let usingPlaceholderIcon = false;
                 if (itemIconKey && this.textures.exists(itemIconKey)) {
-                    bodyElements.iconDisplay.setTexture(itemIconKey).setVisible(true).setScale(0.8);
-                } else { /* Handle missing icon */ bodyElements.iconDisplay.setTexture(bodyElements.placeholderTexture).setVisible(true).setScale(0.8);}
-                bodyElements.label.setText(itemData.inGameName);
-                bodyElements.border.setStrokeStyle(2, 0xaaaaff);
-            } else { /* Reset body slot if invalid item */ bodyElements.iconDisplay.setTexture(bodyElements.placeholderTexture).setVisible(true).setScale(0.8); bodyElements.label.setText(bodyElements.name); bodyElements.border.setStrokeStyle(1, 0x555555);}
-        } else { // Reset body slot if empty
-            bodyElements.iconDisplay.setTexture(bodyElements.placeholderTexture).setVisible(true).setScale(0.8);
-            bodyElements.label.setText(bodyElements.name);
-            bodyElements.border.setStrokeStyle(1, 0x555555);
-        }
+                    // Only change texture if it's different
+                    if (elements.iconDisplay.texture.key !== itemIconKey) {
+                        elements.iconDisplay.setTexture(itemIconKey);
+                    }
+                    elements.iconDisplay.setVisible(true).setScale(0.8);
+                } else {
+                    // Fallback to placeholder if item icon missing but placeholder texture exists
+                    usingPlaceholderIcon = true;
+                    if (this.textures.exists(elements.placeholderTexture)) {
+                         if (elements.iconDisplay.texture.key !== elements.placeholderTexture) {
+                            elements.iconDisplay.setTexture(elements.placeholderTexture);
+                         }
+                         elements.iconDisplay.setVisible(true).setScale(0.8);
+                    } else {
+                        // Hide if placeholder also missing
+                        elements.iconDisplay.setVisible(false);
+                    }
+                    console.warn(`Icon texture '${itemIconKey}' not found for item ${itemIdToDisplay}. Using placeholder.`);
+                }
+
+                // 2. Update Label with Item Name + Modifiers
+                let effectsString = "";
+                if (itemData.effects) {
+                    effectsString = Object.entries(itemData.effects)
+                        // Example: Filter specific stats if needed
+                        // .filter(([stat]) => ['attack', 'defense', 'magicAttack', 'health', 'mana'].includes(stat)) 
+                        .map(([stat, value]) => `${stat.charAt(0).toUpperCase() + stat.slice(1)}: ${value > 0 ? '+' : ''}${value}`)
+                        .join('\n'); // Join with newline
+                }
+                
+                const newLabelText = `${itemData.inGameName}${effectsString ? '\n' + effectsString : ''}`; // Add newline only if effects exist
+
+                // Only update text content if it actually changed
+                if (elements.label.text !== newLabelText) {
+                    elements.label.setText(newLabelText);
+                }
+                // Apply styling suitable for multi-line text
+                if (elements.label.style.fontSize !== '11px') elements.label.setFontSize('11px');
+                if (elements.label.lineSpacing !== 4) elements.label.setLineSpacing(4);
+                elements.label.y = 45; // Adjust Y position if needed to fit multiple lines
+
+                // 3. Update Border (Highlight)
+                elements.border.setStrokeStyle(2, 0xaaaaff); // Highlight color
+
+            } else {
+                // Slot is EMPTY - Reset to default placeholder and label
+
+                // 1. Reset Icon to Placeholder
+                if (this.textures.exists(elements.placeholderTexture)) {
+                     if (elements.iconDisplay.texture.key !== elements.placeholderTexture) {
+                        elements.iconDisplay.setTexture(elements.placeholderTexture);
+                     }
+                     elements.iconDisplay.setVisible(true).setScale(0.8);
+                } else {
+                    elements.iconDisplay.setVisible(false); // Hide if placeholder missing
+                }
+
+                // 2. Reset Label to Default Name
+                if (elements.label.text !== elements.name) {
+                    elements.label.setText(elements.name); // Use stored default name
+                }
+                // Reset styling
+                if (elements.label.style.fontSize !== '14px') elements.label.setFontSize('14px');
+                if (elements.label.lineSpacing !== 0) elements.label.setLineSpacing(0);
+                elements.label.y = 40; // Reset Y position
+
+                // 3. Reset Border
+                elements.border.setStrokeStyle(1, 0x555555); // Default border color
+            }
+        });
+
+        // IMPORTANT: Removed the call to this.updateTotalStatsDisplay(); from here
+        // It should be called separately after this function completes.
     }
-
-    // --- Handle 'accessory' slot (Accessory OR Weapon) ---
-    const accessorySlotKey = 'accessory';
-    const accessoryElements = this.equipmentSlots[accessorySlotKey];
-    if (accessoryElements) {
-        const weaponItemId = equipped['weapon']; // Check weapon slot first
-        const accessoryItemId = equipped['accessory'];
-        let itemToShowId = null;
-        let itemToShowData = null;
-
-        // Prioritize showing weapon if equipped
-        if (weaponItemId) {
-            itemToShowId = weaponItemId;
-            itemToShowData = getItemData(weaponItemId);
-            console.log(`Accessory Slot Display: Showing WEAPON ${itemToShowData?.inGameName}`);
-        } else if (accessoryItemId) { // Otherwise, show accessory if equipped
-            itemToShowId = accessoryItemId;
-            itemToShowData = getItemData(accessoryItemId);
-            console.log(`Accessory Slot Display: Showing ACCESSORY ${itemToShowData?.inGameName}`);
-        }
-
-        if (itemToShowData) {
-            // Display the determined item (weapon or accessory)
-            const itemIconKey = itemToShowData.iconKey;
-            if (itemIconKey && this.textures.exists(itemIconKey)) {
-                accessoryElements.iconDisplay.setTexture(itemIconKey).setVisible(true).setScale(0.8);
-            } else { /* Handle missing icon */ accessoryElements.iconDisplay.setTexture(accessoryElements.placeholderTexture).setVisible(true).setScale(0.8);}
-            accessoryElements.label.setText(itemToShowData.inGameName);
-            accessoryElements.border.setStrokeStyle(2, 0xaaaaff); // Highlight border
-        } else { // Neither weapon nor accessory is equipped
-             console.log(`Accessory Slot Display: Empty`);
-            // Reset accessory slot to placeholder
-            accessoryElements.iconDisplay.setTexture(accessoryElements.placeholderTexture).setVisible(true).setScale(0.8);
-            accessoryElements.label.setText(accessoryElements.name); // Use default name ('Accessory/Weapon')
-            accessoryElements.border.setStrokeStyle(1, 0x555555); // Default border
-        }
-         // --- UPDATE STATS TEXT ---
-         if (this.equipmentStatsText) {
-            const player = gameState.player;
-            // Access the calculated stats (assuming CharacterManager.recalculatePlayerStats updated them)
-            const attack = player.currentAttack || 0;
-            const magicAttack = player.currentMagicAttack || 0;
-            const defense = player.currentDefense || 0;
-            // Add other relevant stats (crit, dodge, etc.) if calculated
-
-            this.equipmentStatsText.setText(
-                 `Attack: ${attack}\n` +
-                 `Magic Atk: ${magicAttack}\n` +
-                 `Defense: ${defense}`
-                 // Add more stats here
-            );
-        }
-    }
-}
 
 equipItem(itemId) {
     // 1. Validate Player and Inventory State (keep as is)
@@ -606,9 +658,13 @@ equipItem(itemId) {
 
     // 10. Recalculate Stats (keep as is)
     CharacterManager.recalculatePlayerStats();
+    this.updateEquipmentSlotsDisplay(); // Update individual slots first
+    this.updateTotalStatsDisplay();    // THEN update the total stats display
 
     // 11. Update UI (Slots & List)
-    this.updateEquipmentSlotsDisplay(); // Update the visual slots
+    this.updateEquipmentSlotsDisplay(); // Update individual slots first
+    this.updateTotalStatsDisplay();    // THEN update the total stats display
+
     if (this.equipmentListContainer) { // Refresh the equipment list
         this.equipmentListContainer.destroy();
         this.equipmentListContainer = null;
@@ -629,7 +685,107 @@ equipItem(itemId) {
     // ...
 }
 
-    // playEquipAnimation method - Targets the iconDisplay Image object
+    // Add this function or integrate into updateEquipmentSlotsDisplay if preferred
+    updateTotalStatsDisplay() {
+        // Check if the text element exists and is active
+        if (!this.equipmentStatsText || !this.equipmentStatsText.scene || !this.equipmentStatsText.active) { 
+             console.warn("Cannot update total stats: equipmentStatsText is missing or destroyed.");
+             // Optionally try to recreate it if it should exist? Or just return.
+             // If recreating: this.createEquipmentSlotsDisplay(this.equipmentSlotsContainer); // Be careful of loops
+             return; 
+        }
+
+        const player = gameState.player;
+        // Ensure stats exist on player object, provide defaults if not
+        const equipped = player.inventory?.equipped || {};
+        const currentAttack = player.currentAttack || 0;
+        const currentMagicAttack = player.currentMagicAttack || 0;
+        const currentDefense = player.currentDefense || 0;
+
+        // Determine which attack stat to display based on equipped weapon state
+        let attackStatLabel = "Attack"; 
+        let attackStatValue = currentAttack; 
+        const weaponId = equipped.weapon; // Check the state
+        
+        if (weaponId) {
+            const weaponData = getItemData(weaponId);
+            // Check if the equipped weapon provides magicAttack
+            if (weaponData?.effects?.hasOwnProperty('magicAttack')) { 
+                attackStatLabel = "Magic Atk";
+                attackStatValue = currentMagicAttack;
+            }
+        }
+       
+        const defenseStatValue = currentDefense;
+
+        // Update the text element
+        this.equipmentStatsText.setText(
+             `${attackStatLabel}: ${attackStatValue}\n` +
+             `Defense: ${defenseStatValue}`
+             // Add other total stats like crit, dodge if needed
+        );
+        console.log("Updated total stats display:", this.equipmentStatsText.text);
+   }
+    
+   
+   unequipItem(slotKey) {
+    console.log(`Attempting to unequip from slot: ${slotKey}`);
+    // Ensure inventory and equipped object exist
+    if (!gameState.player?.inventory?.equipped) {
+        console.error("Cannot unequip: Player inventory or equipped object not found.");
+        return; 
+    }
+    const equipped = gameState.player.inventory.equipped;
+    let itemIdToUnequip = null;
+
+    // Determine which actual state slot corresponds to the visual slot clicked
+    // and clear the state slot if an item is found
+    if (slotKey === 'body' && equipped.body) {
+        itemIdToUnequip = equipped.body;
+        equipped.body = null; // Clear the state slot
+    } else if (slotKey === 'accessory') { // Visual 'accessory' slot clicked
+        if (equipped.weapon) {          // Check if weapon is equipped first
+            itemIdToUnequip = equipped.weapon;
+            equipped.weapon = null;      // Clear weapon state
+        } else if (equipped.accessory) { // Otherwise check accessory state
+            itemIdToUnequip = equipped.accessory;
+            equipped.accessory = null;   // Clear accessory state
+        }
+    }
+
+    // Proceed only if an item was actually unequipped from the state
+    if (itemIdToUnequip) {
+         const itemData = getItemData(itemIdToUnequip); // Get data for logging
+         console.log(`Unequipping ${itemData?.inGameName || itemIdToUnequip}`);
+
+         // Add the item back to the main inventory list
+         if (!gameState.player.inventory.items) gameState.player.inventory.items = []; // Ensure items array exists
+         gameState.player.inventory.items.push({ itemId: itemIdToUnequip, quantity: 1 });
+
+         this.safePlaySound('button-click', { volume: 0.2 }); // Play an unequip sound
+
+         // Recalculate player stats AFTER modifying equipment state
+         CharacterManager.recalculatePlayerStats();
+
+         // Refresh UI: Update slots AND total stats display
+         this.updateEquipmentSlotsDisplay(); 
+         this.updateTotalStatsDisplay();    
+
+         // Refresh the equipment list ONLY if the equipment tab is currently active
+         // This prevents unnecessary list rebuilding if unequipping from another tab (though unlikely here)
+          if (this.currentTab === 'Equipment' && this.equipmentListContainer) { 
+              this.equipmentListContainer.destroy();
+              this.equipmentListContainer = null;
+              this.displayEquipmentTab(); // Recreate the list to show the unequipped item
+          }
+    } else {
+        // No item was found in the corresponding state slot(s)
+        console.log(`Nothing to unequip in slot: ${slotKey}`);
+        // Optionally give visual feedback like a slight shake or red flash on the slot
+    }
+} // --- End of unequipItem method ---
+
+   // playEquipAnimation method - Targets the iconDisplay Image object
     playEquipAnimation(targetIcon) {
         // Add more robust checks
         if (!targetIcon || typeof targetIcon.setScale !== 'function' || !targetIcon.scene || targetIcon.scene !== this || !targetIcon.active) {

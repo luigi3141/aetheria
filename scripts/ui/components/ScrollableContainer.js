@@ -37,6 +37,7 @@ class ScrollableContainer {
         this.width = width;
         this.height = height;
         this.managedObjects = []; // Initialize managedObjects array BEFORE initialize()
+        this.items = []; // Add this array to track added items
 
         // Configuration options
         this.options = {
@@ -269,32 +270,42 @@ class ScrollableContainer {
     addItem(item, y = null) {
         // Check validity and container existence
         if (!this.valid || !this.container) {
-             console.error("[ScrollableContainer addItem] Cannot add item: Container is null or invalid.", { item: item, container: this.container, valid: this.valid });
-             return item; // Return original item, might be null/invalid
+            console.error("[ScrollableContainer addItem] Cannot add item: Container is null or invalid.", { item: item, container: this.container, valid: this.valid });
+            return null; // Return null on failure
         }
         // Check if the item to be added is valid
         if (!item || typeof item.destroy !== 'function') {
-             console.error("[ScrollableContainer addItem] Attempted to add an invalid item.", item);
-             return item; // Return invalid item
+            console.error("[ScrollableContainer addItem] Attempted to add an invalid item.", item);
+            return null; // Return null on failure
         }
 
-        if (y === null) y = this.contentHeight;
-        item.y = y;
+        // Determine Y position if not provided (basic stacking)
+        if (y === null) {
+            y = this.contentHeight; 
+        }
+        item.y = y; // Set item's position within the scrollable container
 
         try {
-             this.container.add(item); // This is where the error occurred
+            this.container.add(item); // Add the item to Phaser's container
+            
+            // --- Add to tracker *after* successful add ---
+            this.items.push(item); 
+            // --- ---
+
+            // Update content height based on the item's position and size
+            const itemHeight = item.displayHeight || item.height || 20; // Estimate height
+            this.contentHeight = Math.max(this.contentHeight, item.y + itemHeight); 
+
+            this.updateMaxScroll(); // Update scroll limits
+
+            return item; // Return the successfully added item
+
         } catch (e) {
-             console.error("[ScrollableContainer addItem] Error during this.container.add(item):", e, "Item:", item, "Container:", this.container);
-             // Optionally destroy the item if adding failed and it won't be used
-             // item.destroy();
-             return item; // Indicate potential failure by returning original item
+            console.error("[ScrollableContainer addItem] Error during this.container.add(item):", e, "Item:", item, "Container:", this.container);
+            // Optionally destroy the item if adding failed and it won't be used elsewhere
+            // if (item && item.destroy) item.destroy(); 
+            return null; // Return null on failure
         }
-
-        const itemHeight = item.displayHeight || item.height || 20;
-        this.contentHeight = Math.max(this.contentHeight, y + itemHeight);
-
-        this.updateMaxScroll();
-        return item; // Return the item added
     }
 
     /**
@@ -406,12 +417,16 @@ if (!this.valid || !this.scene || !this.scene.add) {
     clear() {
         if (!this.valid || !this.container) return;
         this.container.removeAll(true); // Destroy children when removing
+        this.items = []; // Clear tracked items as well
         this.contentHeight = 0;
         this.scrollPosition = 0;
         this.container.y = this.y - (this.height / 2) + this.options.padding; // Reset container position
         this.updateMaxScroll();
     }
 
+    getItems() {
+        return this.items;
+    }
     /**
      * Scroll to the bottom of the container
      */
@@ -502,6 +517,7 @@ if (!this.valid || !this.scene || !this.scene.add) {
         this.scrollbarHandle = null;
         this.interactiveArea = null;
         this.options = null;
+        this.items = []; // Clear items array on destroy
         console.log("[ScrollableContainer] Destruction complete.");
     }
 }
