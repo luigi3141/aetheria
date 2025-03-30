@@ -167,12 +167,25 @@ export default class EncounterScene extends BaseScene {
             this.combatAudio.playBattleMusic();
         });
 
-        if (this.transitions) {
-            this.transitions.fadeIn(); // Fade in this scene smoothly
-        } else {
-            console.warn(`TransitionManager not found in ${this.scene.key}, skipping fade-in.`);
-        }
-        console.log(`${this.scene.key} Create End`); 
+       // --- MODIFIED FADE IN AT THE END ---
+       if (this.transitions) {
+        // Delay the fade-in slightly to ensure camera is ready
+        this.time.delayedCall(50, () => { // 50ms delay (adjust if needed)
+            // Add extra check inside the delayed call for robustness
+            if (this && this.scene && this.sys.isActive()) {
+                 this.transitions.fadeIn(); // Fade in this scene smoothly
+            } else {
+                console.warn(`Scene ${this.scene?.key || 'Unknown'} became inactive before delayed fadeIn.`);
+            }
+        });
+    } else {
+        console.warn(`TransitionManager not found in ${this.scene.key}, skipping fade-in.`);
+        // If no transition manager, make sure input is enabled manually if needed
+         if(this.input) this.input.enabled = true;
+    }
+    // --- END MODIFICATION ---
+
+    console.log(`${this.scene.key} Create End`); // Optional log
     }
 
     update(time, delta) {}
