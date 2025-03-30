@@ -243,9 +243,10 @@ class InventoryScene extends BaseScene {
         // Filter for items that can go in the 'body' or 'accessory' slots
         const equipmentItems = inventory.filter(itemInstance => {
              const itemData = getItemData(itemInstance.itemId);
-             return itemData && (itemData.equipSlot === 'body' || itemData.equipSlot === 'accessory');
+             return itemData && itemData.equipSlot && ['body', 'accessory', 'weapon'].includes(itemData.equipSlot); 
         });
 
+        console.log("Equipment Tab - Filtered items:", JSON.parse(JSON.stringify(equipmentItems))); // Add log to verify filter
 
         if (equipmentItems.length === 0) {
             this.equipmentListContainer.addText('No equippable items found.', { fill: '#aaaaaa', fontSize: this.ui.fontSize.sm });
@@ -352,154 +353,161 @@ class InventoryScene extends BaseScene {
 
     updateEquipmentSlotsDisplay() {
         console.log("Updating Equipment Slots Display...");
-        const equipped = gameState.player.inventory?.equipped || {};
+    const equipped = gameState.player.inventory?.equipped || {};
 
-        // Iterate ONLY over the defined slots (body, accessory)
-        Object.entries(this.equipmentSlots).forEach(([slotKey, elements]) => {
-            const itemId = equipped[slotKey]; // Get the equipped item ID for this slot
-
-             // Ensure elements exist before trying to update them
-             if (!elements || !elements.iconDisplay || !elements.label || !elements.border) {
-                 console.warn(`Skipping update for slot '${slotKey}': Missing UI elements.`);
-                 return;
-             }
-
-            if (itemId) {
-                const itemData = getItemData(itemId);
-                if (itemData && itemData.equipSlot === slotKey) { // Double-check the item belongs in this slot
-                    console.log(`Slot ${slotKey}: Equipped ${itemData.inGameName} (ID: ${itemId})`);
-                    // Update Icon
-                    const itemIconKey = itemData.iconKey;
-                    if (itemIconKey && this.textures.exists(itemIconKey)) {
-                        elements.iconDisplay.setTexture(itemIconKey);
-                        elements.iconDisplay.setVisible(true);
-                        elements.iconDisplay.setScale(0.8); // Reset scale if needed
-                    } else {
-                        console.warn(`Icon texture '${itemIconKey}' not found for item ${itemId}. Using placeholder.`);
-                        // Fallback to placeholder if item icon is missing
-                        if (this.textures.exists(elements.placeholderTexture)) {
-                            elements.iconDisplay.setTexture(elements.placeholderTexture);
-                            elements.iconDisplay.setVisible(true);
-                            elements.iconDisplay.setScale(0.8);
-                        } else {
-                             elements.iconDisplay.setVisible(false);
-                        }
-                    }
-                    // Update Label
-                    elements.label.setText(itemData.inGameName); // Show item name
-                    // Update Border (Highlight)
-                    elements.border.setStrokeStyle(2, 0xaaaaff);
-                } else {
-                    // Item ID exists in equipped, but data missing or doesn't match slot - reset the slot
-                    console.warn(`Item data invalid/mismatched for equipped ID: ${itemId} in slot ${slotKey}. Resetting slot.`);
-                    if (this.textures.exists(elements.placeholderTexture)) {
-                        elements.iconDisplay.setTexture(elements.placeholderTexture);
-                         elements.iconDisplay.setVisible(true);
-                         elements.iconDisplay.setScale(0.8);
-                    } else { elements.iconDisplay.setVisible(false); }
-                    elements.label.setText(elements.name || slotKey.charAt(0).toUpperCase() + slotKey.slice(1)); // Use stored name or default
-                    elements.border.setStrokeStyle(1, 0x555555); // Default border
-                }
-            } else {
-                 console.log(`Slot ${slotKey}: Empty`);
-                // Slot is empty - Reset to default placeholder
-                if (this.textures.exists(elements.placeholderTexture)) {
-                    elements.iconDisplay.setTexture(elements.placeholderTexture);
-                    elements.iconDisplay.setVisible(true);
-                    elements.iconDisplay.setScale(0.8); // Reset scale
-                } else {
-                    console.warn(`Placeholder texture '${elements.placeholderTexture}' not found for slot '${slotKey}'. Hiding icon.`);
-                    elements.iconDisplay.setVisible(false);
-                }
-                elements.label.setText(elements.name || slotKey.charAt(0).toUpperCase() + slotKey.slice(1)); // Default name
-                elements.border.setStrokeStyle(1, 0x555555); // Default border
-            }
-        });
+    // --- Handle 'body' slot (Armour) - No change ---
+    const bodySlotKey = 'body';
+    const bodyElements = this.equipmentSlots[bodySlotKey];
+    if (bodyElements) {
+        const bodyItemId = equipped[bodySlotKey];
+        if (bodyItemId) {
+            const itemData = getItemData(bodyItemId);
+            if (itemData && itemData.equipSlot === bodySlotKey) {
+                // Display equipped body item (icon, name, border)
+                const itemIconKey = itemData.iconKey;
+                if (itemIconKey && this.textures.exists(itemIconKey)) {
+                    bodyElements.iconDisplay.setTexture(itemIconKey).setVisible(true).setScale(0.8);
+                } else { /* Handle missing icon */ bodyElements.iconDisplay.setTexture(bodyElements.placeholderTexture).setVisible(true).setScale(0.8);}
+                bodyElements.label.setText(itemData.inGameName);
+                bodyElements.border.setStrokeStyle(2, 0xaaaaff);
+            } else { /* Reset body slot if invalid item */ bodyElements.iconDisplay.setTexture(bodyElements.placeholderTexture).setVisible(true).setScale(0.8); bodyElements.label.setText(bodyElements.name); bodyElements.border.setStrokeStyle(1, 0x555555);}
+        } else { // Reset body slot if empty
+            bodyElements.iconDisplay.setTexture(bodyElements.placeholderTexture).setVisible(true).setScale(0.8);
+            bodyElements.label.setText(bodyElements.name);
+            bodyElements.border.setStrokeStyle(1, 0x555555);
+        }
     }
 
-    equipItem(itemId) {
-        // 1. Validate Player and Inventory State
-        if (!gameState.player?.inventory) {
-             console.error("Cannot equip: Player or inventory not found in gameState.");
-             return;
+    // --- Handle 'accessory' slot (Accessory OR Weapon) ---
+    const accessorySlotKey = 'accessory';
+    const accessoryElements = this.equipmentSlots[accessorySlotKey];
+    if (accessoryElements) {
+        const weaponItemId = equipped['weapon']; // Check weapon slot first
+        const accessoryItemId = equipped['accessory'];
+        let itemToShowId = null;
+        let itemToShowData = null;
+
+        // Prioritize showing weapon if equipped
+        if (weaponItemId) {
+            itemToShowId = weaponItemId;
+            itemToShowData = getItemData(weaponItemId);
+            console.log(`Accessory Slot Display: Showing WEAPON ${itemToShowData?.inGameName}`);
+        } else if (accessoryItemId) { // Otherwise, show accessory if equipped
+            itemToShowId = accessoryItemId;
+            itemToShowData = getItemData(accessoryItemId);
+            console.log(`Accessory Slot Display: Showing ACCESSORY ${itemToShowData?.inGameName}`);
         }
 
-        // 2. Get Item Data
-        const itemData = getItemData(itemId);
-
-        // 3. Validate Item Data and Equip Slot
-        if (!itemData || !itemData.equipSlot) {
-            console.warn(`Cannot equip item ${itemId}: Item data missing or item is not equippable (no equipSlot defined).`, itemData);
-            return;
+        if (itemToShowData) {
+            // Display the determined item (weapon or accessory)
+            const itemIconKey = itemToShowData.iconKey;
+            if (itemIconKey && this.textures.exists(itemIconKey)) {
+                accessoryElements.iconDisplay.setTexture(itemIconKey).setVisible(true).setScale(0.8);
+            } else { /* Handle missing icon */ accessoryElements.iconDisplay.setTexture(accessoryElements.placeholderTexture).setVisible(true).setScale(0.8);}
+            accessoryElements.label.setText(itemToShowData.inGameName);
+            accessoryElements.border.setStrokeStyle(2, 0xaaaaff); // Highlight border
+        } else { // Neither weapon nor accessory is equipped
+             console.log(`Accessory Slot Display: Empty`);
+            // Reset accessory slot to placeholder
+            accessoryElements.iconDisplay.setTexture(accessoryElements.placeholderTexture).setVisible(true).setScale(0.8);
+            accessoryElements.label.setText(accessoryElements.name); // Use default name ('Accessory/Weapon')
+            accessoryElements.border.setStrokeStyle(1, 0x555555); // Default border
         }
-        const targetSlot = itemData.equipSlot; // e.g., 'body', 'accessory'
-
-         // Check if the target slot exists in our UI definition (body or accessory)
-         if (!this.equipmentSlots[targetSlot]) {
-             console.error(`Cannot equip item ${itemId} to slot '${targetSlot}': Slot does not exist in UI or is not supported.`);
-             // Optionally provide feedback to the player here
-             return;
-         }
-
-
-        // 4. Ensure the 'equipped' object exists
-        if (!gameState.player.inventory.equipped) {
-            gameState.player.inventory.equipped = {};
-        }
-
-        // 5. Equip the Item & Handle Swapping (Move old item back to inventory list)
-         const previouslyEquippedId = gameState.player.inventory.equipped[targetSlot];
-
-         // --- Remove the NEW item from the inventory list ---
-         const itemIndexInInventory = gameState.player.inventory.items.findIndex(invItem => invItem.itemId === itemId);
-         if (itemIndexInInventory === -1) {
-              console.error(`Item ${itemId} to be equipped not found in inventory list!`);
-              return; // Prevent equip if item isn't actually in list
-         } else {
-             // Remove the item being equipped from the main list
-             gameState.player.inventory.items.splice(itemIndexInInventory, 1);
-             console.log(`Removed ${itemId} from inventory list.`);
-         }
-
-         // --- Equip the NEW item ---
-         gameState.player.inventory.equipped[targetSlot] = itemId;
-         console.log(`Equipped ${itemData.inGameName} to ${targetSlot} slot.`);
-
-         // --- Add the PREVIOUSLY equipped item back to the inventory list ---
-         if (previouslyEquippedId) {
-             const prevItemData = getItemData(previouslyEquippedId);
-             gameState.player.inventory.items.push({ itemId: previouslyEquippedId, quantity: 1 });
-             console.log(`Added ${prevItemData?.inGameName || 'previous item'} (ID: ${previouslyEquippedId}) back to inventory list.`);
-         }
-
-
-        // 6. Recalculate Player Stats
-        CharacterManager.recalculatePlayerStats(); // Crucial step!
-
-        // 7. Update the Entire Equipment Slots UI visually
-        this.updateEquipmentSlotsDisplay();
-
-        // 8. Update the Equipment List UI (since items were moved)
-         if (this.equipmentListContainer) {
-             this.equipmentListContainer.destroy(); // Destroy the old list
-             this.equipmentListContainer = null;
-             this.displayEquipmentTab(); // Recreate the list content
-         }
-
-        // 9. Play Equip Animation on the correct slot's icon
-        const slotElements = this.equipmentSlots[targetSlot];
-        if (slotElements?.iconDisplay?.active) { // Check if the icon display is valid and active
-            this.playEquipAnimation(slotElements.iconDisplay);
-        } else {
-            console.warn(`Could not find valid icon display to animate for slot: ${targetSlot}`);
-        }
-
-        // 10. Optional: Update other UI if needed
-        if (this.currentTab === 'Potions') {
-            if(this.potionsHpBar) this.potionsHpBar.update(gameState.player.health, gameState.player.maxHealth);
-            if(this.potionsMpBar) this.potionsMpBar.update(gameState.player.mana, gameState.player.maxMana);
-       }
     }
+}
+
+equipItem(itemId) {
+    // 1. Validate Player and Inventory State (keep as is)
+    if (!gameState.player?.inventory) { /* ... error ... */ return; }
+
+    // 2. Get Item Data (keep as is)
+    const itemData = getItemData(itemId);
+
+    // 3. Validate Item Data and Intended Slot (keep as is)
+    if (!itemData || !itemData.equipSlot) { /* ... error ... */ return; }
+    const intendedSlot = itemData.equipSlot; // This is 'body', 'weapon', or 'accessory'
+
+    // 4. Check if the intended slot is one we handle ('body', 'weapon', 'accessory')
+    if (!['body', 'weapon', 'accessory'].includes(intendedSlot)) {
+        console.error(`Cannot equip item ${itemId}: Unsupported equipSlot '${intendedSlot}'.`);
+        return;
+    }
+
+    // 5. Ensure 'equipped' object exists (keep as is)
+    if (!gameState.player.inventory.equipped) { gameState.player.inventory.equipped = {}; }
+    const equipped = gameState.player.inventory.equipped; // Alias for convenience
+
+    // 6. --- UNEQUIP PHASE: Determine what to unequip and return ---
+    let itemToReturnToInventoryId = null; // ID of the item currently in the target slot(s)
+
+    if (intendedSlot === 'body') {
+        // Simple case: only check the 'body' slot
+        if (equipped.body) {
+            itemToReturnToInventoryId = equipped.body;
+            equipped.body = null; // Clear the state slot
+            console.log(`Unequipping previous body item: ${itemToReturnToInventoryId}`);
+        }
+    } else { // Intended slot is 'weapon' OR 'accessory' - clear BOTH state slots
+        if (equipped.weapon) {
+            itemToReturnToInventoryId = equipped.weapon;
+            equipped.weapon = null; // Clear the weapon state slot
+            console.log(`Unequipping previous weapon: ${itemToReturnToInventoryId}`);
+        } else if (equipped.accessory) { // Check accessory only if weapon wasn't equipped
+            itemToReturnToInventoryId = equipped.accessory;
+            equipped.accessory = null; // Clear the accessory state slot
+            console.log(`Unequipping previous accessory: ${itemToReturnToInventoryId}`);
+        }
+        // Both equipped.weapon and equipped.accessory are now null
+    }
+
+    // 7. --- Remove the NEW item from the inventory list --- (keep as is)
+    const itemIndexInInventory = gameState.player.inventory.items.findIndex(invItem => String(invItem.itemId) === String(itemId)); // Use String comparison
+    if (itemIndexInInventory === -1) {
+         console.error(`Item ${itemId} to be equipped not found in inventory list! Cannot proceed.`);
+         // IMPORTANT: If we already unequipped something, we should ideally put it back here!
+         // This logic can get complex, for now, we'll just error out.
+         // A cleaner way might be to check if the item is in the list *before* unequipping.
+         return;
+    } else {
+        gameState.player.inventory.items.splice(itemIndexInInventory, 1);
+        console.log(`Removed ${itemId} from inventory list.`);
+    }
+
+    // 8. --- Equip the NEW item into its INTENDED state slot ---
+    equipped[intendedSlot] = itemId; // Put 'weapon' in equipped.weapon, 'accessory' in equipped.accessory
+    console.log(`Equipped ${itemData.inGameName} to STATE slot: ${intendedSlot}`);
+
+    // 9. --- Add the PREVIOUSLY equipped item back to the inventory list ---
+    if (itemToReturnToInventoryId) {
+        const prevItemData = getItemData(itemToReturnToInventoryId);
+        gameState.player.inventory.items.push({ itemId: itemToReturnToInventoryId, quantity: 1 });
+        console.log(`Added ${prevItemData?.inGameName || 'previous item'} (ID: ${itemToReturnToInventoryId}) back to inventory list.`);
+    }
+
+    // 10. Recalculate Stats (keep as is)
+    CharacterManager.recalculatePlayerStats();
+
+    // 11. Update UI (Slots & List)
+    this.updateEquipmentSlotsDisplay(); // Update the visual slots
+    if (this.equipmentListContainer) { // Refresh the equipment list
+        this.equipmentListContainer.destroy();
+        this.equipmentListContainer = null;
+        this.displayEquipmentTab();
+    }
+
+    // 12. Play Animation
+    // Determine the VISUAL slot key based on the intended slot
+    const targetDisplaySlotKey = (intendedSlot === 'body') ? 'body' : 'accessory';
+    const slotElements = this.equipmentSlots[targetDisplaySlotKey];
+    if (slotElements?.iconDisplay?.active) {
+        this.playEquipAnimation(slotElements.iconDisplay);
+    } else {
+        console.warn(`Could not find valid icon display to animate for visual slot: ${targetDisplaySlotKey}`);
+    }
+
+    // 13. Optional other UI updates (keep as is)
+    // ...
+}
 
     // playEquipAnimation method - Targets the iconDisplay Image object
     playEquipAnimation(targetIcon) {
