@@ -253,43 +253,91 @@ class InventoryScene extends BaseScene {
         } else {
             let currentY = 0;
             const itemHeight = 40;
-            const backgroundsToListen = [];
 
             equipmentItems.forEach(itemInstance => {
                 const itemData = getItemData(itemInstance.itemId);
                 if (!itemData) return;
+                const itemRow = this.add.container(0, currentY); // Position container at currentY
 
-                const itemRow = this.add.container(0, 0); // Relative coordinates within scroll container
-                const itemBg = this.add.rectangle(listWidth / 2, itemHeight / 2, listWidth - 20, itemHeight, 0x2a2a3e, 0).setOrigin(0.5);
+
+                const itemBg = this.add.rectangle(0, 0, listWidth - 20, itemHeight, 0x2a2a3e, 0).setOrigin(0, 0); 
                 const nameText = this.add.text(10, itemHeight / 2, itemData.inGameName, { fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm, fill: '#ffffff' }).setOrigin(0, 0.5);
                 let statsString = itemData.effects ? Object.entries(itemData.effects).map(([stat, value]) => `${stat.charAt(0).toUpperCase() + stat.slice(1)}: ${value > 0 ? '+' : ''}${value}`).join(', ') : '';
                 const statsText = this.add.text(listWidth - 30, itemHeight / 2, statsString, { fontFamily: "'VT323'", fontSize: this.ui.fontSize.xs, fill: '#aaffaa', align: 'right' }).setOrigin(1, 0.5);
 
                 itemRow.add([itemBg, nameText, statsText]);
-                this.equipmentListContainer.addItem(itemRow, currentY);
-                backgroundsToListen.push({ bg: itemBg, itemId: itemInstance.itemId });
+                try {
+                    // Define the hit area using the row's calculated size
+                    itemRow.setSize(listWidth - 20, itemHeight); // Important: Set container size!
+                    itemRow.setInteractive({ useHandCursor: true }); // Use default shape (its size)
+                     console.log(`[Row Interactive] Set interactive for item ID: ${itemInstance.itemId}`);
+
+                    // Clear potential old listeners
+                    itemRow.off('pointerover');
+                    itemRow.off('pointerout');
+                    itemRow.off('pointerdown');
+
+                    // Attach listeners to itemRow
+                    itemRow.on('pointerover', () => {
+                        if (itemRow.active) itemBg.setFillStyle(0x3a3a4e, 0.7); // Still control bg visual
+                    });
+                    itemRow.on('pointerout', () => {
+                        if (itemRow.active) itemBg.setFillStyle(0x2a2a3e, 0); // Revert bg visual
+                    });
+                    itemRow.on('pointerdown', (pointer) => {
+                        console.log(`[Row Pointer Down] Item ID: ${itemInstance.itemId}`);
+                        pointer.event?.stopPropagation();
+                        if (itemRow.active) {
+                            this.safePlaySound('button-click', { volume: 0.3 });
+                            this.equipItem(itemInstance.itemId);
+                        }
+                    });
+                     console.log(`[Row Interactive] Listeners attached for item ID: ${itemInstance.itemId}`);
+                } catch (e) {
+                    console.warn(`Error setting interactivity on itemRow for ${itemInstance.itemId}:`, e);
+                }
+                this.equipmentListContainer.addItem(itemRow); // Let ScrollableContainer manage Y
+                // --- ATTACH LISTENERS IMMEDIATELY TO itemBg ---
+             try {
+                // Define the hit area based on the background's dimensions
+                const hitAreaRect = new Phaser.Geom.Rectangle(-itemBg.width / 2, -itemBg.height / 2, itemBg.width, itemBg.height);
+                
+                // Set itemBg interactive within its container (itemRow)
+                itemBg.setInteractive(hitAreaRect, Phaser.Geom.Rectangle.Contains).setScrollFactor(0); // Prevent scroll factor issues
+                itemBg.input.cursor = 'pointer'; // Set cursor explicitly
+
+                console.log(`[Immediate Attach] Set interactive for item ID: ${itemInstance.itemId}`); // Log
+
+                // Clear previous listeners if any (important if refreshing)
+                itemBg.off('pointerover');
+                itemBg.off('pointerout');
+                itemBg.off('pointerdown');
+
+                // Attach new listeners
+                itemBg.on('pointerover', () => {
+                    // console.log(`[Hover Over] Item ID: ${itemInstance.itemId}`); // Optional log
+                    if (itemBg.active) itemBg.setFillStyle(0x3a3a4e, 0.7); // Use fill color for hover
+                });
+                itemBg.on('pointerout', () => {
+                    // console.log(`[Hover Out] Item ID: ${itemInstance.itemId}`); // Optional log
+                    if (itemBg.active) itemBg.setFillStyle(0x2a2a3e, 0); // Revert to transparent/original fill
+                });
+                itemBg.on('pointerdown', (pointer) => {
+                    console.log(`[Pointer Down] Item ID: ${itemInstance.itemId}`); // Log click
+                    pointer.event?.stopPropagation(); // Stop propagation to scroll container
+                    if (itemBg.active) {
+                        this.safePlaySound('button-click', { volume: 0.3 });
+                        this.equipItem(itemInstance.itemId);
+                    }
+                });
+                console.log(`[Immediate Attach] Listeners attached for item ID: ${itemInstance.itemId}`); // Log success
+            } catch (e) {
+                console.warn(`Error setting interactivity/listeners for equip item ${itemInstance.itemId}:`, e);
+            }
                 currentY += itemHeight + 5;
             });
 
-            // Add listeners after a short delay to ensure items are rendered
-             this.time.delayedCall(20, () => { // Increased delay slightly
-                 if (!this || !this.scene?.key || this.scene.key !== 'InventoryScene') return; // Scene check
-                 backgroundsToListen.forEach(item => {
-                     // Double check if bg is still valid and part of the scene
-                     if (item.bg && item.bg.scene === this && item.bg.active) {
-                         try {
-                             item.bg.setInteractive({ useHandCursor: true });
-                             item.bg.on('pointerover', () => { if (item.bg?.active) item.bg.setFillStyle(0x3a3a4e, 0.7); });
-                             item.bg.on('pointerout', () => { if (item.bg?.active) item.bg.setFillStyle(0x2a2a3e, 0); });
-                             item.bg.on('pointerdown', () => { if (item.bg?.active) { this.safePlaySound('button-click', { volume: 0.3 }); this.equipItem(item.itemId); } });
-                         } catch (e) {
-                              console.warn(`Error setting interactivity for equip item ${item.itemId}:`, e);
-                         }
-                     } else {
-                         console.warn("Skipping listener attachment for destroyed or invalid equip item background.");
-                     }
-                 });
-             }, [], this);
+
         }
 
         this.equipmentListContainer.updateMaxScroll();
@@ -340,6 +388,15 @@ class InventoryScene extends BaseScene {
             slotContainer.add([slotBorder, iconDisplay, label]);
             container.add(slotContainer); // Add the slot's container to the main equipment container
 
+            // --- ADD STATS DISPLAY ---
+            const statsY = 150; // Position below the slots
+            const statsText = this.add.text(0, statsY, '', { // Start empty
+                 fontSize: '12px', fill: '#aaffaa', align: 'center', lineSpacing: 4
+            }).setOrigin(0.5);
+            container.add(statsText);
+            this.equipmentStatsText = statsText; // Store reference
+            this.updateEquipmentSlotsDisplay(); // Call initially to populate slots AND stats
+
             // --- Store references ---
             this.equipmentSlots[slot.key] = {
                 container: slotContainer,
@@ -348,9 +405,56 @@ class InventoryScene extends BaseScene {
                 label: label,
                 placeholderTexture: placeholderIconKey // Store the placeholder key for resetting
             };
+            slotBorder.setInteractive({ useHandCursor: true })
+                .on('pointerdown', () => {
+                    console.log(`Clicked slot: ${slot.key}`);
+                    this.unequipItem(slot.key); // Call a new unequip function
+                });
         });
     }
+    unequipItem(slotKey) {
+        console.log(`Attempting to unequip from slot: ${slotKey}`);
+        const equipped = gameState.player.inventory?.equipped || {};
+        let itemIdToUnequip = null;
 
+        // Determine which actual state slot corresponds to the visual slot clicked
+        if (slotKey === 'body' && equipped.body) {
+            itemIdToUnequip = equipped.body;
+            equipped.body = null; // Clear the state slot
+        } else if (slotKey === 'accessory') { // Visual 'accessory' slot clicked
+            if (equipped.weapon) {          // Check if weapon is equipped first
+                itemIdToUnequip = equipped.weapon;
+                equipped.weapon = null;      // Clear weapon state
+            } else if (equipped.accessory) { // Otherwise check accessory state
+                itemIdToUnequip = equipped.accessory;
+                equipped.accessory = null;   // Clear accessory state
+            }
+        }
+
+        if (itemIdToUnequip) {
+             const itemData = getItemData(itemIdToUnequip);
+             console.log(`Unequipping ${itemData?.inGameName || itemIdToUnequip}`);
+
+             // Add the item back to the main inventory list
+             if (!gameState.player.inventory.items) gameState.player.inventory.items = [];
+             gameState.player.inventory.items.push({ itemId: itemIdToUnequip, quantity: 1 });
+
+             this.safePlaySound('button-click', { volume: 0.2 }); // Play a sound
+
+             // Recalculate stats
+             CharacterManager.recalculatePlayerStats();
+
+             // Refresh UI
+             this.updateEquipmentSlotsDisplay(); // Update the slots visuals
+              if (this.currentTab === 'Equipment' && this.equipmentListContainer) { // Refresh list only if on equipment tab
+                  this.equipmentListContainer.destroy();
+                  this.equipmentListContainer = null;
+                  this.displayEquipmentTab();
+              }
+        } else {
+            console.log(`Nothing to unequip in slot: ${slotKey}`);
+        }
+    }
     updateEquipmentSlotsDisplay() {
         console.log("Updating Equipment Slots Display...");
     const equipped = gameState.player.inventory?.equipped || {};
@@ -412,6 +516,22 @@ class InventoryScene extends BaseScene {
             accessoryElements.iconDisplay.setTexture(accessoryElements.placeholderTexture).setVisible(true).setScale(0.8);
             accessoryElements.label.setText(accessoryElements.name); // Use default name ('Accessory/Weapon')
             accessoryElements.border.setStrokeStyle(1, 0x555555); // Default border
+        }
+         // --- UPDATE STATS TEXT ---
+         if (this.equipmentStatsText) {
+            const player = gameState.player;
+            // Access the calculated stats (assuming CharacterManager.recalculatePlayerStats updated them)
+            const attack = player.currentAttack || 0;
+            const magicAttack = player.currentMagicAttack || 0;
+            const defense = player.currentDefense || 0;
+            // Add other relevant stats (crit, dodge, etc.) if calculated
+
+            this.equipmentStatsText.setText(
+                 `Attack: ${attack}\n` +
+                 `Magic Atk: ${magicAttack}\n` +
+                 `Defense: ${defense}`
+                 // Add more stats here
+            );
         }
     }
 }
