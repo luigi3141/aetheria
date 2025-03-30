@@ -11,17 +11,17 @@ const enemyData = {
         name: "Forest Goblin",
         sprite: "GOBLIN",
         level: 1,
-        baseHealth: 25,
-        baseAttack: 5,
+        baseHealth: 30,
+        baseAttack: 7,
         baseDefense: 2,
         abilities: ["slash", "taunt"],
         lootTable: {
-            gold: { min: 5, max: 10 },
-            experience: { min: 10, max: 20 },
+            gold: { min: 5, max: 5 },
+            experience: { min: 10, max: 10 },
             items: [ // Updated with specific IDs and estimated chances
                 { id: "goblin-leather", chance: 0.5 }, // Tier 1
-                { id: "goblin-teeth", chance: 0.4 },   // Tier 1
-                { id: "goblin-sinew", chance: 0.3 }    // Tier 1
+                { id: "goblin-teeth", chance: 0.25 },   // Tier 1
+                { id: "goblin-sinew", chance: 0.25}    // Tier 1
             ]
         },
         description: "A small, green-skinned creature that inhabits the Verdant Woods."
@@ -30,17 +30,17 @@ const enemyData = {
         name: "Forest Wolf",
         sprite: "WOLF",
         level: 2,
-        baseHealth: 35,
-        baseAttack: 8,
+        baseHealth: 40,
+        baseAttack: 9,
         baseDefense: 3,
         abilities: ["bite", "howl"],
         lootTable: {
-            gold: { min: 10, max: 20 },
-            experience: { min: 15, max: 25 },
+            gold: { min: 10, max: 10 },
+            experience: { min: 20, max: 20 },
             items: [ // Updated with specific IDs and estimated chances
-                { id: "wolf-pelt", chance: 0.5 },  // Tier 1
-                { id: "wolf-claws", chance: 0.3 }, // Tier 1
-                { id: "wolf-sinew", chance: 0.3 }  // Tier 1
+                { id: "wolf-pelt", chance: 0.25 },  // Tier 1
+                { id: "wolf-claws", chance: 0.5 }, // Tier 1
+                { id: "wolf-sinew", chance: 0.25}  // Tier 1
             ]
         },
         description: "A fierce predator with sharp teeth and keen senses."
@@ -48,18 +48,18 @@ const enemyData = {
     "forest-spider": {
         name: "Giant Spider",
         sprite: "SPIDER",
-        level: 3,
+        level: 2,
         baseHealth: 40,
-        baseAttack: 7,
-        baseDefense: 4,
+        baseAttack: 9,
+        baseDefense: 3,
         abilities: ["poison-bite", "web"],
         lootTable: {
-            gold: { min: 15, max: 30 },
-            experience: { min: 20, max: 30 },
+            gold: { min: 10, max: 10 },
+            experience: { min: 20, max: 20 },
             items: [ // Updated with specific IDs and estimated chances
-                { id: "spider-silk", chance: 0.5 },     // Tier 2
-                { id: "spider-carapace", chance: 0.4 }, // Tier 2
-                { id: "spider-fang", chance: 0.3 }      // Tier 2
+                { id: "spider-silk", chance: 0.25 },     // Tier 1
+                { id: "spider-carapace", chance: 0.25 }, // Tier 1
+                { id: "spider-fang", chance: 0.5 }      // Tier 1
             ]
         },
         description: "A large arachnid that spins webs between the trees of the forest."
@@ -68,16 +68,16 @@ const enemyData = {
         name: "Forest Bandit",
         sprite: "BANDIT",
         level: 3,
-        baseHealth: 45,
-        baseAttack: 9,
+        baseHealth: 50,
+        baseAttack: 11,
         baseDefense: 5,
         abilities: ["slash", "steal", "quick-shot"],
         lootTable: {
-            gold: { min: 15, max: 30 },
-            experience: { min: 25, max: 35 },
+            gold: { min: 15, max: 15 },
+            experience: { min: 30, max: 30 },
             items: [ // Updated with specific IDs and estimated chances
-                { id: "bandit-armour", chance: 0.3 }, // Tier 2
-                { id: "bandit-dagger", chance: 0.2 }  // Tier 2
+                { id: "bandit-armour", chance: 0.5}, // Tier 2
+                { id: "bandit-dagger", chance: 0.5}  // Tier 2
                 // Note: The original 'leather-scraps', 'short-bow', 'stolen-goods' were removed as per the provided table. Add back if needed.
             ]
         },
@@ -86,18 +86,18 @@ const enemyData = {
     "mushroom-creature": {
         name: "Myconid",
         sprite: "MUSHROOM",
-        level: 2,
-        baseHealth: 30,
-        baseAttack: 6,
-        baseDefense: 7,
+        level: 4,
+        baseHealth: 60,
+        baseAttack: 13,
+        baseDefense: 6,
         abilities: ["spore-cloud", "root-grab"],
         lootTable: {
-            gold: { min: 10, max: 20 },
-            experience: { min: 15, max: 25 },
+            gold: { min: 20, max: 20 },
+            experience: { min: 40, max: 40 },
             items: [ // Updated with specific IDs and estimated chances
-                { id: "mushroom-hide", chance: 0.5 }, // Tier 1
-                { id: "mushroom-arms", chance: 0.4 }, // Tier 1
-                { id: "mushroom-sinew", chance: 0.3 } // Tier 1
+                { id: "mushroom-hide", chance: 0.25 }, // Tier 2
+                { id: "mushroom-arms", chance: 0.5 }, // Tier 2
+                { id: "mushroom-sinew", chance: 0.25 } // Tier 2
                 // Note: Original 'glowing-spores', 'healing-cap' removed.
             ]
         },
@@ -106,18 +106,18 @@ const enemyData = {
     "wild-boar": {
         name: "Wild Boar",
         sprite: "BOAR", // Add to AssetConfig.js
-        level: 2,
-        baseHealth: 30,
-        baseAttack: 6,
-        baseDefense: 3,
+        level: 4,
+        baseHealth: 60,
+        baseAttack: 13,
+        baseDefense: 6,
         abilities: ["charge", "tough-hide"],
         lootTable: {
-            gold: { min: 10, max: 20 },
-            experience: { min: 10, max: 20 },
+            gold: { min: 20, max: 20 },
+            experience: { min: 40, max: 40 },
             items: [ // Updated with specific IDs and estimated chances
-                { id: "wild-boar-pelt", chance: 0.5 }, // Tier 1
-                { id: "wild-boar-fang", chance: 0.4 }, // Tier 1
-                { id: "wild-boar-sinew", chance: 0.3 } // Tier 1
+                { id: "wild-boar-pelt", chance: 0.25}, // Tier 2
+                { id: "wild-boar-fang", chance: 0.5 }, // Tier 2
+                { id: "wild-boar-sinew", chance: 0.25 } // Tier 2
             ]
         },
         description: "A stubborn and aggressive boar that uses brute force to defend its territory."
@@ -125,17 +125,17 @@ const enemyData = {
     "thorn-lurker": {
         name: "Thorn Lurker",
         sprite: "THORN_LURKER", // Add to AssetConfig.js
-        level: 3,
-        baseHealth: 35,
-        baseAttack: 7,
-        baseDefense: 5,
+        level: 5,
+        baseHealth: 70,
+        baseAttack: 15,
+        baseDefense: 8,
         abilities: ["piercing-thorns", "camouflage"],
         lootTable: {
-            gold: { min: 15, max: 30 },
-            experience: { min: 15, max: 30 },
+            gold: { min: 25, max: 25 },
+            experience: { min: 50, max: 50 },
             items: [ // Updated with specific IDs and estimated chances
-                { id: "thorn-lurker-pelt", chance: 0.4 },   // Tier 2
-                { id: "thorn-lurker-branch", chance: 0.3 } // Tier 2
+                { id: "thorn-lurker-pelt", chance: 0.5 },   // Tier 3
+                { id: "thorn-lurker-branch", chance: 0.5 } // Tier 3
             ]
         },
         description: "A stealthy predator that hides among underbrush and lashes out with sharp thorns."
@@ -143,18 +143,18 @@ const enemyData = {
     "owlbear-cub": {
         name: "Owlbear Cub",
         sprite: "OWLBEAR_CUB", // Add to AssetConfig.js
-        level: 4,
-        baseHealth: 40,
-        baseAttack: 8,
-        baseDefense: 4,
+        level: 5,
+        baseHealth: 70,
+        baseAttack: 15,
+        baseDefense: 8,
         abilities: ["maul", "shriek"],
         lootTable: {
-            gold: { min: 20, max: 40 },
-            experience: { min: 20, max: 40 },
+            gold: { min: 25, max: 25 },
+            experience: { min: 50, max: 50 },
             items: [ // Updated with specific IDs and estimated chances
-                { id: "owlbear-cub-pelt", chance: 0.4 },  // Tier 2
-                { id: "owlbear-cub-fang", chance: 0.3 },  // Tier 2
-                { id: "owlbear-cub-sinew", chance: 0.2 }  // Tier 2
+                { id: "owlbear-cub-pelt", chance: 0.25 },  // Tier 3
+                { id: "owlbear-cub-fang", chance: 0.5 },  // Tier 3
+                { id: "owlbear-cub-sinew", chance: 0.25 }  // Tier 3
             ]
         },
         description: "A young but dangerous beast with razor claws and a deafening screech."
@@ -162,17 +162,17 @@ const enemyData = {
     "briar-sprite": {
         name: "Briar Sprite",
         sprite: "BRIAR_SPRITE", // Add to AssetConfig.js
-        level: 4,
-        baseHealth: 28,
-        baseAttack: 9,
-        baseDefense: 3,
+        level: 6,
+        baseHealth: 80,
+        baseAttack: 17,
+        baseDefense: 9,
         abilities: ["spike-burst", "life-drain"],
         lootTable: {
-            gold: { min: 20, max: 40 },
-            experience: { min: 20, max: 40 },
+            gold: { min: 30, max: 30 },
+            experience: { min: 30, max: 30 },
             items: [ // Updated with specific IDs and estimated chances
-                { id: "briar-sprite-pelt", chance: 0.4 },   // Tier 2
-                { id: "briar-sprite-branch", chance: 0.3 } // Tier 2
+                { id: "briar-sprite-pelt", chance: 0.5 },   // Tier 3
+                { id: "briar-sprite-branch", chance: 0.5} // Tier 3
             ]
         },
         description: "A mischievous forest spirit that drains vitality and hurls thorns."
@@ -180,17 +180,17 @@ const enemyData = {
     "entling": {
         name: "Entling",
         sprite: "ENTLING", // Add to AssetConfig.js
-        level: 5,
-        baseHealth: 55,
-        baseAttack: 10,
-        baseDefense: 6,
+        level: 6,
+        baseHealth: 80,
+        baseAttack: 17,
+        baseDefense: 9,
         abilities: ["branch-slam", "root-cage"],
         lootTable: {
-            gold: { min: 25, max: 50 },
-            experience: { min: 25, max: 50 },
+            gold: { min: 30, max: 30 },
+            experience: { min: 60, max: 60 },
             items: [ // Updated with specific IDs and estimated chances
-                { id: "entling-pelt", chance: 0.3 },   // Tier 3
-                { id: "entling-branch", chance: 0.2 } // Tier 3
+                { id: "entling-pelt", chance: 0.5 },   // Tier 3
+                { id: "entling-branch", chance: 0.5 } // Tier 3
             ]
         },
         description: "A young tree guardian that binds enemies and crushes them with heavy limbs."
@@ -198,17 +198,17 @@ const enemyData = {
     "horned-stag": {
         name: "Horned Stag",
         sprite: "HORNED_STAG", // Add to AssetConfig.js
-        level: 6,
-        baseHealth: 60,
-        baseAttack: 12,
-        baseDefense: 7,
+        level: 7,
+        baseHealth: 90,
+        baseAttack: 19,
+        baseDefense: 11,
         abilities: ["gore", "rally-call"],
         lootTable: {
-            gold: { min: 30, max: 60 },
-            experience: { min: 30, max: 60 },
+            gold: { min: 35, max: 35 },
+            experience: { min: 70, max: 70 },
             items: [ // Updated with specific IDs and estimated chances
-                { id: "horned-stag-pelt", chance: 0.3 },   // Tier 3
-                { id: "horned-stag-antler", chance: 0.2 } // Tier 3
+                { id: "horned-stag-pelt", chance: 0.5 },   // Tier 4
+                { id: "horned-stag-antler", chance: 0.5 } // Tier 4
             ]
         },
         description: "A majestic creature with magical antlers that can summon forest allies."
@@ -216,17 +216,17 @@ const enemyData = {
     "feral-druid": {
         name: "Feral Druid",
         sprite: "FERAL_DRUID", // Add to AssetConfig.js
-        level: 6,
-        baseHealth: 45,
-        baseAttack: 11,
-        baseDefense: 6,
+        level: 8,
+        baseHealth: 100,
+        baseAttack: 21,
+        baseDefense: 12,
         abilities: ["nature's-fury", "heal", "entangle"],
         lootTable: {
-            gold: { min: 30, max: 60 },
-            experience: { min: 30, max: 60 },
+            gold: { min: 40, max: 40 },
+            experience: { min: 80, max: 80 },
             items: [ // Updated with specific IDs and estimated chances
-                { id: "feral-druid-pelt", chance: 0.3 }, // Tier 3
-                { id: "feral-druid-wand", chance: 0.2 }  // Tier 3
+                { id: "feral-druid-pelt", chance: 0.5 }, // Tier 4
+                { id: "feral-druid-wand", chance: 0.5 }  // Tier 4
             ]
         },
         description: "A corrupted druid wielding powerful nature magic."
@@ -234,18 +234,18 @@ const enemyData = {
     "witch-hare": {
         name: "Witch Hare",
         sprite: "WITCH_HARE", // Add to AssetConfig.js
-        level: 7,
-        baseHealth: 38,
-        baseAttack: 14,
-        baseDefense: 5,
+        level: 8,
+        baseHealth: 100,
+        baseAttack: 21,
+        baseDefense: 12,
         abilities: ["hex-bolt", "leap-strike", "blink"],
         lootTable: {
-            gold: { min: 35, max: 70 },
-            experience: { min: 35, max: 70 },
+            gold: { min: 40, max: 40 },
+            experience: { min: 40, max: 80 },
             items: [ // Updated with specific IDs and estimated chances
-                { id: "witch-hare-pelt", chance: 0.2 },  // Tier 4
-                { id: "witch-hare-wand", chance: 0.15 }, // Tier 4
-                { id: "witch-hare-sinew", chance: 0.1 }  // Tier 4
+                { id: "witch-hare-pelt", chance: 0.25 },  // Tier 4
+                { id: "witch-hare-wand", chance: 0.5 }, // Tier 4
+                { id: "witch-hare-sinew", chance: 0.25 }  // Tier 4
             ]
         },
         description: "A twisted hare imbued with dark magic and incredible speed."
@@ -253,17 +253,17 @@ const enemyData = {
     "moss-troll": {
         name: "Moss Troll",
         sprite: "MOSS_TROLL", // Add to AssetConfig.js
-        level: 8,
-        baseHealth: 90,
-        baseAttack: 13,
-        baseDefense: 10,
+        level: 9,
+        baseHealth: 110,
+        baseAttack: 23,
+        baseDefense: 14,
         abilities: ["regenerate", "club-slam", "throw-rock"],
         lootTable: {
-            gold: { min: 40, max: 80 },
-            experience: { min: 40, max: 80 },
+            gold: { min: 45, max: 45 },
+            experience: { min: 90, max: 90 },
             items: [ // Updated with specific IDs and estimated chances
-                { id: "moss-troll-pelt", chance: 0.2 },  // Tier 4
-                { id: "moss-troll-shard", chance: 0.15 } // Tier 4
+                { id: "moss-troll-pelt", chance: 0.5 },  // Tier 5
+                { id: "moss-troll-shard", chance: 0.5 } // Tier 5
             ]
         },
         description: "A slow-moving tank that heals over time and hurls boulders."
@@ -272,19 +272,20 @@ const enemyData = {
         name: "Forest Wyrmling",
         sprite: "FOREST_WYRMLING", // Add to AssetConfig.js
         level: 10,
-        baseHealth: 110,
-        baseAttack: 18,
-        baseDefense: 12,
+        baseHealth: 120,
+        baseAttack: 25,
+        baseDefense: 15,
         abilities: ["acid-breath", "tail-whip", "wing-flurry"],
         lootTable: {
-            gold: { min: 50, max: 100 },
-            experience: { min: 50, max: 100 },
+            gold: { min: 50, max: 50 },
+            experience: { min: 50, max: 50 },
             items: [ // Updated with specific IDs and estimated chances
-                { id: "forest-wyrmling-pelt", chance: 0.15 }, // Tier 5
-                { id: "forest-wyrmling-fang", chance: 0.1 }  // Tier 5
+                { id: "forest-wyrmling-pelt", chance: 0.5 }, // Tier 5
+                { id: "forest-wyrmling-fang", chance: 0.5 }  // Tier 5
             ]
         },
         description: "A juvenile dragon-like beast awakened deep in the woods."
+
     },
 
     // == Crystal Caverns enemies ==
