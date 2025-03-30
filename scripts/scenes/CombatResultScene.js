@@ -592,7 +592,7 @@ if (gameState.player && gameState.player.experience >= gameState.player.experien
         // Get combat result data
         const combatResult = this.combatResult;
         const isVictory = combatResult.outcome === 'victory';
-        const isDefeat = combatResult.outcome === 'defeat';
+        //const isDefeat = combatResult.outcome === 'defeat';
 
         // Default button positions
         const buttonY = height * 0.85; // Position buttons lower
@@ -610,21 +610,11 @@ if (gameState.player && gameState.player.experience >= gameState.player.experien
                 buttonY,
                 'Continue', // Changed label for clarity
                 () => {
-                    this.continueExploring();
-                    console.log("CombatResultScene: Continue Exploring selected.");
-                    // Ensure we have dungeon state before returning
-                    if (!gameState.currentDungeon) {
-                         console.warn("No current dungeon state found, returning to Overworld instead.");
-                         this.transitions.fade(() => {
-                             navigationManager.navigateTo(this, 'OverworldScene');
-                         });
-                         return;
-                    }
-                    // Navigate back to the Dungeon Scene
-                    this.transitions.fade(() => {
-                        // Pass data if needed, e.g., indicating return from combat
-                        navigationManager.navigateTo(this, 'DungeonScene', { fromCombat: true });
-                    });
+                    this.safePlaySound('button-click'); // Play sound on click
+                    this.continueExploring(); // Only call the function that handles the logic
+                    // NO redundant console.log here
+                    // NO redundant check for gameState.currentDungeon here
+                    // NO redundant this.transitions.fade here
                 },
                 {
                     width: buttonWidth,
@@ -641,7 +631,8 @@ if (gameState.player && gameState.player.experience >= gameState.player.experien
                 buttonY,
                 'Overworld', // Changed label for clarity
                 () => {
-                     console.log("CombatResultScene: Leave Dungeon selected.");
+                    console.log("CombatResultScene: Leave Dungeon selected.");
+                    this.safePlaySound('button-click'); // Play sound
                     // Clear current dungeon state when leaving? Optional.
                     // gameState.currentDungeon = null;
                     this.transitions.fade(() => {
@@ -660,23 +651,24 @@ if (gameState.player && gameState.player.experience >= gameState.player.experien
              // If this scene *is* shown on retreat/defeat, provide a simple way out.
              // Usually, defeat/retreat might go directly to DefeatScene or OverworldScene.
              new Button(
-                 this,
-                 width / 2, // Centered button
-                 buttonY,
-                 'Return to Overworld',
-                 () => {
-                      console.log("CombatResultScene: Returning to Overworld (Fallback).");
-                     this.transitions.fade(() => {
-                         navigationManager.navigateTo(this, 'OverworldScene');
-                     });
-                 },
-                 {
-                     width: buttonWidth + 40, // Slightly wider
-                     height: buttonHeight,
-                     fillColor: 0x555555,
-                     hoverColor: 0x333333
-                 }
-             );
+                this,
+                width / 2, // Centered button
+                buttonY,
+                'Return to Overworld',
+                () => {
+                     console.log("CombatResultScene: Returning to Overworld (Fallback).");
+                     this.safePlaySound('button-click'); // Play sound
+                    this.transitions.fade(() => {
+                        navigationManager.navigateTo(this, 'OverworldScene');
+                    });
+                },
+                {
+                    width: buttonWidth + 40, // Slightly wider
+                    height: buttonHeight,
+                    fillColor: 0x555555,
+                    hoverColor: 0x333333
+                }
+            );
         }
     }
 }
