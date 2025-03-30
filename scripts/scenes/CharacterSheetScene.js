@@ -1,7 +1,9 @@
 import gameState from '../gameState.js';
 import BaseScene from './BaseScene.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
-import ButtonFactory from '../ui/ButtonFactory.js';
+import { LAYOUT } from '../ui/layout/LayoutHelper.js'; 
+import navigationManager from '../navigation/NavigationManager.js';
+
 
 /**
  * CharacterSheetScene - Scene for viewing and managing character stats and skills
@@ -36,6 +38,7 @@ class CharacterSheetScene extends BaseScene {
         if (!this.textures.exists('bard')) {
             this.load.image('bard', ASSET_PATHS.PORTRAITS.BARD);
         }
+        
     }
 
     create() {
@@ -84,7 +87,7 @@ class CharacterSheetScene extends BaseScene {
         const height = this.cameras.main.height;
         
         // Create the title
-        this.ui.createTitle(width/2, height * LAYOUT.TITLE.Y, 'Character Sheet', {
+        this.ui.createTitle(width/2, height * 0.08, 'Character Sheet', {
             fontSize: this.ui.fontSize.lg
         });
     }
@@ -95,11 +98,16 @@ class CharacterSheetScene extends BaseScene {
     createCharacterInfo() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
-        
-        // Create character info container
+
+        // --- >>> DEFINE panelPos HERE <<< ---
+        // Get panel position using LAYOUT for the LEFT panel
+        const panelPos = this.ui.layoutHelper.getPosition(LAYOUT.PANEL.LEFT); 
+        // --- >>> END DEFINITION <<< ---
+
+        // Create character info container using the defined panelPos
         this.ui.createPanel(
-            width * LAYOUT.PANEL.LEFT.X,
-            height * LAYOUT.PANEL.LEFT.Y,
+            panelPos.x, // Now panelPos is defined
+            panelPos.y, // Now panelPos is defined
             width * 0.4,
             height * 0.5,
             {
@@ -109,40 +117,40 @@ class CharacterSheetScene extends BaseScene {
                 borderThickness: 2
             }
         );
-        
+
         // Get player info from gameState
         const player = gameState.player || {};
         const playerClass = player.class || 'warrior';
         const playerName = player.name || 'Adventurer';
         const playerLevel = player.level || 1;
-        
-        // Add character portrait based on class
+
+        // Add character portrait based on class (using defined panelPos)
         this.safeAddImage(
-            width * 0.25, 
-            height * 0.25, 
-            playerClass,
-            { displayWidth: 128, displayHeight: 128 }
-        ).setOrigin(0.5);
-        
-        // Add character name
-        this.add.text(width * 0.25, height * 0.4, playerName, {
+            panelPos.x, // Center X of panel
+            panelPos.y - height * 0.1, // Position above panel center
+            playerClass, // Key should match preloaded texture
+            { scale: 1.5, origin: 0.5 } // Example scale/origin
+        );
+
+        // Add character name (using defined panelPos)
+        this.add.text(panelPos.x, panelPos.y + height * 0.05, playerName, {
             fontFamily: "'Press Start 2P'",
             fontSize: this.ui.fontSize.md + 'px',
             fill: '#ffffff',
             align: 'center'
         }).setOrigin(0.5);
-        
-        // Add character class and level
-        this.add.text(width * 0.25, height * 0.45, `Level ${playerLevel} ${playerClass}`, {
+
+        // Add character class and level (using defined panelPos)
+        this.add.text(panelPos.x, panelPos.y + height * 0.1, `Level ${playerLevel} ${playerClass}`, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.md + 'px',
             fill: '#aaaaff',
             align: 'center'
         }).setOrigin(0.5);
-        
-        // Add gold display
+
+        // Add gold display (using defined panelPos)
         const gold = player.gold || 0;
-        this.add.text(width * 0.25, height * 0.5, `Gold: ${gold}`, {
+        this.add.text(panelPos.x, panelPos.y + height * 0.15, `Gold: ${gold}`, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.md + 'px',
             fill: '#ffff00',
@@ -156,23 +164,27 @@ class CharacterSheetScene extends BaseScene {
     createStatsDisplay() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
-        
+
+        // Get panel position using LAYOUT
+        const panelPos = this.ui.layoutHelper.getPosition(LAYOUT.PANEL.RIGHT);
+
         // Create stats container
-        this.ui.createPanel(
-            width * LAYOUT.PANEL.RIGHT.X,
-            height * LAYOUT.PANEL.RIGHT.Y,
+        const statsPanel = this.ui.createPanel(
+            panelPos.x,
+            panelPos.y,
             width * 0.4,
             height * 0.5,
-            {
-                fillColor: 0x222233,
-                fillAlpha: 0.7,
-                borderColor: 0x9999aa,
-                borderThickness: 2
-            }
+             { /* panel styles */ }
         );
-        
+
+         // Use relative positions within the panel area
+         const panelTopY = panelPos.y - (statsPanel.height / 2);
+         const panelCenterX = panelPos.x;
+         const statsStartX = panelPos.x - width * 0.15; // Start slightly left of center
+         const valueX = panelPos.x + width * 0.05; // Position value column
+
         // Add stats title
-        this.add.text(width * LAYOUT.STATS.X, height * 0.2, 'CHARACTER STATS', {
+        this.add.text(panelCenterX, panelTopY + 30, 'CHARACTER STATS', {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.md + 'px',
             fill: '#ffffff',
@@ -192,59 +204,42 @@ class CharacterSheetScene extends BaseScene {
         
         // Define the secondary stats to display
         const secondaryStats = [
-            { name: 'Health', value: `${player.health !== undefined ? player.health : 100}/${player.maxHealth || 100}` },
-            { name: 'Mana', value: `${player.mana !== undefined ? player.mana : 50}/${player.maxMana || 50}` },
+            { name: 'Health', value: `${player.health ?? player.maxHealth ?? 100}/${player.maxHealth ?? 100}` },
+            { name: 'Mana', value: `${player.mana ?? player.maxMana ?? 50}/${player.maxMana ?? 50}` },
+            { name: 'Attack', value: `${player.currentAttack ?? 10}`}, // Display calculated attack
+            { name: 'Defense', value: `${player.currentDefense ?? 0}`}, // Display calculated defense
             { name: 'Experience', value: `${player.experience || 0}/${player.experienceToNextLevel || 100}` }
         ];
         
         // Display primary stats
+        const primaryStatsStartY = panelTopY + 70;
+        const statSpacing = 25; // Adjust spacing
+        
+        // Display primary stats
         primaryStats.forEach((stat, index) => {
-            const statY = height * LAYOUT.STATS.START_Y + (index * LAYOUT.STATS.SPACING);
+            const statY = primaryStatsStartY + (index * statSpacing);
             
             // Stat name
-            this.add.text(width * 0.6, statY, stat.name, {
-                fontFamily: "'VT323'",
-                fontSize: this.ui.fontSize.md + 'px',
-                fill: '#aaaaaa',
-                align: 'left'
-            }).setOrigin(0, 0.5);
-            
+            this.add.text(statsStartX, statY, stat.name, { /* styles */ align: 'left' }).setOrigin(0, 0.5);
             // Stat value
-            this.add.text(width * 0.8, statY, stat.value.toString(), {
-                fontFamily: "'VT323'",
-                fontSize: this.ui.fontSize.md + 'px',
-                fill: '#ffffff',
-                align: 'center'
-            }).setOrigin(0.5);
+            this.add.text(valueX, statY, stat.value.toString(), { /* styles */ align: 'right' }).setOrigin(1, 0.5);
         });
         
-        // Display secondary stats title
-        this.add.text(width * LAYOUT.STATS.X, height * 0.45, 'OTHER STATS', {
-            fontFamily: "'VT323'",
-            fontSize: this.ui.fontSize.md + 'px',
-            fill: '#ffffff',
-            align: 'center'
+        // Display secondary stats title (optional)
+        const secondaryStatsStartY = primaryStatsStartY + primaryStats.length * statSpacing + 20;
+        /*
+        this.add.text(panelCenterX, secondaryStatsStartY - 15, 'COMBAT STATS', {
+            fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm + 'px', fill: '#cccccc', align: 'center'
         }).setOrigin(0.5);
-        
+        */
+
         // Display secondary stats
         secondaryStats.forEach((stat, index) => {
-            const statY = height * 0.5 + (index * LAYOUT.STATS.SPACING);
-            
+            const statY = secondaryStatsStartY + (index * statSpacing);
             // Stat name
-            this.add.text(width * 0.6, statY, stat.name, {
-                fontFamily: "'VT323'",
-                fontSize: this.ui.fontSize.md + 'px',
-                fill: '#aaaaaa',
-                align: 'left'
-            }).setOrigin(0, 0.5);
-            
+            this.add.text(statsStartX, statY, stat.name, { /* styles */ align: 'left' }).setOrigin(0, 0.5);
             // Stat value
-            this.add.text(width * 0.8, statY, stat.value.toString(), {
-                fontFamily: "'VT323'",
-                fontSize: this.ui.fontSize.md + 'px',
-                fill: '#ffffff',
-                align: 'center'
-            }).setOrigin(0.5);
+            this.add.text(valueX, statY, stat.value.toString(), { /* styles */ align: 'right' }).setOrigin(1, 0.5);
         });
     }
     
@@ -254,9 +249,31 @@ class CharacterSheetScene extends BaseScene {
     createBackButton() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
-        
-        // Create back button using ButtonFactory
-        ButtonFactory.createBackButton(this);
+
+        // Use ui.createButton and standard positioning
+        this.ui.createButton(
+            width / 2, // Center horizontally
+            height * 0.9, // Near bottom
+            'Back', // Button text
+            () => { // Callback function
+                this.safePlaySound('button-click');
+
+                // Determine the destination scene
+                // Use gameState.previousScene if it's set, otherwise default to OverworldScene
+                const destinationScene = gameState.previousScene || 'OverworldScene';
+                console.log(`Navigating back to: ${destinationScene}`);
+
+                // Use the existing navigateTo method
+                if (navigationManager) {
+                     navigationManager.navigateTo(this, destinationScene); 
+                } else {
+                     // Fallback if navigationManager is somehow missing (shouldn't happen now)
+                     console.warn("NavigationManager not found, using direct scene start as fallback.");
+                     this.scene.start(destinationScene);
+                }
+            },
+            { width: 150, height: 40 } // Standard button size
+        );
     }
 }
 

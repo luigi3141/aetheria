@@ -78,21 +78,48 @@ export default class BaseScene extends Phaser.Scene {
      * @returns {Phaser.GameObjects.Image} The created image or a placeholder
      */
     safeAddImage(x, y, key, options = {}) {
+        let imageObject = null;
         try {
             if (this.textures.exists(key)) {
-                return this.add.image(x, y, key, options);
+                // Create the image using only x, y, key
+                imageObject = this.add.image(x, y, key);
+    
+                // Apply options to the created image object
+                if (options.displayWidth) {
+                    imageObject.setDisplaySize(options.displayWidth, options.displayHeight || options.displayWidth); // Use displayWidth if height missing
+                } else if (options.scale) {
+                    imageObject.setScale(options.scale);
+                }
+                
+                if (options.originX !== undefined && options.originY !== undefined) {
+                     imageObject.setOrigin(options.originX, options.originY);
+                } else if (options.origin !== undefined) {
+                     imageObject.setOrigin(options.origin); // Handle single origin value
+                }
+    
+                // Add other common options if needed (e.g., setDepth, setAlpha)
+    
             } else {
                 console.warn(`Image ${key} not found in cache, using placeholder`);
                 // Create a placeholder rectangle
-                const placeholder = this.add.rectangle(x, y, 64, 64, 0xff00ff);
-                if (options.displayWidth) placeholder.displayWidth = options.displayWidth;
-                if (options.displayHeight) placeholder.displayHeight = options.displayHeight;
-                return placeholder;
+                imageObject = this.add.rectangle(x, y, options.displayWidth || 64, options.displayHeight || 64, 0xff00ff);
+                if (options.originX !== undefined && options.originY !== undefined) {
+                     imageObject.setOrigin(options.originX, options.originY);
+                 } else if (options.origin !== undefined) {
+                     imageObject.setOrigin(options.origin);
+                 }
             }
         } catch (error) {
             console.warn(`Error adding image ${key}: ${error.message}`);
-            return this.add.rectangle(x, y, 64, 64, 0xff00ff);
+            // Fallback placeholder on error
+            imageObject = this.add.rectangle(x, y, options.displayWidth || 64, options.displayHeight || 64, 0xff00ff);
+             if (options.originX !== undefined && options.originY !== undefined) {
+                 imageObject.setOrigin(options.originX, options.originY);
+             } else if (options.origin !== undefined) {
+                 imageObject.setOrigin(options.origin);
+             }
         }
+        return imageObject; // Return the created image or placeholder
     }
     
     /**

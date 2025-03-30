@@ -497,15 +497,20 @@ function getAbilityData(abilityId) {
  */
 function generateEnemy(enemyId, levelModifier = 0) {
     const baseData = getEnemyData(enemyId);
-    if (!baseData) { return null; }
+    if (!baseData) {
+        console.warn(`generateEnemy: Base data not found for ${enemyId}`);
+        return null;
+    }
 
+    // Calculate the enemy's nominal level (can still be useful for display, XP, etc.)
     const level = Math.max(1, baseData.level + levelModifier);
-    const levelMultiplier = 1 + (level - 1) * 0.2;
 
-    const health = Math.floor(baseData.baseHealth * levelMultiplier);
-    const attack = Math.floor(baseData.baseAttack * levelMultiplier);
-    const defense = Math.floor(baseData.baseDefense * levelMultiplier);
+    // --- Use BASE stats directly - REMOVED Level Multiplier ---
+    const health = baseData.baseHealth;
+    const attack = baseData.baseAttack;
+    const defense = baseData.baseDefense;
 
+    // --- Process abilities (remains the same) ---
     const abilities = [];
     if (baseData.abilities && Array.isArray(baseData.abilities)) {
         baseData.abilities.forEach(abilityId => {
@@ -513,18 +518,39 @@ function generateEnemy(enemyId, levelModifier = 0) {
             if (abilityData) {
                 const cooldown = abilityData.cooldown ? abilityData.cooldown : 0;
                 abilities.push({
-                    id: abilityId, ...abilityData, cooldownRemaining: 0, baseCooldown: cooldown
+                    id: abilityId,
+                    ...abilityData, // Spread ability properties
+                    cooldownRemaining: 0,
+                    baseCooldown: cooldown
                 });
-            } else { console.warn(`Ability data for '${abilityId}' not found for enemy '${enemyId}'.`); }
+            } else {
+                console.warn(`Ability data for '${abilityId}' not found for enemy '${enemyId}'.`);
+            }
         });
     }
 
+    // --- Return the enemy object with base stats ---
     return {
-        id: enemyId, name: baseData.name, sprite: baseData.sprite, level: level,
-        health: health, maxHealth: health, attack: attack, defense: defense,
-        abilities: abilities, isBoss: baseData.isBoss || false, description: baseData.description,
+        id: enemyId,
+        name: baseData.name,
+        sprite: baseData.sprite,
+        level: level, // Keep the calculated level for potential display/XP use
+
+        health: health,        // Use base health
+        maxHealth: health,     // Use base health for maxHealth
+        attack: attack,        // Use base attack (the base stat value itself)
+        defense: defense,      // Use base defense (the base stat value itself)
+
+        abilities: abilities,
+        isBoss: baseData.isBoss || false,
+        description: baseData.description,
+        // Deep copy loot table if it exists
         lootTable: baseData.lootTable ? JSON.parse(JSON.stringify(baseData.lootTable)) : { gold: {min:0, max:0}, experience: {min:0, max:0}, items: [] },
-        statusEffects: [], currentAttack: attack, currentDefense: defense
+        statusEffects: [], // Initialize empty status effects array
+
+        // Initialize current combat stats directly from base stats
+        currentAttack: attack,
+        currentDefense: defense
     };
 }
 
