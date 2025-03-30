@@ -4,6 +4,7 @@
  */
 
 // --- ENEMY DATA DEFINITIONS ---
+import { getDungeonData } from '../data/DungeonConfig.js';
 
 const enemyData = {
     // == Verdant Woods enemies ==
@@ -472,7 +473,20 @@ function getEnemyData(enemyId) {
         console.warn(`Enemy data not found for ID: ${enemyId}. Returning null.`);
         return null;
     }
-    return JSON.parse(JSON.stringify({ ...enemy, maxHealth: enemy.baseHealth }));
+    // Calculate maxHealth from baseHealth if not already present
+    const maxHealth = enemy.maxHealth || enemy.baseHealth;
+    return JSON.parse(JSON.stringify({ ...enemy, maxHealth: maxHealth }));
+}
+
+/**
+ * Gets all enemy IDs that match a specific level.
+ * @param {number} level - The target enemy level.
+ * @returns {string[]} An array of enemy IDs matching the level.
+ */
+function getEnemyIdsByLevel(level) {
+    return Object.entries(enemyData)
+        .filter(([id, data]) => data.level === level)
+        .map(([id]) => id);
 }
 
 /**
@@ -495,17 +509,17 @@ function getAbilityData(abilityId) {
  * @param {number} levelModifier - Optional level modifier (default: 0)
  * @returns {object|null} - An enemy instance with calculated stats or null if base data not found
  */
-function generateEnemy(enemyId, levelModifier = 0) {
+function generateEnemy(enemyId) { // REMOVED levelModifier
     const baseData = getEnemyData(enemyId);
     if (!baseData) {
         console.warn(`generateEnemy: Base data not found for ${enemyId}`);
         return null;
     }
 
-    // Calculate the enemy's nominal level (can still be useful for display, XP, etc.)
-    const level = Math.max(1, baseData.level + levelModifier);
+    // Use the level directly from the enemy's data definition
+    const level = baseData.level;
 
-    // --- Use BASE stats directly - REMOVED Level Multiplier ---
+    // Use BASE stats directly
     const health = baseData.baseHealth;
     const attack = baseData.baseAttack;
     const defense = baseData.baseDefense;
@@ -534,7 +548,7 @@ function generateEnemy(enemyId, levelModifier = 0) {
         id: enemyId,
         name: baseData.name,
         sprite: baseData.sprite,
-        level: level, // Keep the calculated level for potential display/XP use
+        level: level, // Use level from base data
 
         health: health,        // Use base health
         maxHealth: health,     // Use base health for maxHealth
@@ -584,9 +598,8 @@ function getDungeonEnemies(dungeonId, dungeonLevel, count = 1) {
 
     for (let i = 0; i < count; i++) {
         const enemyId = possibleEnemies[Math.floor(Math.random() * possibleEnemies.length)];
-        const levelMod = Math.floor(Math.random() * (levelVariance * 2 + 1)) - levelVariance;
         try {
-            const enemy = generateEnemy(enemyId, levelMod);
+            const enemy = generateEnemy(enemyId);
             if (enemy) { enemy.level = Math.max(1, enemy.level); enemies.push(enemy); }
             else { console.error(`Failed to generate enemy instance for ${enemyId}.`); enemies.push(createDefaultEnemy(dungeonLevel)); }
         } catch (error) { console.error(`Error generating enemy ${enemyId}:`, error); enemies.push(createDefaultEnemy(dungeonLevel)); }
@@ -630,7 +643,7 @@ function getDungeonBoss(dungeonId, dungeonLevel) {
     }
     if (!bossId) { console.log(`No boss ID for ${dungeonId}.`); return createDefaultBoss(dungeonLevel); }
     try {
-        const boss = generateEnemy(bossId, 2); // Boss +2 levels
+        const boss = generateEnemy(bossId); // Use base level from enemy data
         if (boss) {
             boss.isBoss = true; boss.maxHealth = Math.floor(boss.maxHealth * 1.5); boss.health = boss.maxHealth;
             boss.currentAttack = Math.floor(boss.currentAttack * 1.2); return boss;
@@ -644,7 +657,34 @@ function createDefaultBoss(level) {
     const bossLvl = Math.max(1, level + 2); const health = 80+(bossLvl*15); const attack = 10+(bossLvl*2); const defense = 5+bossLvl;
     return { id: `default-boss-${type.toLowerCase()}-${Date.now()}`, name: `Level ${bossLvl} ${type}`, sprite: 'BOSS_DEFAULT', level: bossLvl, health: health, maxHealth: health, attack: attack, defense: defense, abilities: [{ id: 'power-attack', name: 'Power Attack', type: 'attack', damageMultiplier: 1.5, cooldown: 2, description: 'A powerful blow.', cooldownRemaining: 0 }, { id: 'reinforce', name: 'Reinforce', type: 'buff', effect: { type: 'defense', value: 5, duration: 3 }, cooldown: 4, description: 'Increases defense.', cooldownRemaining: 0 }], isBoss: true, description: `A formidable default boss of level ${bossLvl}.`, lootTable: { gold: { min: bossLvl * 20, max: bossLvl * 40 }, experience: { min: bossLvl * 30, max: bossLvl * 60 }, items: [{ id: "rare_gem", chance: 0.3 }, { id: "epic_material", chance: 0.1 }] }, statusEffects: [], currentAttack: attack, currentDefense: defense };
 }
+/** DEPRECATED / MODIFIED USAGE
+ * Get enemies appropriate for a dungeon level - This function's logic is now mostly in EnemyGenerator
+ * It might still be useful for getting a *list* of possible enemy types for a dungeon,
+ * but the level selection happens differently now.
+ * We'll keep it but note its limited use for the new system.
+ * @param {string} dungeonId - The ID of the dungeon (e.g., 'verdant-woods', 'crystal-caverns')
+ * @returns {array} - Array of possible enemy TYPE IDs for the dungeon
+ */
+function getPossibleDungeonEnemyTypes(dungeonId) {
+    // This should now ideally read from DungeonConfig.js
+    const dungeonConfig = getDungeonData(dungeonId); // Assuming getDungeonData is imported
+    if (dungeonConfig && dungeonConfig.enemyTypes) {
+        return dungeonConfig.enemyTypes;
+    }
 
+    // Fallback based on old logic (less ideal)
+    console.warn(`Using fallback enemy type determination for dungeon ${dungeonId}`);
+    switch (dungeonId) {
+        case 'verdant-woods':
+            return ['forest-goblin', 'mushroom-creature', 'wild-boar', 'wolf', 'forest-spider', 'forest-bandit', 'thorn-lurker', 'owlbear-cub', 'briar-sprite', 'entling', 'horned-stag', 'feral-druid', 'witch-hare', 'moss-troll', 'forest-wyrmling'];
+        case 'crystal-caverns':
+            return ['cave-bat', 'miner-ghost', 'crystal-golem'];
+        default:
+            console.warn(`Unknown dungeon ID: ${dungeonId}. Returning default enemies.`);
+            // Return IDs of some basic default enemies if defined
+            return ['forest-goblin', 'wolf'];
+    }
+}
 /** Apply a status effect */
 function applyStatusEffect(target, statusEffect, chanceOverride) {
     if (!target?.statusEffects) { console.error("Invalid target for applyStatusEffect"); return false; }
@@ -661,5 +701,8 @@ function applyStatusEffect(target, statusEffect, chanceOverride) {
 // --- EXPORTS ---
 export {
     enemyData, abilityDefinitions, getEnemyData, getAbilityData, generateEnemy,
-    getDungeonEnemies, generateLoot, getDungeonBoss, applyStatusEffect
+    getPossibleDungeonEnemyTypes, // Export the modified helper
+    getEnemyIdsByLevel, // Export the new helper
+    generateLoot, getDungeonBoss, applyStatusEffect
+    // REMOVED getDungeonEnemies from export as its core logic moved
 };

@@ -1,3 +1,4 @@
+import BaseScene from './BaseScene.js';
 import UIManager from '../ui/UIManager.js';
 import Button from '../ui/components/Button.js';
 import gameState from '../gameState.js';
@@ -5,14 +6,17 @@ import navigationManager from '../navigation/NavigationManager.js';
 import TransitionManager from '../ui/TransitionManager.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
 import items from '../data/items.js';
+import CharacterManager from '../utils/CharacterManager.js';
+import { getDungeonData } from '../data/DungeonConfig.js';
+
 const { getItemData } = items;
 
 /**
  * CombatResultScene - Scene that shows the results of combat encounters
  */
-class CombatResultScene extends Phaser.Scene {
+class CombatResultScene extends BaseScene {
     constructor() {
-        super({ key: 'CombatResultScene' });
+        super({ key: 'CombatResultScene' }); // Pass config to BaseScene constructor
     }
 
     init(data) {
@@ -73,47 +77,50 @@ class CombatResultScene extends Phaser.Scene {
 
     create() {
         console.log("CombatResultScene Create Start");
-        
-        // Get screen dimensions
+
+        // --- Call initializeScene from BaseScene ---
+        // This initializes this.ui, this.transitions, etc.
+        this.initializeScene();
+
+        // Get screen dimensions after initialization
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
-        // Create UI Manager first
-        this.ui = new UIManager(this);
-
-        // Create Transition Manager
-        this.transitions = new TransitionManager(this);
-
-        // Add background
-        this.add.image(width/2, height/2, 'combat-result-bg').setDisplaySize(width, height);
-
-        // Ensure we have valid combat result data
-        if (!this.combatResult) {
-            console.error("No combat result data found!");
-            // Show error message instead of crashing
-            this.ui.createTitle(width/2, height/2, 'Error: Combat data not found', {
-                fontSize: 32,
-                color: '#ff0000'
+        // --- Background ---
+        // Safely add background using BaseScene's helper if available, or standard add
+        if (typeof this.safeAddImage === 'function') {
+            this.safeAddImage(width/2, height/2, 'combat-result-bg', {
+                displayWidth: width,
+                displayHeight: height
             });
-
-            // Add continue button that returns to dungeon
-            this.ui.createButton({
-                x: width/2,
-                y: height * 0.8,
-                width: 200,
-                text: 'Continue',
-                onClick: () => {
-                    this.transitions.fade(() => {
-                        navigationManager.navigateTo(this, 'DungeonScene', { fromCombat: true });
-                    });
-                }
-            });
-            return;
+        } else {
+            this.add.image(width/2, height/2, 'combat-result-bg').setDisplaySize(width, height);
         }
-        
+
+
+        // --- Validate Combat Result Data ---
+        // Ensure we have valid combat result data from init()
+        if (!this.combatResult) {
+            console.error("CombatResultScene Create: No combat result data found! Cannot proceed.");
+            // Show error message instead of crashing
+            if (this.ui) { // Check if UI manager is available
+                this.ui.createTitle(width/2, height/2, 'Error: Combat data missing', {
+                    fontSize: this.ui.fontSize.md || 24, // Use UIManager size or default
+                    color: '#ff0000'
+                });
+                // Add a simple back button as a fallback
+                this.ui.createButton(
+                    width/2, height * 0.8, 'Return',
+                    () => navigationManager.navigateTo(this, 'OverworldScene'),
+                    { width: 150, height: 40 }
+                );
+            }
+            return; // Stop creation if data is missing
+        }
+
         console.log("Combat Result Data:", this.combatResult);
 
-        // Create the title based on outcome
+        // --- Create Title based on Outcome ---
         let titleText = 'Victory!';
         let titleColor = '#ffff00'; // Yellow for victory
         if (this.combatResult.outcome === 'retreat') {
@@ -124,31 +131,53 @@ class CombatResultScene extends Phaser.Scene {
             titleColor = '#ff0000'; // Red for defeat
         }
 
-        this.ui.createTitle(width/2, height * 0.1, titleText, {
-            fontSize: this.ui.fontSize.lg,
-            color: titleColor
-        });
-
-        // Create the results display
-        this.createResultsDisplay();
-
-        // Create the loot display if there is loot and not a defeat
-        if (this.combatResult.loot && this.combatResult.outcome !== 'defeat') { // Show loot on victory or retreat (if applicable)
-            this.createLootDisplay();
-        } else if (this.combatResult.outcome === 'victory' || this.combatResult.outcome === 'retreat') {
-            // Show "No items found" if victory/retreat but no loot array
-            this.createLootDisplay(); // Call it to show the "No items found" message
+        // Create the title using the initialized UI manager
+        if (this.ui) {
+            this.ui.createTitle(width/2, height * 0.1, titleText, {
+                fontSize: this.ui.fontSize.lg, // Use UIManager size
+                color: titleColor
+            });
+        } else {
+            console.error("UIManager not initialized, cannot create title!");
         }
 
-        // Create navigation buttons
+        // --- Create the Results Display (XP, Gold, etc.) ---
+        // This function also calls updatePlayerStats internally
+        this.createResultsDisplay();
+
+        // --- Create the Loot Display ---
+        // Show loot on victory or retreat (if applicable), or "No items found" message
+        if (this.combatResult.outcome !== 'defeat') {
+            this.createLootDisplay();
+        }
+
+        // --- Create Navigation Buttons ---
         this.createNavigationButtons();
+
         console.log("CombatResultScene Create End");
     }
 
     continueExploring() {
         console.log("CombatResultScene: Continue Exploring selected.");
+
+        // --- >>> INCREMENT DUNGEON LEVEL ON VICTORY <<< ---
+        if (this.combatResult?.outcome === 'victory' && gameState.currentDungeon) {
+            gameState.currentDungeon.level += 1;
+            console.log(`Advanced to Dungeon Level: ${gameState.currentDungeon.level}`);
+            // Optional: Check if max level reached, trigger boss, etc.
+            const dungeonConfig = getDungeonData(gameState.currentDungeon.id);
+            if (dungeonConfig && gameState.currentDungeon.level > dungeonConfig.maxLevel) {
+                console.log("Max dungeon level reached!");
+                // Handle reaching the end - maybe force Overworld or trigger final boss?
+                // For now, let's just cap it or log it.
+                // gameState.currentDungeon.level = dungeonConfig.maxLevel;
+            }
+        }
+        // --- <<< END LEVEL INCREMENT >>> ---
+
         this.transitions.fade(() => {
-            navigationManager.navigateTo(this, 'DungeonScene', { fromCombat: true });
+            // Pass updated dungeon state if needed, though it's in gameState
+            navigationManager.navigateTo(this, 'DungeonScene', { fromCombat: true /*, updatedDungeon: gameState.currentDungeon */ });
         });
     }
 
@@ -361,7 +390,17 @@ class CombatResultScene extends Phaser.Scene {
         if (gameState.player.experience >= gameState.player.experienceToNextLevel) {
             this.handleLevelUp();
         }
-
+// Check for player level up AFTER adding experience
+if (gameState.player && gameState.player.experience >= gameState.player.experienceToNextLevel) {
+    // Call CharacterManager to handle the level up logic consistently
+    if (typeof CharacterManager !== 'undefined' && CharacterManager.applyLevelUp) {
+        CharacterManager.applyLevelUp(gameState.player);
+        this.displayLevelUpMessage(); // Separate UI display logic
+    } else {
+         console.warn("CharacterManager or applyLevelUp not available. Level up stats not applied.");
+         // Fallback basic level up if needed, but ideally use CharacterManager
+    }
+}
         // Add items to inventory
         const lootItemsArray = combatResult.loot || [];
         if (lootItemsArray.length > 0) {
@@ -449,11 +488,40 @@ class CombatResultScene extends Phaser.Scene {
             });
         }
     }
-
+    
+    displayLevelUpMessage() {
+        if (!this.ui) { // Add safety check just in case
+            console.error("UIManager (this.ui) not available in displayLevelUpMessage!");
+            return;
+        }
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        const levelText = this.ui.createTitle(width/2, height * 0.38,
+            `LEVEL UP! You are now level ${gameState.player.level}`, {
+            fontSize: this.ui.fontSize.sm, color: '#ffff00',
+        });
+        // Animate the level up text
+        this.tweens.add({
+             targets: levelText,
+             alpha: { from: 0, to: 1 },
+             y: height * 0.35,
+             scale: { from: 0.5, to: 1.1 },
+             duration: 800,
+             ease: 'Bounce.easeOut',
+             onComplete: () => {
+                 this.tweens.add({
+                     targets: levelText, alpha: 0, delay: 1500, duration: 500,
+                     onComplete: () => { if (levelText.active) levelText.destroy(); } // Check active
+                 });
+             }
+         });
+    }
     /**
      * Handle player level up mechanics
      */
     handleLevelUp() {
+        console.log("handleLevelUp called - UI display responsibility moved.");
+/*
         // NOTE: This assumes a simple level-up mechanic. Adjust as needed.
         // Consider moving complex level-up logic to CharacterManager.js
         if (!gameState.player) return;
@@ -511,6 +579,7 @@ class CombatResultScene extends Phaser.Scene {
             // Optionally play level up sound
             // this.sound.play('level-up-sound');
         }
+        */
     }
 
     /**
@@ -541,6 +610,7 @@ class CombatResultScene extends Phaser.Scene {
                 buttonY,
                 'Continue', // Changed label for clarity
                 () => {
+                    this.continueExploring();
                     console.log("CombatResultScene: Continue Exploring selected.");
                     // Ensure we have dungeon state before returning
                     if (!gameState.currentDungeon) {

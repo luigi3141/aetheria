@@ -162,14 +162,15 @@ class DungeonSelectScene extends BaseScene {
                     gameState.currentDungeon = {
                         id: dungeonData.id,
                         name: dungeonData.name,
-                        level: 1, // Starting level
-                        minRooms: dungeonData.minRooms,
-                        maxRooms: dungeonData.maxRooms,
+                        level: 1, // <<< START AT LEVEL 1
+                        minRooms: dungeonData.minRooms, // Keep these if your design uses them
+                        maxRooms: dungeonData.maxRooms, // Keep these if your design uses them
                         backgroundKey: dungeonData.backgroundKey,
                         minLevel: dungeonData.minLevel,
-                        maxLevel: dungeonData.maxLevel,
-                        enemies: dungeonData.enemyTypes,
-                        bosses: dungeonData.bossTypes
+                        maxLevel: dungeonData.maxLevel, // Add max level if defined in config
+                        enemyTypes: dungeonData.enemyTypes, // Get enemy types from config
+                        bossTypes: dungeonData.bossTypes, // Get boss types from config
+                        // Add any other relevant dungeon properties from config
                     };
                     console.log('Set gameState.currentDungeon to:', gameState.currentDungeon);
                     

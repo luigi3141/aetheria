@@ -9,43 +9,77 @@ import { generateCombatEncounter } from '../encounter/EnemyGenerator.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
 import { calculateDifficulty } from '../utils/DifficultyManager.js';
 import gameState from '../gameState.js';
+import navigationManager from '../navigation/NavigationManager.js';
+import { generateLoot } from '../data/enemies.js';
+
+import items from '../data/items.js'; // Import the entire default export object
+const { getItemData } = items; // Destructure getItemData from the imported object
 
 export default class EncounterScene extends BaseScene {
     constructor() {
         super({ key: 'EncounterScene' });
-        this.isBoss = false;
-        this.dungeonLevel = 1;
     }
 
     init(data) {
-        this.dungeonLevel = data.dungeonLevel || 1;
-        this.playerData = data.playerData || this.registry.get('playerData') || {
-            health: 100,
-            maxHealth: 100,
-            mana: 50,
-            maxMana: 50,
-            level: 1,
-            attack: 10,
-            defense: 5,
-            speed: 5,
-            critical: 5
-        };
+        // NOTE: EncounterScene doesn't receive data directly via navigateTo typically.
+        // It relies on gameState.combatData being set *before* navigating to it.
+        console.log("EncounterScene init. Reading from gameState.combatData:", gameState.combatData);
+
+        if (!gameState.combatData || !gameState.combatData.dungeon) {
+            console.error("CRITICAL: gameState.combatData or combatData.dungeon not set before entering EncounterScene!");
+            // Navigate back safely if data is missing
+            navigationManager.navigateTo(this, 'OverworldScene'); // Or DungeonScene?
+            // Prevent further execution in this scene
+            this.scene.pause(); // Or stop() if appropriate
+        }
     }
 
     preload() {
-        this.load.image('combat-background', 'assets/sprites/backgrounds/combat-bg.png');
+        // Use combatData from gameState set in the previous scene (DungeonScene)
+        const combatData = gameState.combatData;
+        if (!combatData) {
+            console.error("Cannot preload enemies: gameState.combatData is missing.");
+            return; // Avoid errors if data is missing
+        }
 
-        const dungeon = gameState.combatData?.dungeon || { id: 'verdant-woods', level: 1 };
-        const isBoss = gameState.combatData?.isBoss || false;
+        const dungeon = combatData.dungeon; // Includes current level
+        const isBoss = combatData.isBoss || false;
+
+        // --- Generate enemies based on gameState ---
+        // Note: generateCombatEncounter now uses dungeon.level internally
         const enemies = generateCombatEncounter(dungeon, isBoss);
+        if (!enemies || enemies.length === 0) {
+             console.error("EnemyGenerator failed to produce enemies!");
+             // Handle error - maybe force retreat or show error message?
+             // For now, store empty array to potentially handle in create()
+             this.enemiesToPreload = [];
+             return;
+        }
+        this.enemiesToPreload = enemies; // Store for use in create()
+        // --- ---
 
-        enemies.forEach(enemy => {
+        // Preload background based on dungeon config
+        const bgKey = dungeon.backgroundKey || 'combat-bg'; // Fallback key
+        const bgPath = ASSET_PATHS.BACKGROUNDS[dungeon.backgroundKey?.toUpperCase().replace('-BG', '')] || ASSET_PATHS.BACKGROUNDS.COMBAT;
+        if (!this.textures.exists(bgKey)) {
+            this.load.image(bgKey, bgPath);
+        }
+        this.backgroundKeyToUse = bgKey; // Store key for create()
+
+
+        // Preload enemy sprites
+        this.enemiesToPreload.forEach(enemy => {
             if (enemy.sprite && !this.textures.exists(enemy.sprite)) {
+                // Use the key directly from enemy data (assuming it matches ASSET_PATHS keys)
                 const spritePath = ASSET_PATHS.ENEMIES[enemy.sprite.toUpperCase()];
                 if (spritePath) {
                     this.load.image(enemy.sprite, spritePath);
                 } else {
-                    console.warn(`No sprite path found for sprite key: ${enemy.sprite}`);
+                    console.warn(`No sprite path found in ASSET_PATHS.ENEMIES for key: ${enemy.sprite}`);
+                    // Optionally load a fallback sprite
+                    if (!this.textures.exists('DEFAULT_ENEMY')) {
+                         this.load.image('DEFAULT_ENEMY', ASSET_PATHS.ENEMIES.DEFAULT);
+                    }
                 }
             }
         });
@@ -61,179 +95,149 @@ export default class EncounterScene extends BaseScene {
         this.enemiesToPreload = enemies;
     }
 
-    create(data) {
+    create(data) { // data argument might be empty here
         this.initializeScene();
 
+        // Check if preloading failed to generate enemies
+        if (!this.enemiesToPreload || this.enemiesToPreload.length === 0) {
+            console.error("EncounterScene Create: No enemies were preloaded or generated. Returning to previous scene.");
+             // Attempt to navigate back cleanly
+             const prevScene = gameState.previousScene || 'DungeonScene'; // Default back to Dungeon
+             navigationManager.navigateTo(this, prevScene);
+             return; // Stop further execution
+        }
+
+        // Assign enemies from preload step
+        this.enemies = this.enemiesToPreload;
+
+        // --- Rest of create method remains largely the same ---
         this.combatEngine = new CombatEngine(this);
+        // ... initialize other managers (UI, Log, Audio, Text, Sprite) ...
         this.combatUI = new CombatUI(this);
         this.combatLog = new CombatLog(this);
         this.combatAudio = new CombatAudio(this);
         this.combatText = new CombatText(this);
         this.spriteManager = new SpriteManager(this);
         this.spriteManager.playerSpriteKey = this.playerSpriteKey;
-      
-        this.add.image(0, 0, 'combat-background')
+
+        // Add background using the key determined in preload
+        this.add.image(0, 0, this.backgroundKeyToUse || 'combat-bg')
             .setOrigin(0)
             .setDisplaySize(this.cameras.main.width, this.cameras.main.height);
 
-        const dungeon = gameState.combatData?.dungeon || { id: 'verdant-woods', level: 1 };
-        this.isBoss = gameState.combatData?.isBoss || false;
-        this.enemies = this.enemiesToPreload || generateCombatEncounter(dungeon, this.isBoss);
-
-        if (!gameState.combatData) {
-            gameState.combatData = {};
-        }
+        // Store enemies in gameState AFTER generation and assignment
         gameState.combatData.enemies = this.enemies;
 
+        // --- Calculate difficulty based on generated enemies ---
         const enemy = this.enemies[0];
         const playerLevel = gameState.player?.level || 1;
         const { label: difficulty, color: difficultyColor } = calculateDifficulty(this.enemies, playerLevel);
 
+        // --- Encounter Message setup ---
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
-        
-        // Initialize combat log first
-        this.combatLog.createCombatLog();
-        
-        const messageContainer = this.add.container(0, 0);
+        this.combatLog.createCombatLog(); // Create log UI FIRST
 
+        const messageContainer = this.add.container(0, 0);
         const dimBg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.6);
         const box = this.add.rectangle(width / 2, height / 2, width * 0.6, height * 0.3, 0x222222, 0.9)
             .setStrokeStyle(2, 0xffffff);
-        const message = this.add.text(
-            width / 2,
-            height / 2 - 20,
-            `You've encountered a ${enemy.name}!`,
-            {
-                fontFamily: "'VT323'",
-                fontSize: '24px',
-                fill: '#ffffff',
-                align: 'center'
-            }
-        ).setOrigin(0.5);
-        const diffText = this.add.text(
-            width / 2,
-            height / 2 + 20,
-            `Difficulty: ${difficulty}`,
-            {
-                fontFamily: "'VT323'",
-                fontSize: '20px',
-                fill: difficultyColor,
-                align: 'center'
-            }
-        ).setOrigin(0.5);
-
+        const messageText = `Encountered ${enemy.name}!`; // Simplified message
+        const message = this.add.text(width / 2, height / 2 - 20, messageText, { /* styles */ }).setOrigin(0.5);
+        const diffText = this.add.text(width / 2, height / 2 + 20, `Difficulty: ${difficulty}`, { /* styles */ fill: difficultyColor }).setOrigin(0.5);
         messageContainer.add([dimBg, box, message, diffText]);
-        this.combatLog.addLogEntry(`You've encountered a ${enemy.name}!`);
-        this.combatLog.addLogEntry(`Difficulty: ${difficulty}`, false, difficultyColor);
 
+        // Add messages to the actual log
+        this.combatLog.addEncounterMessage(enemy, difficulty, difficultyColor);
+
+        // --- Start Combat After Delay ---
         this.time.delayedCall(1500, () => {
             messageContainer.destroy();
-            this.combatEngine.setEnemies(this.enemies);
-            this.combatUI.createCombatUI();
-            
-            // Create player and enemy sprites
+            this.combatEngine.setEnemies(this.enemies); // Set enemies in engine
+            this.combatUI.createCombatUI(); // Create main UI elements
+
+            // Create sprites
             this.spriteManager.createPlayerSprite();
-            this.spriteManager.createEnemyDisplay(this.enemies[0]);
-            
-            // Create enemy health bar using CombatUI instead of SpriteManager
-            this.combatUI.createEnemyHealthBar(this.enemies[0]);
-            
-            this.combatEngine.startCombat();
+            this.spriteManager.createEnemyDisplay(enemy); // Pass the actual enemy object
+
+            // Use CombatUI to create enemy health bar
+            this.combatUI.createEnemyHealthBar(enemy);
+
+            this.combatEngine.startCombat(); // Start the engine logic
             this.combatAudio.playBattleMusic();
         });
-
-        this.input.keyboard.on('keydown-F2', () => {
-            this.ui.toggleDebug();
-        });
-        
-        if (this.ui.debug?.fpsText) {
-            this.time.addEvent({
-                delay: 1000,
-                callback: () => {
-                    this.ui.debug.fpsText.setText(`FPS: ${Math.floor(this.game.loop.actualFps)}`);
-                },
-                loop: true
-            });
-        }
     }
 
     update(time, delta) {}
 
     processVictory() {
-        const enemy = this.enemies[0];
-        let experienceReward = 10; // Default experience
-        let goldReward = Math.floor(Math.random() * 10) + 5; // Default gold
+        const enemy = this.enemies[0]; // Assuming single enemy for now
+        let experienceReward = 0;
+        let goldReward = 0;
+        let lootItems = [];
 
-        if (enemy.lootTable) {
-            if (enemy.lootTable.experience) {
-                experienceReward = Math.floor(Math.random() * (enemy.lootTable.experience.max - enemy.lootTable.experience.min + 1)) + enemy.lootTable.experience.min;
-            }
-            if (enemy.lootTable.gold) {
-                goldReward = Math.floor(Math.random() * (enemy.lootTable.gold.max - enemy.lootTable.gold.min + 1)) + enemy.lootTable.gold.min;
-            }
-        }
+        // Use generateLoot helper from enemies.js
+        const lootResult = generateLoot(this.enemies); // Pass the array of defeated enemies
+        experienceReward = lootResult.experience;
+        goldReward = lootResult.gold;
+        lootItems = lootResult.items; // Array of item IDs
 
-        if (gameState.player) {
-            gameState.player.experience = (gameState.player.experience || 0) + experienceReward;
-            gameState.player.gold = (gameState.player.gold || 0) + goldReward;
+        this.combatLog.addLogEntry(`You gained ${experienceReward} XP and ${goldReward} Gold.`);
+        lootItems.forEach(itemId => {
+             const itemData = getItemData(itemId); // Get data for logging name
+             if (itemData) {
+                  this.combatLog.addLogEntry(`You found: ${itemData.inGameName}!`);
+             } else {
+                  this.combatLog.addLogEntry(`You found an unknown item (${itemId})!`); // Fallback
+             }
+        });
 
-            this.combatLog.addLogEntry(`You gained ${experienceReward} experience and ${goldReward} gold!`);
+        // Set combat result in gameState BEFORE navigating
+        gameState.combatResult = {
+            outcome: 'victory',
+            enemyName: enemy?.name || 'Enemy', // Handle potential undefined enemy
+            experienceGained: experienceReward,
+            goldGained: goldReward,
+            loot: lootItems // Pass the array of item IDs
+        };
 
-            let lootItems = [];
-            if (enemy.lootTable && enemy.lootTable.items && enemy.lootTable.items.length > 0) {
-                enemy.lootTable.items.forEach(lootItem => {
-                    if (Math.random() <= lootItem.chance) {
-                        // Ensure inventory exists
-                        if (!gameState.player.inventory) gameState.player.inventory = { items: [], maxItems: 20, equipped: {} };
-                        if (!gameState.player.inventory.items) gameState.player.inventory.items = [];
-                        
-                        // Add item ID to loot list and log
-                        lootItems.push(lootItem.id);
-                        this.combatLog.addLogEntry(`You found a ${lootItem.id}!`);
-                    }
-                });
-            }
-
-            gameState.combatResult = {
-                outcome: 'victory',
-                enemyName: enemy.name,
-                experienceGained: experienceReward,
-                goldGained: goldReward,
-                loot: lootItems
-            };
-        }
-
+        // Navigate to CombatResultScene
         this.time.delayedCall(1500, () => {
-            this.scene.start('CombatResultScene');
+             // Check scene validity before starting next one
+             if (this.scene.isActive()) {
+                 navigationManager.navigateTo(this, 'CombatResultScene');
+             }
         });
     }
 
     processDefeat() {
-        this.scene.start('DefeatScene');
-    }
-
-    handleDefeat() {
-        this.combatLog.addLogEntry('You have been defeated!');
+        // Set combat result in gameState
         gameState.combatResult = { outcome: 'defeat' };
-        this.time.delayedCall(1500, () => {
-            this.processDefeat();
+        // Navigate to DefeatScene
+         this.time.delayedCall(1500, () => {
+             if (this.scene.isActive()) {
+                 navigationManager.navigateTo(this, 'DefeatScene');
+             }
         });
     }
 
     handleRetreat() {
         this.combatLog.addLogEntry('You retreat from battle!');
+        // Set combat result in gameState
         gameState.combatResult = { outcome: 'retreat' };
-        this.scene.start('DefeatScene', { retreated: true });
+        // Navigate to Overworld directly on retreat? Or a specific retreat summary?
+        // Let's go to Overworld for now.
+         this.time.delayedCall(1000, () => {
+             if (this.scene.isActive()) {
+                  navigationManager.navigateTo(this, 'OverworldScene');
+             }
+        });
     }
-    
-    /**
-     * Update the enemy's health display
-     * @param {object} enemy - The enemy to update
-     */
+
     updateEnemyHealth(enemy) {
-        if (enemy && this.combatUI) {
-            this.combatUI.updateEnemyHealthBar(enemy);
-        }
-    }
+       if (enemy && this.combatUI) {
+           this.combatUI.updateEnemyHealthBar(enemy);
+       }
+   }
+
 }

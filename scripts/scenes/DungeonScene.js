@@ -126,57 +126,76 @@ class DungeonScene extends BaseScene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
-        this.ui = new UIManager(this);
-        this.transitions = new TransitionManager(this);
+        // Ensure this.ui exists (should be handled by initializeScene)
+        if (!this.ui) {
+            console.error("UIManager not initialized in DungeonScene!");
+            return;
+        }
+
+        this.transitions = new TransitionManager(this); // Ensure transitions are initialized
 
         const dungeon = gameState.currentDungeon;
-        this.ui.createTitle(width / 2, height * 0.06, dungeon.name, {
+        if (!dungeon) {
+            console.error("No current dungeon data found in gameState!");
+            // Handle error - maybe navigate back?
+            navigationManager.navigateTo(this, 'OverworldScene');
+            return;
+        }
+
+        // --- MODIFICATION: Display current dungeon level in title ---
+        this.ui.createTitle(width / 2, height * 0.06, `${dungeon.name} - Level ${dungeon.level}`, {
             fontSize: this.ui.fontSize.lg
         });
+        // --- END MODIFICATION ---
 
         const player = gameState.player;
-        this.ui.createTitle(
-            width * 0.5,
-            height * 0.3,
-            `${player.name || 'Adventurer'}\nHP: ${player.health}/${player.maxHealth}\nMP: ${player.mana}/${player.maxMana}`,
-            { 
-                fontSize: this.ui.fontSize.sm,
-                padding: this.ui.spacing.md,
-                lineSpacing: 10
-            }
-        );
+        // --- Consider updating player stats display here too if needed ---
+         const playerInfoText = this.ui.createText(
+             width * 0.5, // Centered maybe?
+             height * 0.3,
+             `${player.name || 'Adventurer'} | Lvl ${player.level}\n` +
+             `HP: ${player.health}/${player.maxHealth}\n` +
+             `MP: ${player.mana}/${player.maxMana}`,
+             {
+                 fontSize: this.ui.fontSize.sm,
+                 color: '#ffffff',
+                 align: 'center', // Center align
+                 lineSpacing: 8,
+                 backgroundColor: '#000000cc', // Add slight background
+                 padding: {x: 10, y: 5}
+             }
+         ).setOrigin(0.5); // Center the text block
     }
 
     createEncounterButton() {
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
+        // ... (existing logic) ...
+        const width = this.cameras.main.width; // <<< ADD THIS
+        const height = this.cameras.main.height; // <<< ADD THIS
         const buttonY = height * 0.9;
-        const buttonSpacing = width * 0.2;
-
-        new Button(
-            this,
-            width * 0.5,
-            buttonY,
-            'ADVANCE',
-            () => {
-                this.transitions.fade(() => {
-                    navigationManager.navigateTo(this, 'EncounterScene');
-                });
-            },
-            {
-                width: 160,
-                height: 50,
-                fillColor: 0x00cc00,
-                hoverColor: 0x009900
-            }
-        );
+         new Button(
+             this, width * 0.5, buttonY, 'ADVANCE',
+             () => {
+                 this.transitions.fade(() => {
+                     // --- Pass current dungeon state to EncounterScene ---
+                     // EncounterScene will use dungeon.level to generate enemies
+                     gameState.combatData = {
+                         dungeon: { ...gameState.currentDungeon }, // Pass a copy
+                         isBoss: false // Determine if it should be a boss fight here
+                         // Potentially add boss logic: e.g., if dungeon.level % 5 === 0
+                     };
+                     navigationManager.navigateTo(this, 'EncounterScene');
+                 });
+             },
+             { /* options */ }
+         );
     }
+
 
     createReturnButton() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         const buttonY = height * 0.9;
-        const buttonSpacing = width * 0.2;
+       // const buttonSpacing = width * 0.2;
 
         new Button(
             this,
@@ -201,7 +220,7 @@ class DungeonScene extends BaseScene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         const buttonY = height * 0.9;
-        const buttonSpacing = width * 0.2;
+       // const buttonSpacing = width * 0.2;
 
         new Button(
             this,
