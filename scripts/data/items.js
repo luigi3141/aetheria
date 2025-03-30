@@ -240,13 +240,50 @@ function getItemsByTier(tier) {
  * @param {string} itemId - The backend ID of the item (e.g., 'goblin-leather', 'rusted-shortsword')
  * @returns {object|null} - The item data object or null if not found
  */
-function getItemData(itemId) {
-    const item = itemDatabase[itemId];
-    if (!item) {
-        console.warn(`Item data not found for ID: ${itemId}`);
+function getItemData(identifier) { // Parameter is named 'identifier'
+    let itemEntry = null;
+    // Use the parameter 'identifier' correctly
+    const searchIdStr = String(identifier); 
+
+    console.log(`[getItemData] Called with identifier: ${identifier} (Type: ${typeof identifier})`);
+
+    // 1. Try direct key lookup (assuming identifier is itemName string)
+    // Use the parameter 'identifier' correctly
+    if (typeof identifier === 'string') {
+        console.log(`[getItemData] Attempting direct key lookup for: '${identifier}'`);
+        // Use the parameter 'identifier' correctly
+        if (itemDatabase.hasOwnProperty(identifier)) {
+            // Use the parameter 'identifier' correctly
+            itemEntry = itemDatabase[identifier];
+            console.log(`[getItemData] SUCCESS: Found item by direct key: '${identifier}'`);
+        } else {
+            // Use the parameter 'identifier' correctly
+            console.log(`[getItemData] FAILED: Direct key lookup failed for: '${identifier}'.`);
+        }
+    }
+
+    // 2. If not found by key, try searching by itemId property
+    if (!itemEntry) {
+         console.log(`[getItemData] Attempting search by itemId property for: '${searchIdStr}'`);
+         // Search through the database values
+         itemEntry = Object.values(itemDatabase).find(item => String(item.itemId) === searchIdStr);
+         if (itemEntry) {
+            console.log(`[getItemData] SUCCESS: Found item by itemId property: '${searchIdStr}' (ItemName: ${itemEntry.itemName})`);
+         } else {
+             console.log(`[getItemData] FAILED: Search by itemId property failed for: '${searchIdStr}'`);
+         }
+    }
+
+    if (!itemEntry) {
+        // Use the parameter 'identifier' correctly
+        console.warn(`[getItemData] FINAL RESULT: Item data not found for identifier: ${identifier}`);
         return null;
     }
-    return JSON.parse(JSON.stringify(item));
+
+    // Return a deep copy
+    // Use the parameter 'identifier' correctly
+    console.log(`[getItemData] FINAL RESULT: Returning data for identifier: ${identifier}`);
+    return JSON.parse(JSON.stringify(itemEntry));
 }
 
 export default {

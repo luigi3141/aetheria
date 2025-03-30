@@ -120,7 +120,44 @@ class CraftingScene extends BaseScene {
     }
 
     giveDebugMaterials() {
-        if (!gameState.player.inventory) gameState.player.inventory = { items: [], maxItems: 50, equipped: {} }; if (!gameState.player.inventory.items) gameState.player.inventory.items = []; const addDebugItem = (itemId, quantity) => { const itemData = getItemData(itemId); if (!itemData) { return; } const existingItemIndex = gameState.player.inventory.items.findIndex(i => i.itemId === itemId); if (existingItemIndex > -1) { gameState.player.inventory.items[existingItemIndex].quantity += quantity; } else { gameState.player.inventory.items.push({ itemId: itemId, quantity: quantity }); } }; addDebugItem('goblin-teeth', 10); addDebugItem('wolf-claws', 10); addDebugItem('goblin-sinew', 10); addDebugItem('wild-boar-sinew', 10); addDebugItem('mushroom-arms', 10); addDebugItem('wolf-pelt', 10); addDebugItem('spider-fang', 5); addDebugItem('spider-silk', 5); addDebugItem('briar-sprite-branch', 5); addDebugItem('bandit-armour', 5); addDebugItem('crystal-golem-shard', 3); addDebugItem('entling-branch', 3); addDebugItem('miner-straps', 3); addDebugItem('goblin-chief-armour', 3); addDebugItem('witch-hare-sinew', 2); addDebugItem('moss-troll-shard', 2); addDebugItem('forest-wyrmling-fang', 1); gameState.player.gold = (gameState.player.gold || 0) + 5000; this.updateGoldDisplay(); this.showTemporaryFeedback("Debug materials added!", '#aaffaa');
+        if (!gameState.player.inventory) gameState.player.inventory = { items: [], maxItems: 50, equipped: {} };
+        if (!gameState.player.inventory.items) gameState.player.inventory.items = [];
+        const addDebugItem = (itemId, quantity) => {
+            const itemData = getItemData(itemId); // getItemData now expects the numeric ID
+            if (!itemData) {
+                console.warn(`[addDebugItem] Could not find item data for ID: ${itemId}`);
+                return;
+            }
+            const existingItemIndex = gameState.player.inventory.items.findIndex(i => String(i.itemId) === String(itemId)); // Compare as strings for safety
+            if (existingItemIndex > -1) {
+                gameState.player.inventory.items[existingItemIndex].quantity += quantity;
+            } else {
+                gameState.player.inventory.items.push({ itemId: itemId, quantity: quantity });
+            }
+        };
+    
+        // Use NUMERIC IDs here:
+        addDebugItem(20, 10);  // goblin-teeth
+        addDebugItem(46, 10);  // wolf-claws
+        addDebugItem(21, 10);  // goblin-sinew (Corrected from 9->10 for consistency)
+        addDebugItem(42, 10);  // wild-boar-sinew
+        addDebugItem(29, 10);  // mushroom-arms
+        addDebugItem(47, 10);  // wolf-pelt
+        addDebugItem(36, 5);   // spider-fang
+        addDebugItem(37, 5);   // spider-silk
+        addDebugItem(3, 5);    // briar-sprite-branch
+        addDebugItem(1, 5);    // bandit-armour
+        addDebugItem(8, 3);    // crystal-golem-shard
+        addDebugItem(11, 3);   // entling-branch
+        addDebugItem(26, 3);   // miner-straps
+        addDebugItem(17, 3);   // goblin-chief-armour
+        addDebugItem(45, 2);   // witch-hare-sinew
+        addDebugItem(28, 2);   // moss-troll-shard
+        addDebugItem(15, 1);   // forest-wyrmling-fang
+    
+        gameState.player.gold = (gameState.player.gold || 0) + 5000;
+        this.updateGoldDisplay();
+        this.showTemporaryFeedback("Debug materials added!", '#aaffaa');
     }
 
     clearAllUI() {
@@ -404,20 +441,130 @@ class CraftingScene extends BaseScene {
     }
 
     craftItem() {
-       if (!this.craftButton || this.craftButton.disabled) return; if (!this.selectedMaterials.every(m => m !== null)) { this.showTemporaryFeedback("Fill all material slots!"); return; } if ((gameState.player.gold || 0) < CRAFTING_GOLD_COST) { this.showTemporaryFeedback(`Need ${CRAFTING_GOLD_COST} Gold!`); return; }
-       console.log("Attempting to craft..."); let canAffordMaterials = true; const materialsToConsume = {};
-       for (const selected of this.selectedMaterials) { const itemId = selected.itemInstance.itemId; materialsToConsume[itemId] = (materialsToConsume[itemId] || 0) + 1; }
-       for (const itemId in materialsToConsume) { const needed = materialsToConsume[itemId]; const itemInInventory = gameState.player.inventory.items.find(invItem => invItem.itemId === itemId); if (!itemInInventory || itemInInventory.quantity < needed) { canAffordMaterials = false; this.showTemporaryFeedback(`Not enough ${getItemData(itemId)?.inGameName || itemId}!`); break; } }
-       if (!canAffordMaterials) return;
-       const tierSum = this.calculateTierSum(); const craftedRarity = this.determineRarity(tierSum); if (!craftedRarity) { this.showTemporaryFeedback("Crafting Failed!"); return; }
-       const selectedItemKey = this.selectCraftedItemKey(this.currentCategory, craftedRarity);
-       if (!selectedItemKey) { console.error(`[Crafting] FAILED to select item KEY for Category=${this.currentCategory}, Rarity=${craftedRarity}`); this.showTemporaryFeedback("Crafting Failed! (No matching item found)"); return; }
-       const craftedItemData = getItemData(selectedItemKey); if (!craftedItemData) { console.error(`[Crafting] CRITICAL ERROR: getItemData failed for selected KEY ${selectedItemKey}`); this.showTemporaryFeedback("Crafting Failed! (Internal Error)"); return; }
-       this.safePlaySound('anvil-hit'); gameState.player.gold = (gameState.player.gold || 0) - CRAFTING_GOLD_COST; this.updateGoldDisplay();
-       for (const selected of this.selectedMaterials) { const itemId = selected.itemInstance.itemId; const itemIndex = gameState.player.inventory.items.findIndex(invItem => invItem.itemId === itemId); if (itemIndex > -1) { gameState.player.inventory.items[itemIndex].quantity -= 1; if (gameState.player.inventory.items[itemIndex].quantity <= 0) { gameState.player.inventory.items.splice(itemIndex, 1); } } }
-       if (!gameState.player.inventory.items) gameState.player.inventory.items = []; const spaceAvailable = (gameState.player.inventory.maxItems || 20) > gameState.player.inventory.items.length; if (!spaceAvailable) { this.showTemporaryFeedback("Inventory Full!"); this.clearInputState(); this.displayCraftingInput(this.currentCategory); return; }
-       gameState.player.inventory.items.push({ itemId: craftedItemData.itemId, quantity: 1 }); this.showResult(craftedItemData); this.selectedMaterials = [null, null, null];
-   }
+        if (!this.craftButton || this.craftButton.disabled) {
+             console.log("[Craft Check] Craft button disabled or non-existent.");
+             return;
+        }
+        if (!this.selectedMaterials.every(m => m !== null)) {
+             this.showTemporaryFeedback("Fill all material slots!");
+             return;
+        }
+        if ((gameState.player.gold || 0) < CRAFTING_GOLD_COST) {
+             this.showTemporaryFeedback(`Need ${CRAFTING_GOLD_COST} Gold!`);
+             return;
+        }
+ 
+        console.log("Attempting to craft..."); // Line 445
+        let canAffordMaterials = true;
+        const materialsToConsume = {};
+ 
+        // Tally up materials needed from the slots
+        for (const selected of this.selectedMaterials) {
+            if (!selected || !selected.itemInstance) { // Added safety check
+                console.error("[Craft Tally] Invalid item found in selectedMaterials slot!");
+                canAffordMaterials = false;
+                break;
+            }
+            const itemId = selected.itemInstance.itemId;
+            materialsToConsume[itemId] = (materialsToConsume[itemId] || 0) + 1;
+        }
+ 
+        if (!canAffordMaterials) { // Check if tallying failed
+            this.showTemporaryFeedback("Error reading selected materials.");
+            return;
+        }
+ 
+        console.log("[Craft Check] Materials needed:", JSON.stringify(materialsToConsume)); // Log the tally
+ 
+        // Check if player has enough in their ACTUAL inventory
+        for (const itemIdStr in materialsToConsume) { // Use itemIdStr to emphasize it's a key
+            const needed = materialsToConsume[itemIdStr];
+            // Ensure we search using the correct type (string if keys are strings, number if keys are numbers)
+            const searchKey = itemIdStr; // Assuming itemId stored in inventory is consistent now
+ 
+            console.log(`[Craft Check] Checking for ID: ${searchKey}, Needed: ${needed}`); // Log check start
+ 
+            const itemInInventory = gameState.player.inventory.items.find(invItem => String(invItem.itemId) === String(searchKey)); // String comparison
+ 
+            if (!itemInInventory) {
+                console.error(`[Craft Check] FAILED: Item ${searchKey} not found in inventory.`);
+                canAffordMaterials = false;
+                this.showTemporaryFeedback(`Missing ${getItemData(searchKey)?.inGameName || searchKey}!`);
+                break; // Stop checking
+            } else {
+                console.log(`[Craft Check] Found ID: ${searchKey}, Has Quantity: ${itemInInventory.quantity} (Type: ${typeof itemInInventory.quantity})`); // Log found item quantity and type
+                // Explicitly check if quantity is a number and compare
+                if (typeof itemInInventory.quantity !== 'number' || itemInInventory.quantity < needed) {
+                    console.error(`[Craft Check] FAILED: Quantity check failed for ${searchKey}. Has: ${itemInInventory.quantity}, Needed: ${needed}`);
+                    canAffordMaterials = false;
+                    this.showTemporaryFeedback(`Not enough ${getItemData(searchKey)?.inGameName || searchKey}!`);
+                    break; // Stop checking
+                } else {
+                    console.log(`[Craft Check] PASSED: Quantity check for ${searchKey}. Has: ${itemInInventory.quantity}, Needed: ${needed}`);
+                }
+            }
+        }
+        // Log final state of gameState inventory *right before* consumption logic
+        console.log("[Craft Check] Inventory state before consumption:", JSON.parse(JSON.stringify(gameState.player.inventory.items)));
+ 
+ 
+        if (!canAffordMaterials) {
+            console.log("[Craft Check] Material check failed. Aborting craft.");
+            return; // Exit if not enough materials
+        }
+ 
+        // --- If check passes, proceed with crafting ---
+        console.log("[Craft Logic] Material check passed. Proceeding...");
+ 
+        const tierSum = this.calculateTierSum();
+        const craftedRarity = this.determineRarity(tierSum);
+        // ... (rest of your crafting logic: determineRarity, selectCraftedItemKey, consume materials, add item, showResult) ...
+ 
+        // Ensure consumption happens *after* successful checks and item selection
+        console.log("[Craft Logic] Consuming materials...");
+        gameState.player.gold = (gameState.player.gold || 0) - CRAFTING_GOLD_COST; this.updateGoldDisplay(); // Consume gold first
+ 
+        for (const itemIdStr in materialsToConsume) {
+             const consumedCount = materialsToConsume[itemIdStr];
+             const itemIndex = gameState.player.inventory.items.findIndex(invItem => String(invItem.itemId) === String(itemIdStr));
+             if (itemIndex > -1) {
+                 console.log(`[Craft Logic] Consuming ${consumedCount} of ${itemIdStr} (Index: ${itemIndex}). Current Qty: ${gameState.player.inventory.items[itemIndex].quantity}`);
+                 gameState.player.inventory.items[itemIndex].quantity -= consumedCount;
+                 if (gameState.player.inventory.items[itemIndex].quantity <= 0) {
+                     console.log(`[Craft Logic] Removing ${itemIdStr} from inventory as quantity reached zero.`);
+                     gameState.player.inventory.items.splice(itemIndex, 1);
+                 } else {
+                     console.log(`[Craft Logic] New quantity for ${itemIdStr}: ${gameState.player.inventory.items[itemIndex].quantity}`);
+                 }
+             } else {
+                  console.error(`[Craft Logic] CRITICAL ERROR: Could not find item ${itemIdStr} to consume, even though check passed!`);
+             }
+        }
+ 
+        // ... (Generate crafted item, add to inventory, showResult) ...
+        const selectedItemKey = this.selectCraftedItemKey(this.currentCategory, craftedRarity);
+        if (!selectedItemKey) { /* ... error handling ... */ return; }
+        const craftedItemData = getItemData(selectedItemKey);
+        if (!craftedItemData) { /* ... error handling ... */ return; }
+ 
+        // Add to inventory check
+        if (!gameState.player.inventory.items) gameState.player.inventory.items = [];
+        const spaceAvailable = (gameState.player.inventory.maxItems || 20) > gameState.player.inventory.items.length;
+        if (!spaceAvailable) {
+             this.showTemporaryFeedback("Inventory Full!");
+             // Consider refunding materials/gold here if desired?
+             // Refresh UI
+             this.clearInputState();
+             this.displayCraftingInput(this.currentCategory);
+             return;
+        }
+        gameState.player.inventory.items.push({ itemId: craftedItemData.itemId, quantity: 1 });
+        console.log(`[Craft Logic] Added crafted item ${craftedItemData.itemId} to inventory.`);
+ 
+        this.showResult(craftedItemData); // Show success popup
+        this.selectedMaterials = [null, null, null]; // Reset slots for next craft (if needed by showResult flow)
+ 
+    }
 
 
 
