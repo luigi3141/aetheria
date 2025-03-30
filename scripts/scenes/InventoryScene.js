@@ -1,3 +1,5 @@
+// ---- File: InventoryScene.js ----
+
 import UIManager from '../ui/UIManager.js';
 import Button from '../ui/components/Button.js';
 import Panel from '../ui/components/Panel.js';
@@ -17,6 +19,7 @@ class InventoryScene extends BaseScene {
         super({ key: 'InventoryScene' });
         this.currentTab = 'Equipment';
         this.tabButtons = {};
+        // Stores UI elements for each equipment slot { container, iconDisplay, border, label }
         this.equipmentSlots = {};
         this.returnSceneKey = 'OverworldScene';
 
@@ -24,18 +27,19 @@ class InventoryScene extends BaseScene {
         this.equipmentListContainer = null;
         this.materialsListContainer = null;
         this.potionsListContainer = null;
-        this.potionsHpBar = null; // Renamed to avoid conflict if needed
-        this.potionsMpBar = null; // Renamed
-        this.materialsInfoMessage = null; // Reference for the static message
+        this.potionsHpBar = null;
+        this.potionsMpBar = null;
+        this.materialsInfoMessage = null;
 
         // Static content container (created once)
-        this.equipmentSlotsContainer = null;
+        this.equipmentSlotsContainer = null; // The main container holding all slot visuals
+        this.isSwitchingTabs = false; // Flag to prevent issues with rapid tab switching
     }
 
     init(data) {
         this.returnSceneKey = gameState.previousScene || 'OverworldScene';
         console.log(`InventoryScene init - Will return to ${this.returnSceneKey}`);
-        
+
         // Load saved state
         const savedState = window.localStorage.getItem('gameState');
         if (savedState) {
@@ -48,7 +52,7 @@ class InventoryScene extends BaseScene {
                 gameState.player.experienceToNextLevel = parsedState.player.experienceToNextLevel;
             }
         }
-        
+
         // Log inventory state on scene init
         console.log('InventoryScene init - Inventory state:', {
             itemCount: gameState.player.inventory?.items?.length || 0,
@@ -63,24 +67,62 @@ class InventoryScene extends BaseScene {
             this.load.image('inventory-bg', ASSET_PATHS.BACKGROUNDS.INVENTORY);
         }
 
-        // Load equipment slot placeholder icons
-        if (!this.textures.exists('slot-armour')) {
-            this.load.image('slot-armour', ASSET_PATHS.EQUIPMENT_SLOTS.ARMOUR);
+        // --- Load Specific Equipment Slot Placeholders ---
+        // Load the Head image but assign it the texture key 'slot-body' for logical consistency
+        if (!this.textures.exists('slot-body')) {
+            this.load.image('slot-body', ASSET_PATHS.ITEMS.SLOT_HEAD);
         }
+        // Load the Accessory image with the texture key 'slot-accessory'
         if (!this.textures.exists('slot-accessory')) {
-            this.load.image('slot-accessory', ASSET_PATHS.EQUIPMENT_SLOTS.ACCESSORY);
+            this.load.image('slot-accessory', ASSET_PATHS.ITEMS.SLOT_ACCESSORY);
         }
+        // --- End Placeholder Loading ---
 
-        // Load material icons
-        for (const [key, path] of Object.entries(ASSET_PATHS.MATERIALS)) {
-            if (!this.textures.exists(key)) this.load.image(key, path);
-        }
+
+        // --- Load Item Icons ---
+        // This assumes itemDatabase icons refer to keys in ASSET_PATHS.MATERIALS, .ITEMS, .EQUIPMENT etc.
+        // Preload all possible item icons based on categoryIconKeys and itemDatabase definitions
+        const preloadIcon = (iconKey) => {
+            if (iconKey && typeof iconKey === 'string' && !this.textures.exists(iconKey)) {
+                 // Find the path for this icon key in ASSET_PATHS
+                 let path = null;
+                 if (ASSET_PATHS.MATERIALS[iconKey]) path = ASSET_PATHS.MATERIALS[iconKey];
+                 else if (ASSET_PATHS.ITEMS[iconKey]) path = ASSET_PATHS.ITEMS[iconKey];
+                 else if (ASSET_PATHS.EQUIPMENT[iconKey]) path = ASSET_PATHS.EQUIPMENT[iconKey];
+                 // Add more checks if icons are in other categories (e.g., EQUIPMENT_SLOTS if they double as icons)
+
+                 if (path) {
+                     this.load.image(iconKey, path);
+                 } else {
+                      console.warn(`Preload: Icon path not found in ASSET_PATHS for key: ${iconKey}`);
+                 }
+            }
+        };
+
+        // Preload icons defined in categoryIconKeys
+        Object.values(items.categoryIconKeys).forEach(value => {
+             if (typeof value === 'string') preloadIcon(value);
+             else if (typeof value === 'object') {
+                 Object.values(value).forEach(subValue => {
+                     if (typeof subValue === 'string') preloadIcon(subValue);
+                     else if (typeof subValue === 'object') { // Handle nested objects like Potion
+                          Object.values(subValue).forEach(nestedValue => preloadIcon(nestedValue));
+                     }
+                 });
+             }
+        });
+
+        // Preload icons explicitly defined in itemDatabase
+        Object.values(items.itemDatabase).forEach(item => preloadIcon(item.iconKey));
+        // --- End Item Icon Loading ---
+
+
         console.log('InventoryScene Preload End');
     }
 
     create() {
         console.log("InventoryScene Create Start");
-        this.initializeScene();
+        this.initializeScene(); // Sets up this.ui
 
         // Log inventory state at the start of scene creation
         console.log('InventoryScene create - Inventory state:', {
@@ -99,23 +141,22 @@ class InventoryScene extends BaseScene {
         this.createReturnButton();
 
         // --- Create Static Equipment Slots Container ---
-        // This container persists across tab switches
         this.equipmentSlotsContainer = this.add.container(width * 0.75, height * 0.5);
-        this.createEquipmentSlotsDisplay(this.equipmentSlotsContainer);
+        this.createEquipmentSlotsDisplay(this.equipmentSlotsContainer); // Create the visual slots
+        this.updateEquipmentSlotsDisplay(); // Populate with current equipment
         // Initially hide it if the default tab is not Equipment
         this.equipmentSlotsContainer.setVisible(this.currentTab === 'Equipment');
 
-        // Wait for scene to be fully active before displaying the initial tab
-        this.events.once('create', () => {
-            // Display the initial tab (which will create its dynamic content)
-            this.setActiveTab(this.currentTab);
-            console.log("InventoryScene Create End");
-        });
+        // Display the initial tab (which will create its dynamic content)
+        // No need for events.once('create'), create() completes synchronously here
+        this.setActiveTab(this.currentTab);
+        console.log("InventoryScene Create End");
+
     }
 
     // --- Tab Management ---
 
-    createTabs() { /* ... Keep as is ... */
+    createTabs() {
         const width = this.cameras.main.width;
         const tabY = this.cameras.main.height * 0.18;
         const tabs = ['Equipment', 'Materials', 'Potions'];
@@ -189,21 +230,25 @@ class InventoryScene extends BaseScene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
-        // Equipment Slots container is static, just ensure it's visible and updated
+        // Equipment Slots container is static, ensure it's visible and updated
         this.equipmentSlotsContainer?.setVisible(true);
-        this.updateEquipmentSlotsDisplay(); // Update its content
+        this.updateEquipmentSlotsDisplay(); // Refresh content based on gameState
 
         // Create NEW Scrollable Equipment List
         const listWidth = width * 0.4; const listHeight = height * 0.6;
         const listX = width * 0.3; const listY = height * 0.55;
         this.equipmentListContainer = new ScrollableContainer(this, listX, listY, listWidth, listHeight, { padding: 10, backgroundColor: 0x1a1a2e, borderColor: 0x7f7fbf });
-        // NOTE: Do NOT add this container to tabContentGroup anymore, cleanup is manual
 
         const inventory = gameState.player.inventory.items || [];
-        const equipmentItems = inventory.filter(itemInstance => getItemData(itemInstance.itemId)?.equipSlot);
+        // Filter for items that can go in the 'body' or 'accessory' slots
+        const equipmentItems = inventory.filter(itemInstance => {
+             const itemData = getItemData(itemInstance.itemId);
+             return itemData && (itemData.equipSlot === 'body' || itemData.equipSlot === 'accessory');
+        });
+
 
         if (equipmentItems.length === 0) {
-            this.equipmentListContainer.addText('No equipment found.', { fill: '#aaaaaa', fontSize: this.ui.fontSize.sm });
+            this.equipmentListContainer.addText('No equippable items found.', { fill: '#aaaaaa', fontSize: this.ui.fontSize.sm });
         } else {
             let currentY = 0;
             const itemHeight = 40;
@@ -213,7 +258,7 @@ class InventoryScene extends BaseScene {
                 const itemData = getItemData(itemInstance.itemId);
                 if (!itemData) return;
 
-                const itemRow = this.add.container(0, 0);
+                const itemRow = this.add.container(0, 0); // Relative coordinates within scroll container
                 const itemBg = this.add.rectangle(listWidth / 2, itemHeight / 2, listWidth - 20, itemHeight, 0x2a2a3e, 0).setOrigin(0.5);
                 const nameText = this.add.text(10, itemHeight / 2, itemData.inGameName, { fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm, fill: '#ffffff' }).setOrigin(0, 0.5);
                 let statsString = itemData.effects ? Object.entries(itemData.effects).map(([stat, value]) => `${stat.charAt(0).toUpperCase() + stat.slice(1)}: ${value > 0 ? '+' : ''}${value}`).join(', ') : '';
@@ -225,17 +270,25 @@ class InventoryScene extends BaseScene {
                 currentY += itemHeight + 5;
             });
 
-            this.time.delayedCall(10, () => {
-                if (!this || !this.scene?.key || this.scene.key !== 'InventoryScene') return;
-                backgroundsToListen.forEach(item => {
-                    if (item.bg?.active && typeof item.bg.setInteractive === 'function') {
-                         item.bg.setInteractive({ useHandCursor: true });
-                         item.bg.on('pointerover', () => { if (item.bg?.active) item.bg.setFillStyle(0x3a3a4e, 0.7); });
-                         item.bg.on('pointerout', () => { if (item.bg?.active) item.bg.setFillStyle(0x2a2a3e, 0); });
-                         item.bg.on('pointerdown', () => { if (item.bg?.active) { this.safePlaySound('button-click', { volume: 0.3 }); this.equipItem(item.itemId); } });
-                    } else { console.warn("Skipping listener attachment for invalid equip item background."); }
-                });
-            }, [], this);
+            // Add listeners after a short delay to ensure items are rendered
+             this.time.delayedCall(20, () => { // Increased delay slightly
+                 if (!this || !this.scene?.key || this.scene.key !== 'InventoryScene') return; // Scene check
+                 backgroundsToListen.forEach(item => {
+                     // Double check if bg is still valid and part of the scene
+                     if (item.bg && item.bg.scene === this && item.bg.active) {
+                         try {
+                             item.bg.setInteractive({ useHandCursor: true });
+                             item.bg.on('pointerover', () => { if (item.bg?.active) item.bg.setFillStyle(0x3a3a4e, 0.7); });
+                             item.bg.on('pointerout', () => { if (item.bg?.active) item.bg.setFillStyle(0x2a2a3e, 0); });
+                             item.bg.on('pointerdown', () => { if (item.bg?.active) { this.safePlaySound('button-click', { volume: 0.3 }); this.equipItem(item.itemId); } });
+                         } catch (e) {
+                              console.warn(`Error setting interactivity for equip item ${item.itemId}:`, e);
+                         }
+                     } else {
+                         console.warn("Skipping listener attachment for destroyed or invalid equip item background.");
+                     }
+                 });
+             }, [], this);
         }
 
         this.equipmentListContainer.updateMaxScroll();
@@ -243,68 +296,123 @@ class InventoryScene extends BaseScene {
     }
 
     createEquipmentSlotsDisplay(container) {
-        // Create background panel first
-        const panelWidth = 240;
-        const panelHeight = 300;
+        // --- Background Panel for the whole section ---
+        const panelWidth = 240; // Adjust as needed
+        const panelHeight = 250; // Adjusted height for two slots
         const panel = this.add.rectangle(0, 0, panelWidth, panelHeight, 0x111111, 0.6)
             .setStrokeStyle(1, 0x333333);
         container.add(panel);
 
+        // --- Define ONLY the Armour (Body) and Accessory Slots ---
         const slotData = [
-            { key: 'armour', name: 'Armour', x: 0, y: -60 },
-            { key: 'accessory', name: 'Accessory', x: 0, y: 60 }
+             { key: 'body', name: 'Armour', x: 0, y: -60, placeholderTexture: 'slot-body' }, // Use 'slot-body' texture key (head image)
+             { key: 'accessory', name: 'Accessory', x: 0, y: 60, placeholderTexture: 'slot-accessory' }
         ];
 
-        this.equipmentSlots = {};
-        
+        this.equipmentSlots = {}; // Reset object
+
         slotData.forEach(slot => {
-            const slotContainer = this.add.container(slot.x, slot.y);
-            
-            // Add slot background/placeholder
-            const slotBg = this.add.image(0, 0, `slot-${slot.key}`);
-            slotBg.setScale(0.8);
-            
-            // Add slot label
-            const label = this.add.text(-60, -30, slot.name, {
-                fontSize: '16px',
-                fill: '#ffffff'
-            });
-            
-            // Add slot highlight/border
+            const slotContainer = this.add.container(slot.x, slot.y); // Position relative to the main container
+
+            // --- Slot Background/Border ---
             const slotBorder = this.add.rectangle(0, 0, 64, 64, 0x222222, 0.8)
-                .setStrokeStyle(1, 0x555555);
-            
-            slotContainer.add([slotBorder, slotBg, label]);
-            container.add(slotContainer);
-            
+                .setStrokeStyle(1, 0x555555); // Default border
+
+            // --- Slot Icon Display (starts as placeholder) ---
+            const placeholderIconKey = slot.placeholderTexture; // Use defined placeholder texture key
+            const iconDisplay = this.add.image(0, 0, placeholderIconKey);
+            iconDisplay.setScale(0.8); // Adjust scale as needed
+             // Ensure placeholder exists, otherwise hide it
+             if (!this.textures.exists(placeholderIconKey)) {
+                 console.warn(`Placeholder texture '${placeholderIconKey}' not found for slot '${slot.key}'. Hiding icon.`);
+                 iconDisplay.setVisible(false);
+             }
+
+            // --- Slot Label ---
+            const label = this.add.text(0, 40, slot.name, { // Position below the icon
+                fontSize: '14px',
+                fill: '#ffffff',
+                align: 'center'
+            }).setOrigin(0.5);
+
+            // --- Add elements to the slot's container ---
+            slotContainer.add([slotBorder, iconDisplay, label]);
+            container.add(slotContainer); // Add the slot's container to the main equipment container
+
+            // --- Store references ---
             this.equipmentSlots[slot.key] = {
                 container: slotContainer,
-                background: slotBg,
-                border: slotBorder
+                iconDisplay: iconDisplay, // Reference to the Image object that shows the icon/placeholder
+                border: slotBorder,
+                label: label,
+                placeholderTexture: placeholderIconKey // Store the placeholder key for resetting
             };
         });
-
-        this.updateEquipmentSlotsDisplay();
     }
 
     updateEquipmentSlotsDisplay() {
+        console.log("Updating Equipment Slots Display...");
         const equipped = gameState.player.inventory?.equipped || {};
-        
-        Object.entries(this.equipmentSlots).forEach(([slot, elements]) => {
-            const equippedItem = equipped[slot];
-            if (equippedItem) {
-                const itemData = getItemData(equippedItem);
-                if (itemData) {
-                    // Update the label to show what's equipped
-                    elements.container.list[2].setText(`${slot}\n${itemData.name}`);
-                    // Highlight the border
+
+        // Iterate ONLY over the defined slots (body, accessory)
+        Object.entries(this.equipmentSlots).forEach(([slotKey, elements]) => {
+            const itemId = equipped[slotKey]; // Get the equipped item ID for this slot
+
+             // Ensure elements exist before trying to update them
+             if (!elements || !elements.iconDisplay || !elements.label || !elements.border) {
+                 console.warn(`Skipping update for slot '${slotKey}': Missing UI elements.`);
+                 return;
+             }
+
+            if (itemId) {
+                const itemData = getItemData(itemId);
+                if (itemData && itemData.equipSlot === slotKey) { // Double-check the item belongs in this slot
+                    console.log(`Slot ${slotKey}: Equipped ${itemData.inGameName} (ID: ${itemId})`);
+                    // Update Icon
+                    const itemIconKey = itemData.iconKey;
+                    if (itemIconKey && this.textures.exists(itemIconKey)) {
+                        elements.iconDisplay.setTexture(itemIconKey);
+                        elements.iconDisplay.setVisible(true);
+                        elements.iconDisplay.setScale(0.8); // Reset scale if needed
+                    } else {
+                        console.warn(`Icon texture '${itemIconKey}' not found for item ${itemId}. Using placeholder.`);
+                        // Fallback to placeholder if item icon is missing
+                        if (this.textures.exists(elements.placeholderTexture)) {
+                            elements.iconDisplay.setTexture(elements.placeholderTexture);
+                            elements.iconDisplay.setVisible(true);
+                            elements.iconDisplay.setScale(0.8);
+                        } else {
+                             elements.iconDisplay.setVisible(false);
+                        }
+                    }
+                    // Update Label
+                    elements.label.setText(itemData.inGameName); // Show item name
+                    // Update Border (Highlight)
                     elements.border.setStrokeStyle(2, 0xaaaaff);
+                } else {
+                    // Item ID exists in equipped, but data missing or doesn't match slot - reset the slot
+                    console.warn(`Item data invalid/mismatched for equipped ID: ${itemId} in slot ${slotKey}. Resetting slot.`);
+                    if (this.textures.exists(elements.placeholderTexture)) {
+                        elements.iconDisplay.setTexture(elements.placeholderTexture);
+                         elements.iconDisplay.setVisible(true);
+                         elements.iconDisplay.setScale(0.8);
+                    } else { elements.iconDisplay.setVisible(false); }
+                    elements.label.setText(elements.name || slotKey.charAt(0).toUpperCase() + slotKey.slice(1)); // Use stored name or default
+                    elements.border.setStrokeStyle(1, 0x555555); // Default border
                 }
             } else {
-                // Reset to default label if nothing equipped
-                elements.container.list[2].setText(slot === 'armour' ? 'Armour' : 'Accessory');
-                // Reset border
-                elements.border.setStrokeStyle(1, 0x555555);
+                 console.log(`Slot ${slotKey}: Empty`);
+                // Slot is empty - Reset to default placeholder
+                if (this.textures.exists(elements.placeholderTexture)) {
+                    elements.iconDisplay.setTexture(elements.placeholderTexture);
+                    elements.iconDisplay.setVisible(true);
+                    elements.iconDisplay.setScale(0.8); // Reset scale
+                } else {
+                    console.warn(`Placeholder texture '${elements.placeholderTexture}' not found for slot '${slotKey}'. Hiding icon.`);
+                    elements.iconDisplay.setVisible(false);
+                }
+                elements.label.setText(elements.name || slotKey.charAt(0).toUpperCase() + slotKey.slice(1)); // Default name
+                elements.border.setStrokeStyle(1, 0x555555); // Default border
             }
         });
     }
@@ -320,80 +428,105 @@ class InventoryScene extends BaseScene {
         const itemData = getItemData(itemId);
 
         // 3. Validate Item Data and Equip Slot
-        // Check if item exists and has a defined 'equipSlot' property
         if (!itemData || !itemData.equipSlot) {
             console.warn(`Cannot equip item ${itemId}: Item data missing or item is not equippable (no equipSlot defined).`, itemData);
             return;
         }
+        const targetSlot = itemData.equipSlot; // e.g., 'body', 'accessory'
 
-        const targetSlot = itemData.equipSlot; // e.g., 'weapon', 'body', 'head', 'accessory1'
+         // Check if the target slot exists in our UI definition (body or accessory)
+         if (!this.equipmentSlots[targetSlot]) {
+             console.error(`Cannot equip item ${itemId} to slot '${targetSlot}': Slot does not exist in UI or is not supported.`);
+             // Optionally provide feedback to the player here
+             return;
+         }
+
 
         // 4. Ensure the 'equipped' object exists
         if (!gameState.player.inventory.equipped) {
             gameState.player.inventory.equipped = {};
         }
 
-        // 5. Equip the Item
-        // Directly assign the itemId to the target slot.
-        // This automatically replaces anything previously in that slot.
-        // (No need to manually unequip first unless you want to return the old item to the main list)
-        const previouslyEquippedId = gameState.player.inventory.equipped[targetSlot];
-        gameState.player.inventory.equipped[targetSlot] = itemId;
+        // 5. Equip the Item & Handle Swapping (Move old item back to inventory list)
+         const previouslyEquippedId = gameState.player.inventory.equipped[targetSlot];
 
-        if (previouslyEquippedId) {
-            const prevItemData = getItemData(previouslyEquippedId);
-            console.log(`Replaced ${prevItemData?.inGameName || 'previous item'} in ${targetSlot} slot.`);
-        }
-        console.log(`Equipped ${itemData.inGameName} to ${targetSlot} slot.`);
+         // --- Remove the NEW item from the inventory list ---
+         const itemIndexInInventory = gameState.player.inventory.items.findIndex(invItem => invItem.itemId === itemId);
+         if (itemIndexInInventory === -1) {
+              console.error(`Item ${itemId} to be equipped not found in inventory list!`);
+              return; // Prevent equip if item isn't actually in list
+         } else {
+             // Remove the item being equipped from the main list
+             gameState.player.inventory.items.splice(itemIndexInInventory, 1);
+             console.log(`Removed ${itemId} from inventory list.`);
+         }
+
+         // --- Equip the NEW item ---
+         gameState.player.inventory.equipped[targetSlot] = itemId;
+         console.log(`Equipped ${itemData.inGameName} to ${targetSlot} slot.`);
+
+         // --- Add the PREVIOUSLY equipped item back to the inventory list ---
+         if (previouslyEquippedId) {
+             const prevItemData = getItemData(previouslyEquippedId);
+             gameState.player.inventory.items.push({ itemId: previouslyEquippedId, quantity: 1 });
+             console.log(`Added ${prevItemData?.inGameName || 'previous item'} (ID: ${previouslyEquippedId}) back to inventory list.`);
+         }
+
 
         // 6. Recalculate Player Stats
         CharacterManager.recalculatePlayerStats(); // Crucial step!
 
-        // 7. Update the Equipment Slots UI
-        this.updateEquipmentSlotsDisplay(); // Refresh the visual display of equipped items
+        // 7. Update the Entire Equipment Slots UI visually
+        this.updateEquipmentSlotsDisplay();
 
-        // 8. Play Equip Animation
-        const slotToAnimate = this.equipmentSlotsDisplay[targetSlot];
-        // Animate the ICON within the slot, not the background
-        if (slotToAnimate?.icon && slotToAnimate.icon.visible) { // Check icon exists and is visible
-            this.playEquipAnimation(slotToAnimate.icon);
+        // 8. Update the Equipment List UI (since items were moved)
+         if (this.equipmentListContainer) {
+             this.equipmentListContainer.destroy(); // Destroy the old list
+             this.equipmentListContainer = null;
+             this.displayEquipmentTab(); // Recreate the list content
+         }
+
+        // 9. Play Equip Animation on the correct slot's icon
+        const slotElements = this.equipmentSlots[targetSlot];
+        if (slotElements?.iconDisplay?.active) { // Check if the icon display is valid and active
+            this.playEquipAnimation(slotElements.iconDisplay);
         } else {
-            console.warn(`Could not find valid icon to animate for slot: ${targetSlot}`);
+            console.warn(`Could not find valid icon display to animate for slot: ${targetSlot}`);
         }
 
-        // 9. Optional: Update other UI if needed
-        // If HP/MP bars are visible (e.g., Potions tab), update them after stat recalc
+        // 10. Optional: Update other UI if needed
         if (this.currentTab === 'Potions') {
             if(this.potionsHpBar) this.potionsHpBar.update(gameState.player.health, gameState.player.maxHealth);
             if(this.potionsMpBar) this.potionsMpBar.update(gameState.player.mana, gameState.player.maxMana);
        }
     }
 
-// playEquipAnimation method (ensure it targets the icon)
-playEquipAnimation(targetIcon) {
-    if (!targetIcon || !targetIcon.scene || targetIcon.scene !== this || !targetIcon.active) {
-        console.warn("playEquipAnimation: Invalid targetIcon provided or scene context lost.");
-        return;
+    // playEquipAnimation method - Targets the iconDisplay Image object
+    playEquipAnimation(targetIcon) {
+        // Add more robust checks
+        if (!targetIcon || typeof targetIcon.setScale !== 'function' || !targetIcon.scene || targetIcon.scene !== this || !targetIcon.active) {
+            console.warn("playEquipAnimation: Invalid targetIcon provided or scene context lost.", targetIcon);
+            return;
+        }
+
+        // Use current scale as the final target scale
+        const finalScaleX = targetIcon.scaleX || 1; // Default to 1 if scale is 0
+        const finalScaleY = targetIcon.scaleY || 1;
+
+        // Start slightly larger and faded
+        targetIcon.setScale(finalScaleX * 1.5, finalScaleY * 1.5);
+        targetIcon.setAlpha(0.5);
+
+        // Tween back to normal scale and full alpha
+        this.tweens.add({
+            targets: targetIcon,
+            scaleX: finalScaleX,
+            scaleY: finalScaleY,
+            alpha: 1,
+            duration: 300, // Faster animation
+            ease: 'Back.easeOut', // Gives a nice little bounce effect
+        });
     }
-
-    // Use current scale as the final target scale
-    const finalScaleX = targetIcon.scaleX;
-    const finalScaleY = targetIcon.scaleY;
-
-    // Start slightly larger and faded
-    targetIcon.setScale(finalScaleX * 1.5, finalScaleY * 1.5);
-    targetIcon.setAlpha(0.5);
-
-    // Tween back to normal scale and full alpha
-    this.tweens.add({
-        targets: targetIcon,
-        scaleX: finalScaleX,
-        scaleY: finalScaleY,
-        alpha: 1,
-        duration: 500, // Adjust duration as needed
-        ease: 'Back.easeOut', // Gives a nice little bounce effect
-    });
-}
 
     displayMaterialsTab() {
         const width = this.cameras.main.width; const height = this.cameras.main.height;
@@ -402,10 +535,10 @@ playEquipAnimation(targetIcon) {
 
         this.materialsListContainer = new ScrollableContainer(this, listX, listY, listWidth, listHeight, { padding: 15, backgroundColor: 0x2e1a2e, borderColor: 0xbf7fbf });
 
-        const messageY = listY + listHeight / 2 - 20;
+        const messageY = listY + listHeight / 2 + 30; // Position below the list
         this.materialsInfoMessage = this.add.text(listX, messageY,
-            "Crafting materials can be used at the Crafting Workshop to create equipment",
-            { fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm, fill: '#cccccc', align: 'center', fontStyle: 'italic'}
+            "Crafting materials can be used at the Crafting Workshop to create equipment.",
+            { fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm, fill: '#cccccc', align: 'center', fontStyle: 'italic', wordWrap: { width: listWidth - 40 } }
         ).setOrigin(0.5);
 
         const inventory = gameState.player.inventory.items || [];
@@ -413,19 +546,7 @@ playEquipAnimation(targetIcon) {
 
         const materialItems = inventory.filter(itemInstance => {
             const itemData = getItemData(itemInstance.itemId);
-            console.log(`Checking item ${itemInstance.itemId}:`, {
-                itemData: itemData,
-                type: itemData?.type,
-                category: itemData?.category,
-                isValid: itemData && (
-                    itemData.type === 'material' || 
-                    ['Armour', 'Branches', 'Sharps', 'Strings', 'Gem', 'Material'].includes(itemData.category)
-                )
-            });
-            return itemData && (
-                itemData.type === 'material' || 
-                ['Armour', 'Branches', 'Sharps', 'Strings', 'Gem', 'Material'].includes(itemData.category)
-            );
+            return itemData && itemData.type === 'material'; // Filter strictly by type: 'material'
         });
 
         console.log("Materials Tab - Filtered items:", JSON.parse(JSON.stringify(materialItems)));
@@ -441,23 +562,25 @@ playEquipAnimation(targetIcon) {
                 if (itemData.iconKey && this.textures.exists(itemData.iconKey)) {
                      icon = this.add.image(10 + iconSize/2, itemHeight / 2, itemData.iconKey).setDisplaySize(iconSize, iconSize).setOrigin(0.5);
                     itemRow.add(icon);
+                 } else {
+                      console.warn(`Icon texture '${itemData.iconKey}' not found for material ${itemData.itemId}`);
                  }
                 const text = `${itemData.inGameName} x${itemInstance.quantity}`;
                 const textObject = this.add.text(10 + iconSize + 10, itemHeight / 2, text, { fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm, fill: '#ffffff' }).setOrigin(0, 0.5);
                 itemRow.add(textObject);
                 this.materialsListContainer.addItem(itemRow, currentY);
-                currentY += itemHeight;
+                currentY += itemHeight + 5; // Add spacing
             });
         }
         this.materialsListContainer.updateMaxScroll();
         this.materialsListContainer.setVisible(true);
     }
 
-    // displayPotionsTab - unchanged (except cleanup handled in setActiveTab)
-    displayPotionsTab() { /* ... Keep as is, BUT remove the initial destroy lines for container/bars ... */
+
+    displayPotionsTab() {
         const width = this.cameras.main.width; const height = this.cameras.main.height;
         const barWidth = 250; const barX = width * 0.5;
-        const hpBarY = height * 0.3; const mpBarY = hpBarY + 30;
+        const hpBarY = height * 0.3; const mpBarY = hpBarY + 40; // Increased spacing
 
         // Create NEW status bars
         this.potionsHpBar = this.ui.createStatusBar(barX, hpBarY, gameState.player.health, gameState.player.maxHealth, { width: barWidth, textPrefix: 'HP', barColor: 0x00ff00 });
@@ -468,9 +591,10 @@ playEquipAnimation(targetIcon) {
         this.potionsListContainer = new ScrollableContainer(this, listX, listY, listWidth, listHeight, { padding: 10, backgroundColor: 0x1a2e1a, borderColor: 0x7fbf7f });
 
         const inventory = gameState.player.inventory.items || [];
-        const potionItems = inventory.filter(itemInstance => { /* ... filter logic ... */
+        const potionItems = inventory.filter(itemInstance => {
             const itemData = getItemData(itemInstance.itemId);
-            return itemData && (itemData.category === 'Potion' || itemData.type === 'consumable');
+            // Filter specifically for items with a potionEffect defined
+            return itemData && itemData.potionEffect;
          });
 
         if (potionItems.length === 0) {
@@ -480,13 +604,15 @@ playEquipAnimation(targetIcon) {
             const backgroundsToListen = [];
 
             potionItems.forEach((itemInstance) => {
-                const itemData = getItemData(itemInstance.itemId); if (!itemData?.potionEffect) return;
+                const itemData = getItemData(itemInstance.itemId); if (!itemData?.potionEffect) return; // Should not happen due to filter, but safe check
                 const itemRow = this.add.container(0, 0);
                 const itemBg = this.add.rectangle(listWidth / 2, itemHeight / 2, listWidth - 20, itemHeight, 0x2a3e2a, 0).setOrigin(0.5);
                 let icon = null;
                 if (itemData.iconKey && this.textures.exists(itemData.iconKey)) {
                      icon = this.add.image(20 + iconSize/2, itemHeight / 2, itemData.iconKey).setDisplaySize(iconSize, iconSize).setOrigin(0.5);
                     itemRow.add(icon);
+                 } else {
+                      console.warn(`Icon texture '${itemData.iconKey}' not found for potion ${itemData.itemId}`);
                  }
                 const effectStat = itemData.potionEffect.stat || '???'; const effectValue = itemData.potionEffect.value || 0;
                 const effectText = `Restores ${effectValue} ${effectStat.toUpperCase()}`; const fullText = `${itemData.inGameName} (x${itemInstance.quantity}) - ${effectText}`;
@@ -500,12 +626,19 @@ playEquipAnimation(targetIcon) {
              this.time.delayedCall(10, () => {
                  if (!this || !this.scene?.key || this.scene.key !== 'InventoryScene') return;
                  backgroundsToListen.forEach(item => {
-                     if (item.bg?.active && typeof item.bg.setInteractive === 'function') {
-                         item.bg.setInteractive({ useHandCursor: true });
-                         item.bg.on('pointerover', () => { if (item.bg?.active) item.bg.setFillStyle(0x3a4e3a, 0.7); });
-                         item.bg.on('pointerout', () => { if (item.bg?.active) item.bg.setFillStyle(0x2a3e2a, 0); });
-                         item.bg.on('pointerdown', () => { if (item.bg?.active) this.consumePotion(item.itemId); });
-                     } else { console.warn("Skipping listener attachment for invalid potion background."); }
+                      // Double check if bg is still valid and part of the scene
+                     if (item.bg && item.bg.scene === this && item.bg.active) {
+                          try {
+                             item.bg.setInteractive({ useHandCursor: true });
+                             item.bg.on('pointerover', () => { if (item.bg?.active) item.bg.setFillStyle(0x3a4e3a, 0.7); });
+                             item.bg.on('pointerout', () => { if (item.bg?.active) item.bg.setFillStyle(0x2a3e2a, 0); });
+                             item.bg.on('pointerdown', () => { if (item.bg?.active) this.consumePotion(item.itemId); });
+                         } catch (e) {
+                              console.warn(`Error setting interactivity for potion item ${item.itemId}:`, e);
+                         }
+                     } else {
+                          console.warn("Skipping listener attachment for destroyed or invalid potion background.");
+                     }
                  });
              }, [], this);
         }
@@ -514,7 +647,7 @@ playEquipAnimation(targetIcon) {
     }
 
 
-    consumePotion(itemId) { /* ... Keep as is ... */
+    consumePotion(itemId) {
         if (!gameState.player?.inventory?.items) return;
         const itemData = getItemData(itemId); if (!itemData?.potionEffect) return;
         const { stat, value } = itemData.potionEffect;
@@ -528,10 +661,16 @@ playEquipAnimation(targetIcon) {
             else { HealthManager.updatePlayerMana(value, true); success = true; message = `Used ${itemData.inGameName}. Restored ${value} MP.`; }
         } else message = `Unknown potion effect: ${stat}`;
 
-        if(this.ui?.createText) {
+        // --- Create Feedback Text ---
+        // Ensure UI Manager and createText are available
+        if (this.ui && typeof this.ui.createText === 'function') {
              const feedbackText = this.ui.createText(this.cameras.main.width / 2, this.cameras.main.height * 0.8, message, { fontSize: this.ui.fontSize.sm, color: success ? '#aaffaa' : '#ffaaaa'});
-             this.tweens.add({ targets: feedbackText, y: '-=50', alpha: 0, duration: 1500, ease: 'Power1', onComplete: () => feedbackText.destroy()});
-        } else console.log(message);
+             // Add a simple fade-out tween
+             this.tweens.add({ targets: feedbackText, alpha: 0, duration: 1500, ease: 'Power1', onComplete: () => feedbackText.destroy()});
+        } else {
+             console.log(message); // Fallback logging
+        }
+
 
         if (success) {
             this.safePlaySound('heal', {volume: 0.4});
@@ -540,38 +679,61 @@ playEquipAnimation(targetIcon) {
                 gameState.player.inventory.items[itemIndex].quantity -= 1;
                 if (gameState.player.inventory.items[itemIndex].quantity <= 0) gameState.player.inventory.items.splice(itemIndex, 1);
             }
-            if(this.potionsHpBar) this.potionsHpBar.update(gameState.player.health, gameState.player.maxHealth); // Use correct var name
-            if(this.potionsMpBar) this.potionsMpBar.update(gameState.player.mana, gameState.player.maxMana); // Use correct var name
-            this.displayPotionsTab(); // Refresh list
+
+             // --- Refresh UI Elements ---
+             // Ensure bars exist before updating
+             if(this.potionsHpBar && typeof this.potionsHpBar.update === 'function') this.potionsHpBar.update(gameState.player.health, gameState.player.maxHealth);
+             if(this.potionsMpBar && typeof this.potionsMpBar.update === 'function') this.potionsMpBar.update(gameState.player.mana, gameState.player.maxMana);
+
+             // Ensure list exists before destroying and recreating
+             if (this.potionsListContainer) {
+                this.potionsListContainer.destroy(); // Destroy the old list
+                this.potionsListContainer = null;
+                this.displayPotionsTab(); // Recreate the list to show updated quantities/removed items
+             }
         }
     }
 
 
-    createReturnButton() { /* ... Keep as is ... */
+    createReturnButton() {
         const width = this.cameras.main.width; const height = this.cameras.main.height;
         this.ui.createButton( width / 2, height * 0.92, 'Return',
-            () => { console.log(`InventoryScene: Returning to ${this.returnSceneKey}`); this.safePlaySound('menu-close'); navigationManager.navigateTo(this, this.returnSceneKey); },
+            () => {
+                 console.log(`InventoryScene: Returning to ${this.returnSceneKey}`);
+                 this.safePlaySound('menu-close');
+                 // Use navigationManager safely
+                 if (navigationManager && typeof navigationManager.navigateTo === 'function') {
+                      navigationManager.navigateTo(this, this.returnSceneKey);
+                 } else {
+                      console.warn("NavigationManager not available, attempting direct scene start.");
+                      this.scene.start(this.returnSceneKey);
+                 }
+            },
             { width: 180, height: 50 }
         );
     }
 
     shutdown() {
         console.log("InventoryScene shutdown starting...");
-        // Destroy DYNAMIC content containers
-        if (this.equipmentListContainer) this.equipmentListContainer.destroy();
-        if (this.materialsListContainer) this.materialsListContainer.destroy();
-        if (this.potionsListContainer) this.potionsListContainer.destroy();
-        if (this.potionsHpBar) this.potionsHpBar.destroy(); // Use correct var name
-        if (this.potionsMpBar) this.potionsMpBar.destroy(); // Use correct var name
-        if (this.materialsInfoMessage) this.materialsInfoMessage.destroy();
+        // Destroy DYNAMIC content containers safely
+        if (this.equipmentListContainer && typeof this.equipmentListContainer.destroy === 'function') this.equipmentListContainer.destroy();
+        if (this.materialsListContainer && typeof this.materialsListContainer.destroy === 'function') this.materialsListContainer.destroy();
+        if (this.potionsListContainer && typeof this.potionsListContainer.destroy === 'function') this.potionsListContainer.destroy();
+        if (this.potionsHpBar && typeof this.potionsHpBar.destroy === 'function') this.potionsHpBar.destroy();
+        if (this.potionsMpBar && typeof this.potionsMpBar.destroy === 'function') this.potionsMpBar.destroy();
+        if (this.materialsInfoMessage && typeof this.materialsInfoMessage.destroy === 'function') this.materialsInfoMessage.destroy();
 
-        // Destroy STATIC container (created in create)
-        if (this.equipmentSlotsContainer) this.equipmentSlotsContainer.destroy(true); // true to destroy children
+        // Destroy STATIC container (created in create) safely
+        if (this.equipmentSlotsContainer && typeof this.equipmentSlotsContainer.destroy === 'function') this.equipmentSlotsContainer.destroy(true); // true to destroy children
 
-        // Destroy tab buttons
+        // Destroy tab buttons safely
         for (const name in this.tabButtons) {
            if (this.tabButtons[name] && typeof this.tabButtons[name].destroy === 'function') {
-               this.tabButtons[name].destroy();
+               try {
+                    this.tabButtons[name].destroy();
+               } catch (e) {
+                    console.warn(`Error destroying tab button ${name}:`, e);
+               }
            }
         }
         this.tabButtons = {}; // Clear references
@@ -584,9 +746,10 @@ playEquipAnimation(targetIcon) {
         this.potionsMpBar = null;
         this.materialsInfoMessage = null;
         this.equipmentSlotsContainer = null; // Also nullify static container reference
+        this.equipmentSlots = {}; // Clear slot element references
 
         console.log("InventoryScene shutdown cleanup complete.");
-        // No super.shutdown needed unless BaseScene implements it
+        // If BaseScene has a shutdown, call it: super.shutdown();
     }
 }
 
