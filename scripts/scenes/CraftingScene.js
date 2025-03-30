@@ -73,9 +73,12 @@ class CraftingScene extends BaseScene { // Extend BaseScene
         this.inventoryContainer = null; // ScrollableContainer for materials
         this.craftButton = null;
         this.tierSumText = null;
+        this.tierSumBg = null; // Background for tier sum
         this.resultPopup = null; // Container for result display
         this.goldText = null;
         this.backButtonInstance = null; // <<-- ADDED: Store reference to the back button instance
+        this.costText = null; // Add reference for cost text
+        this.costTextBg = null; // Background for cost text
     }
 
     preload() {
@@ -143,6 +146,17 @@ class CraftingScene extends BaseScene { // Extend BaseScene
         this.createNavigationButtons(); // Create navigation buttons FIRST to store reference
         this.displayCategorySelection(); // Start with category selection
 
+        // --- DEBUG START: Add debug key listener ---
+        this.input.keyboard.on('keydown-M', () => { // Press 'M' for Materials
+            console.warn("DEBUG: Giving materials via keypress!");
+            this.giveDebugMaterials();
+            // Refresh inventory display ONLY if in the INPUT state
+            if (this.currentState === 'INPUT' && this.inventoryContainer) {
+                 const requiredMaterials = CRAFTING_CONFIG.crafting_recipes[this.currentCategory];
+                 this.updateInventoryDisplay(requiredMaterials || []); // Refresh with current filter
+            }
+        });
+        console.log("Crafting Scene: Press 'M' to add debug materials.");
     }
 
     createGoldDisplay() {
@@ -197,7 +211,29 @@ class CraftingScene extends BaseScene { // Extend BaseScene
         // No need to set name on container: this.backButtonInstance.container.setName('backButton');
     }
 
+ // --- DEBUG START: Helper function ---
+ giveDebugMaterials() {
+    if (!gameState.player.inventory) gameState.player.inventory = { items: [], maxItems: 50, equipped: {} };
+    if (!gameState.player.inventory.items) gameState.player.inventory.items = [];
 
+    const addDebugItem = (itemId, quantity) => { /* ... same helper function as Option 1 ... */
+        const itemData = getItemData(itemId); if (!itemData) { console.warn(`DEBUG: Item data not found for ${itemId}`); return; }
+        const existingItemIndex = gameState.player.inventory.items.findIndex(i => i.itemId === itemId);
+        if (existingItemIndex > -1) { gameState.player.inventory.items[existingItemIndex].quantity += quantity; }
+        else { gameState.player.inventory.items.push({ itemId: itemId, quantity: quantity }); }
+    };
+
+    addDebugItem('goblin-teeth', 10); addDebugItem('wolf-claws', 10); addDebugItem('goblin-sinew', 10);
+    addDebugItem('wild-boar-sinew', 10); addDebugItem('mushroom-arms', 10); addDebugItem('wolf-pelt', 10);
+    addDebugItem('spider-fang', 5); addDebugItem('spider-silk', 5); addDebugItem('briar-sprite-branch', 5); addDebugItem('bandit-armour', 5);
+    addDebugItem('crystal-golem-shard', 3); addDebugItem('entling-branch', 3); addDebugItem('miner-straps', 3); addDebugItem('goblin-chief-armour', 3);
+    addDebugItem('witch-hare-sinew', 2); addDebugItem('moss-troll-shard', 2); addDebugItem('forest-wyrmling-fang', 1);
+    // Give some gold too for testing cost
+    gameState.player.gold = (gameState.player.gold || 0) + 5000;
+    this.updateGoldDisplay(); // Update gold display immediately
+
+    this.showTemporaryFeedback("Debug materials added!", '#aaffaa');
+}
     // --- UI State Management ---
 
     clearAllUI() {
@@ -293,11 +329,7 @@ class CraftingScene extends BaseScene { // Extend BaseScene
         this.inputContainer.add(inputTitle.background);
         this.inputContainer.add(inputTitle);
 
-        // Update Back button text using the stored instance
-         if (this.backButtonInstance) {
-              this.backButtonInstance.setText('Back');
-         }
-
+        if (this.backButtonInstance) { this.backButtonInstance.setText('Back'); }
 
         const requiredMaterials = CRAFTING_CONFIG.crafting_recipes[categoryName];
         const slotSize = 70;
@@ -307,55 +339,37 @@ class CraftingScene extends BaseScene { // Extend BaseScene
         const slotsY = height * 0.35;
         this.materialSlots = [];
 
-        for (let i = 0; i < 3; i++) {
-            const slotX = startXSlots + i * slotSpacing;
-            const requiredCategory = requiredMaterials[i];
-            const placeholderIconKey = categoryIconKeys[requiredCategory] || 'icon-default-material';
+        for (let i = 0; i < 3; i++) { /* ... slot creation logic - no changes ... */
+            const slotX = startXSlots + i * slotSpacing; const requiredCategory = requiredMaterials[i]; const placeholderIconKey = categoryIconKeys[requiredCategory] || 'icon-default-material'; const slotContainer = this.add.container(slotX, slotsY); const border = this.add.rectangle(0, 0, slotSize, slotSize, 0x222233, 0.8).setStrokeStyle(2, 0x5599ff); const placeholderIcon = this.add.image(0, 0, placeholderIconKey); if (!this.textures.exists(placeholderIconKey)) { placeholderIcon.setVisible(false); } else { placeholderIcon.setDisplaySize(slotSize * 0.7, slotSize * 0.7).setAlpha(0.5); } const itemIcon = this.add.image(0, 0, '').setVisible(false).setDisplaySize(slotSize*0.8, slotSize*0.8); const tooltipText = this.add.text(0, slotSize / 2 + 10, `Requires: ${requiredCategory}`, { fontSize: '10px', fill: '#ccc' }).setOrigin(0.5).setVisible(false); slotContainer.add([border, placeholderIcon, itemIcon, tooltipText]); this.inputContainer.add(slotContainer); border.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.removeMaterialFromSlot(i)).on('pointerover', () => tooltipText.setVisible(true)).on('pointerout', () => tooltipText.setVisible(false)); this.materialSlots.push({ container: slotContainer, border: border, placeholder: placeholderIcon, itemIcon: itemIcon, requiredCategory: requiredCategory, currentItem: null, tooltip: tooltipText });
+         }
 
-            const slotContainer = this.add.container(slotX, slotsY);
-
-            const border = this.add.rectangle(0, 0, slotSize, slotSize, 0x222233, 0.8)
-                .setStrokeStyle(2, 0x5599ff);
-
-            const placeholderIcon = this.add.image(0, 0, placeholderIconKey);
-             if (!this.textures.exists(placeholderIconKey)) {
-                 placeholderIcon.setVisible(false);
-             } else {
-                 placeholderIcon.setDisplaySize(slotSize * 0.7, slotSize * 0.7).setAlpha(0.5);
-             }
-
-            const itemIcon = this.add.image(0, 0, '').setVisible(false).setDisplaySize(slotSize*0.8, slotSize*0.8);
-            const tooltipText = this.add.text(0, slotSize / 2 + 10, `Requires: ${requiredCategory}`, { fontSize: '10px', fill: '#ccc' }).setOrigin(0.5).setVisible(false);
-
-            slotContainer.add([border, placeholderIcon, itemIcon, tooltipText]);
-            this.inputContainer.add(slotContainer);
-
-            border.setInteractive({ useHandCursor: true })
-                 .on('pointerdown', () => this.removeMaterialFromSlot(i))
-                 .on('pointerover', () => tooltipText.setVisible(true))
-                 .on('pointerout', () => tooltipText.setVisible(false));
-
-            this.materialSlots.push({
-                container: slotContainer, border: border, placeholder: placeholderIcon,
-                itemIcon: itemIcon, requiredCategory: requiredCategory, currentItem: null, tooltip: tooltipText
-            });
-        }
-
-        this.tierSumText = this.add.text(width / 2, slotsY + slotSize / 2 + 30, 'Total Tier: 0', {
-            fontSize: this.ui.fontSize.sm, fill: '#ffffaa'
+        // --- Tier Sum Text with Background ---
+        const tierSumY = slotsY + slotSize / 2 + 40; // Adjusted Y
+        this.tierSumText = this.add.text(width / 2, tierSumY, 'Total Tier: 0', {
+            fontSize: this.ui.fontSize.sm, fill: '#ffffaa', align: 'center'
         }).setOrigin(0.5);
-        this.inputContainer.add(this.tierSumText);
+        // Add background rectangle behind it
+        this.tierSumBg = this.add.rectangle(width / 2, tierSumY, this.tierSumText.width + 20, this.tierSumText.height + 10, 0x000000, 0.6);
+        this.inputContainer.add(this.tierSumBg); // Add BG first
+        this.inputContainer.add(this.tierSumText); // Add Text on top
+        // --- End Tier Sum ---
 
-        const costText = this.add.text(width / 2, slotsY + slotSize / 2 + 55, `Cost: ${CRAFTING_GOLD_COST} Gold`, {
-            fontSize: this.ui.fontSize.sm, fill: '#FFD700'
+        // --- Gold Cost Text with Background ---
+        const costY = height * 0.88 - 45; // Position above craft button
+        this.costText = this.add.text(width / 2, costY, `Cost: ${CRAFTING_GOLD_COST} Gold`, {
+            fontSize: this.ui.fontSize.sm, fill: '#FFD700', align: 'center' // Gold color
         }).setOrigin(0.5);
-        this.inputContainer.add(costText);
+         // Add background rectangle behind it
+        this.costTextBg = this.add.rectangle(width / 2, costY, this.costText.width + 20, this.costText.height + 10, 0x000000, 0.6);
+        this.inputContainer.add(this.costTextBg); // Add BG first
+        this.inputContainer.add(this.costText); // Add Text on top
+        // --- End Gold Cost ---
 
 
         const invListWidth = width * 0.8;
         const invListHeight = height * 0.3;
         const invListX = width * 0.5;
-        const invListY = height * 0.65;
+        const invListY = height * 0.65; // Y position of the inventory list
 
         this.inventoryContainer = new ScrollableContainer(this, invListX, invListY, invListWidth, invListHeight, { padding: 10, backgroundColor: 0x1a1a2e, borderColor: 0x7f7fbf });
          if (this.inventoryContainer.background) this.inputContainer.add(this.inventoryContainer.background);
@@ -368,80 +382,69 @@ class CraftingScene extends BaseScene { // Extend BaseScene
 
         this.craftButton = this.ui.createButton(
             width / 2,
-            height * 0.88,
+            height * 0.88, // Y position of the craft button
             'CRAFT',
             () => this.craftItem(),
             { width: 150, height: 50 }
         );
-        this.craftButton.disable(); // Start disabled
-        this.craftButton.container.setAlpha(0.5); // Start dimmed
+        this.craftButton.disable();
+        this.craftButton.container.setAlpha(0.5);
         this.inputContainer.add(this.craftButton.container);
     }
 
-    // ... (updateInventoryDisplay, handleInventoryItemClick, addMaterialToSlot, removeMaterialFromSlot remain the same) ...
     updateInventoryDisplay(filterCategories) {
-        if (!this.inventoryContainer || !this.inventoryContainer.valid) { // Check if container is valid
-            console.warn("Inventory container is not valid for updating.");
-            return;
-        }
-        this.inventoryContainer.clear(); // Clear previous items
+        if (!this.inventoryContainer || !this.inventoryContainer.valid) { /* ... */ return; }
+        this.inventoryContainer.clear();
 
         const inventory = gameState.player.inventory.items || [];
-        const relevantMaterials = inventory.filter(itemInstance => {
+        const relevantMaterials = inventory.filter(itemInstance => { /* ... */
             const itemData = getItemData(itemInstance.itemId);
-            return itemData && itemData.type === 'material' && filterCategories.includes(itemData.category);
+            return itemData && itemData.type === 'material' && itemInstance.quantity > 0 && filterCategories.includes(itemData.category);
         });
 
-        if (relevantMaterials.length === 0) {
-            this.inventoryContainer.addText('No relevant materials found.', { fill: '#aaaaaa', fontSize: this.ui.fontSize.sm });
-        } else {
-            let currentY = 0;
-            const itemHeight = 40;
-            const iconSize = 30;
-            const containerWidth = this.inventoryContainer.width || 0; // Get width safely
+        if (relevantMaterials.length === 0) { /* ... */ }
+        else {
+            let currentY = 0; const itemHeight = 40; const iconSize = 30; const containerWidth = this.inventoryContainer.width || 0;
 
             relevantMaterials.forEach((itemInstance, inventoryIndex) => {
-                const itemData = getItemData(itemInstance.itemId);
-                if (!itemData) return;
-
+                const itemData = getItemData(itemInstance.itemId); if (!itemData) return;
                 const itemRow = this.add.container(0, 0);
-                 const itemBg = this.add.rectangle(
-                     containerWidth / 2, itemHeight / 2, containerWidth - 20, itemHeight,
-                     0x2a2a3e, 0.6
-                 ).setOrigin(0.5);
+                const itemBg = this.add.rectangle( containerWidth / 2, itemHeight / 2, containerWidth - 20, itemHeight, 0x2a2a3e, 0.6 ).setOrigin(0.5);
+                // --- Set itemBg interactive with its own bounds ---
+                itemBg.setInteractive(new Phaser.Geom.Rectangle(0, 0, containerWidth - 20, itemHeight), Phaser.Geom.Rectangle.Contains);
+                itemBg.input.cursor = 'pointer'; // Add hand cursor
 
 
-                let icon = null;
-                if (itemData.iconKey && this.textures.exists(itemData.iconKey)) {
-                    icon = this.add.image(20 + iconSize / 2, itemHeight / 2, itemData.iconKey)
-                        .setDisplaySize(iconSize, iconSize).setOrigin(0.5);
-                    itemRow.add(icon);
+                let icon = null; if (itemData.iconKey && this.textures.exists(itemData.iconKey)) { icon = this.add.image(20 + iconSize / 2, itemHeight / 2, itemData.iconKey).setDisplaySize(iconSize, iconSize).setOrigin(0.5); itemRow.add(icon); }
+                const countInSlots = this.selectedMaterials.reduce((count, slot) => count + (slot && slot.itemInstance.itemId === itemInstance.itemId ? 1 : 0), 0);
+                const availableQuantity = itemInstance.quantity - countInSlots;
+                const text = `${itemData.inGameName} (T${itemData.tier}) x${availableQuantity}`;
+                const itemText = this.add.text(20 + iconSize + 15, itemHeight / 2, text, { fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm, fill: '#ffffff' }).setOrigin(0, 0.5);
+                itemRow.add(itemBg); itemRow.add(itemText); itemRow.sendToBack(itemBg);
+
+                const canAddMore = availableQuantity > 0;
+
+                itemBg.removeListener('pointerdown'); itemBg.removeListener('pointerover'); itemBg.removeListener('pointerout');
+                itemText.setAlpha(1); itemBg.setFillStyle(0x2a2a3e, 0.6); itemBg.setStrokeStyle();
+                // Explicitly disable if needed, otherwise setInteractive above handles it
+                // itemBg.input.enabled = canAddMore; // Control input enabled state
+
+                if (!canAddMore) {
+                    itemBg.setFillStyle(0x111111, 0.7); itemText.setAlpha(0.4);
+                    itemBg.input.enabled = false; // Explicitly disable input
+                } else {
+                     itemBg.input.enabled = true; // Ensure input is enabled
+                     itemBg.on('pointerdown', (pointer) => {
+                        // Stop the event from propagating further up (like to the scroll container drag)
+                        pointer.event.stopPropagation();
+                        console.log(`[Crafting CLICK] Clicked on BG for: ${itemData.inGameName} (Available: ${availableQuantity})`);
+                        const currentCountInSlotsOnClick = this.selectedMaterials.reduce((count, slot) => count + (slot && slot.itemInstance.itemId === itemInstance.itemId ? 1 : 0), 0);
+                        if (itemInstance.quantity > currentCountInSlotsOnClick) { this.handleInventoryItemClick(itemInstance, inventoryIndex); }
+                        else { console.warn(`[Crafting CLICK] Click denied for ${itemData.inGameName}. No longer available.`); this.showTemporaryFeedback("None available!"); }
+                    });
+                    itemBg.on('pointerover', () => { if (itemBg.input?.enabled) itemBg.setFillStyle(0x3a3a4e, 0.8); });
+                    itemBg.on('pointerout', () => { if (itemBg.input?.enabled) itemBg.setFillStyle(0x2a2a3e, 0.6); });
                 }
-
-                const text = `${itemData.inGameName} (T${itemData.tier}) x${itemInstance.quantity}`;
-                const itemText = this.add.text(20 + iconSize + 15, itemHeight / 2, text, {
-                    fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm, fill: '#ffffff'
-                }).setOrigin(0, 0.5);
-
-                itemRow.add([itemBg, itemText]);
-
-                const isSelected = this.selectedMaterials.some(sel => sel && sel.itemInstance === itemInstance);
-                const canAdd = itemInstance.quantity > 0 && !isSelected;
-
-                if (isSelected) {
-                    itemBg.setStrokeStyle(2, 0xffff00);
-                    itemText.setAlpha(0.5);
-                    itemBg.disableInteractive(); // Ensure it's disabled if selected
-                } else if (itemInstance.quantity <= 0) {
-                    itemBg.setFillStyle(0x111111, 0.7);
-                    itemText.setAlpha(0.4);
-                    itemBg.disableInteractive(); // Ensure it's disabled if no quantity
-                } else { // canAdd is true
-                      itemBg.setInteractive({ useHandCursor: true })
-                          .on('pointerdown', () => this.handleInventoryItemClick(itemInstance, inventoryIndex))
-                          .on('pointerover', () => itemBg.setFillStyle(0x3a3a4e, 0.8))
-                          .on('pointerout', () => itemBg.setFillStyle(0x2a2a3e, 0.6));
-                 }
 
                 this.inventoryContainer.addItem(itemRow, currentY);
                 currentY += itemHeight + 5;
@@ -449,352 +452,328 @@ class CraftingScene extends BaseScene { // Extend BaseScene
         }
         this.inventoryContainer.updateMaxScroll();
     }
+    
+    handleInventoryItemClick(itemInstance, inventoryIndex) {
+        // console.log(`[Crafting handleInventoryItemClick] Processing click for ${itemInstance.itemId}`);
+        const itemData = getItemData(itemInstance.itemId);
+        if (!itemData) { /* ... error handling ... */ return; }
 
-     handleInventoryItemClick(itemInstance, inventoryIndex) {
-         const itemData = getItemData(itemInstance.itemId);
-         if (!itemData) return;
+        const targetSlotIndex = this.materialSlots.findIndex((slot, index) =>
+            !this.selectedMaterials[index] && slot.requiredCategory === itemData.category
+        );
 
-         const targetSlotIndex = this.materialSlots.findIndex((slot, index) =>
-             !this.selectedMaterials[index] && slot.requiredCategory === itemData.category
-         );
+         // console.log(`[Crafting handleInventoryItemClick] Found target slot index: ${targetSlotIndex} for category ${itemData.category}`);
 
-         if (targetSlotIndex !== -1) {
-             this.addMaterialToSlot(itemInstance, inventoryIndex, targetSlotIndex);
-         } else {
-             this.showTemporaryFeedback("No suitable empty slot!");
-         }
-     }
+        if (targetSlotIndex !== -1) {
+            this.addMaterialToSlot(itemInstance, inventoryIndex, targetSlotIndex);
+        } else {
+            // console.log("[Crafting handleInventoryItemClick] No suitable empty slot found.");
+            this.showTemporaryFeedback("No suitable empty slot!");
+        }
+    }
 
-     addMaterialToSlot(itemInstance, originalInventoryIndex, slotIndex) {
-         if (slotIndex < 0 || slotIndex >= 3 || this.selectedMaterials[slotIndex]) return;
 
-         const itemData = getItemData(itemInstance.itemId);
-         const slot = this.materialSlots[slotIndex];
+    addMaterialToSlot(itemInstance, originalInventoryIndex, slotIndex) {
+        // console.log(`[Crafting addMaterialToSlot] Adding ${itemInstance.itemId} to slot ${slotIndex}`);
+        if (slotIndex < 0 || slotIndex >= 3 || this.selectedMaterials[slotIndex]) { /*...*/ return; }
 
-         if (!itemData || itemData.category !== slot.requiredCategory) {
-             this.showTemporaryFeedback("Wrong material type!");
-             return;
-         }
-          if (itemInstance.quantity <= 0) {
-               this.showTemporaryFeedback("Not enough of this material!");
-               return;
+        const itemData = getItemData(itemInstance.itemId);
+        const slot = this.materialSlots[slotIndex];
+
+        if (!itemData || itemData.category !== slot.requiredCategory) { /*...*/ this.showTemporaryFeedback("Wrong material type!"); return; }
+
+        // --- Check Available Quantity Again ---
+        const countInSlots = this.selectedMaterials.reduce((count, sl) => {
+            return count + (sl && sl.itemInstance.itemId === itemInstance.itemId ? 1 : 0);
+        }, 0);
+        if (itemInstance.quantity <= countInSlots) {
+            console.warn(`[Crafting addMaterialToSlot] Attempted to add ${itemInstance.itemId} but none available (In Slots: ${countInSlots}, Total: ${itemInstance.quantity}).`);
+            this.showTemporaryFeedback("None available!");
+            return; // Stop if none are actually available
+        }
+        // --- End Check Available Quantity ---
+
+
+       this.selectedMaterials[slotIndex] = { itemInstance: itemInstance, originalIndex: originalInventoryIndex };
+       // console.log(`[Crafting addMaterialToSlot] Stored material in selectedMaterials[${slotIndex}]`);
+
+       if (itemData.iconKey && this.textures.exists(itemData.iconKey)) {
+           slot.itemIcon.setTexture(itemData.iconKey).setVisible(true); slot.placeholder.setVisible(false); slot.border.setStrokeStyle(2, 0x00ff00);
+           // console.log(`[Crafting addMaterialToSlot] Slot ${slotIndex} UI updated with item icon.`);
+       } else { /* ... icon missing handling ... */ }
+
+       const requiredMaterials = CRAFTING_CONFIG.crafting_recipes[this.currentCategory];
+       // console.log("[Crafting addMaterialToSlot] Refreshing inventory display...");
+       this.updateInventoryDisplay(requiredMaterials); // Refresh inventory
+
+       this.updateCraftButtonState();
+       this.updateTierSumDisplay();
+   }
+
+   removeMaterialFromSlot(slotIndex) {
+    // console.log(`[Crafting removeMaterialFromSlot] Removing material from slot ${slotIndex}`);
+    if (slotIndex < 0 || slotIndex >= 3 || !this.selectedMaterials[slotIndex]) { /*...*/ return; }
+
+     // --- Store the item being removed to update inventory correctly ---
+     const removedItemInstance = this.selectedMaterials[slotIndex].itemInstance;
+     // --- End Store ---
+
+
+    this.selectedMaterials[slotIndex] = null;
+
+    const slot = this.materialSlots[slotIndex];
+    slot.itemIcon.setVisible(false); slot.placeholder.setVisible(true); slot.border.setStrokeStyle(2, 0x5599ff);
+    // console.log(`[Crafting removeMaterialFromSlot] Slot ${slotIndex} UI reset to placeholder.`);
+
+    const requiredMaterials = CRAFTING_CONFIG.crafting_recipes[this.currentCategory];
+    // console.log("[Crafting removeMaterialFromSlot] Refreshing inventory display...");
+    this.updateInventoryDisplay(requiredMaterials); // Refresh inventory (This will make the removed item clickable again if available)
+
+    this.updateCraftButtonState();
+    this.updateTierSumDisplay();
+}
+
+    // ... (updateCraftButtonState, calculateTierSum, updateTierSumDisplay, craftItem, determineRarity, selectCraftedItem, showResult, showTemporaryFeedback) ...
+    // Keep the rest of the code the same from this point down
+    updateCraftButtonState() {
+        const allSlotsFilled = this.selectedMaterials.every(material => material !== null);
+        const hasEnoughGold = (gameState.player.gold || 0) >= CRAFTING_GOLD_COST;
+
+        if (this.craftButton) {
+            if (allSlotsFilled && hasEnoughGold) {
+                this.craftButton.enable(); this.craftButton.container.setAlpha(1);
+            } else {
+                this.craftButton.disable(); this.craftButton.container.setAlpha(0.5);
+            }
+        }
+        // Update the tier sum display as well, as gold status might affect its appearance
+        this.updateTierSumDisplay();
+    }
+
+
+    calculateTierSum() {
+        return this.selectedMaterials.reduce((sum, selected) => {
+            if (selected?.itemInstance) { // Safely access itemInstance
+                const itemData = getItemData(selected.itemInstance.itemId);
+                return sum + (itemData?.tier || 0);
+            }
+            return sum;
+        }, 0);
+    }
+
+    updateTierSumDisplay() {
+        if (!this.tierSumText || !this.tierSumBg) return;
+        const tierSum = this.calculateTierSum();
+        this.tierSumText.setText(`Total Tier: ${tierSum}`);
+        // Adjust background size to fit text
+        this.tierSumBg.setSize(this.tierSumText.width + 20, this.tierSumText.height + 10);
+
+        const hasEnoughGold = (gameState.player.gold || 0) >= CRAFTING_GOLD_COST;
+        const allSlotsFilled = this.selectedMaterials.every(material => material !== null);
+
+        if (allSlotsFilled && !hasEnoughGold) {
+            this.tierSumText.setFill('#ffaaaa'); // Warning color if no gold
+        } else {
+            this.tierSumText.setFill('#ffffaa'); // Normal color otherwise
+        }
+    }
+
+    craftItem() {
+       // ... (initial checks remain the same) ...
+       if (!this.craftButton || this.craftButton.disabled) return; if (!this.selectedMaterials.every(m => m !== null)) { this.showTemporaryFeedback("Fill all material slots!"); return; } if ((gameState.player.gold || 0) < CRAFTING_GOLD_COST) { this.showTemporaryFeedback(`Need ${CRAFTING_GOLD_COST} Gold!`); return; }
+       console.log("Attempting to craft..."); let canAffordMaterials = true; const materialsToConsume = {};
+       for (const selected of this.selectedMaterials) { const itemId = selected.itemInstance.itemId; materialsToConsume[itemId] = (materialsToConsume[itemId] || 0) + 1; }
+       for (const itemId in materialsToConsume) { const needed = materialsToConsume[itemId]; const itemInInventory = gameState.player.inventory.items.find(invItem => invItem.itemId === itemId); if (!itemInInventory || itemInInventory.quantity < needed) { canAffordMaterials = false; this.showTemporaryFeedback(`Not enough ${getItemData(itemId)?.inGameName || itemId}!`); break; } }
+       if (!canAffordMaterials) return;
+
+       const tierSum = this.calculateTierSum();
+       const craftedRarity = this.determineRarity(tierSum);
+       if (!craftedRarity) { this.showTemporaryFeedback("Crafting Failed!"); return; }
+
+       console.log(`[Crafting] Trying to select item: Category=${this.currentCategory}, Rarity=${craftedRarity}, Tier=${rarityToTier(craftedRarity)}`);
+       const selectedItemKey = this.selectCraftedItemKey(this.currentCategory, craftedRarity); // Get the string key
+
+       if (!selectedItemKey) {
+            console.error(`[Crafting] FAILED to select item KEY for Category=${this.currentCategory}, Rarity=${craftedRarity}`);
+            this.showTemporaryFeedback("Crafting Failed! (No matching item found)"); return;
+       }
+        console.log("[Crafting] Successfully selected item key:", selectedItemKey);
+
+        // Now get the actual data using the key
+        const craftedItemData = getItemData(selectedItemKey);
+        if (!craftedItemData) {
+             console.error(`[Crafting] CRITICAL ERROR: getItemData failed for selected KEY ${selectedItemKey}, even though it came from itemDatabase!`);
+             this.showTemporaryFeedback("Crafting Failed! (Internal Error)");
+             return; // Stop if data retrieval fails
+        }
+        console.log("[Crafting] Successfully retrieved item data for:", craftedItemData.inGameName);
+
+
+       // --- Commit Crafting ---
+       this.safePlaySound('anvil-hit');
+       gameState.player.gold = (gameState.player.gold || 0) - CRAFTING_GOLD_COST; this.updateGoldDisplay();
+       for (const selected of this.selectedMaterials) { const itemId = selected.itemInstance.itemId; const itemIndex = gameState.player.inventory.items.findIndex(invItem => invItem.itemId === itemId); if (itemIndex > -1) { gameState.player.inventory.items[itemIndex].quantity -= 1; if (gameState.player.inventory.items[itemIndex].quantity <= 0) { gameState.player.inventory.items.splice(itemIndex, 1); } } }
+       if (!gameState.player.inventory.items) gameState.player.inventory.items = []; const spaceAvailable = (gameState.player.inventory.maxItems || 20) > gameState.player.inventory.items.length; if (!spaceAvailable) { this.showTemporaryFeedback("Inventory Full!"); this.clearInputState(); this.displayCraftingInput(this.currentCategory); return; }
+       gameState.player.inventory.items.push({ itemId: craftedItemData.itemId, quantity: 1 }); // Use numeric itemId here
+       this.showResult(craftedItemData); this.selectedMaterials = [null, null, null];
+   }
+
+
+    determineRarity(tierSum) {
+        const minTier = Math.min(...Object.keys(CRAFTING_CONFIG.tier_probability_chart).map(Number));
+        const maxTier = Math.max(...Object.keys(CRAFTING_CONFIG.tier_probability_chart).map(Number));
+        const effectiveTierSum = Math.max(minTier, Math.min(tierSum, maxTier));
+
+        const probabilities = CRAFTING_CONFIG.tier_probability_chart[effectiveTierSum.toString()];
+        if (!probabilities) {
+            console.warn(`No probability data for effective tier sum: ${effectiveTierSum}. Defaulting to Common.`);
+            return "Common";
+        }
+
+        const roll = Math.random() * 100;
+        let cumulativeProb = 0;
+        const rarityOrder = ["Legendary", "Epic", "Rare", "Uncommon", "Common"];
+
+        for (const rarity of rarityOrder) {
+            cumulativeProb += probabilities[rarity] || 0;
+            if (roll < cumulativeProb) {
+                return rarity;
+            }
+        }
+        return "Common";
+    }
+
+    selectCraftedItemKey(category, rarity) { // Renamed to indicate it returns the key
+        const targetTier = rarityToTier(rarity);
+        const targetEquipmentType = categoryToEquipmentType[category];
+        // console.log(`[selectCraftedItemKey] Args: category=${category}, rarity=${rarity}, targetTier=${targetTier}, targetEquipType=${targetEquipmentType}`);
+        if (!targetEquipmentType) return null;
+
+        const possibleItems = Object.values(itemDatabase).filter(item => {
+             const isEquipment = item.type === 'equipment'; const tierMatch = item.tier === targetTier; const typeMatch = item.category === targetEquipmentType; let subtypeMatch = true;
+             if (isEquipment && typeMatch && targetEquipmentType === 'Weapon') { const expectedIconKey = categoryToEquipmentIconKey[category]; const actualIconKey = items.getEquipmentIconKey(item.itemName, item.category); subtypeMatch = (actualIconKey === expectedIconKey); }
+             return isEquipment && tierMatch && typeMatch && subtypeMatch;
+        });
+        // console.log(`[selectCraftedItemKey] Found ${possibleItems.length} possible items for Tier ${targetTier} ${category}:`, possibleItems.map(i => i.itemId));
+
+        if (possibleItems.length === 0) { console.warn(`[selectCraftedItemKey] No items found matching criteria.`); return null; }
+
+        const randomIndex = Math.floor(Math.random() * possibleItems.length);
+        const selectedRawItem = possibleItems[randomIndex];
+        // console.log(`[selectCraftedItemKey] Random index: ${randomIndex}, Selected raw item:`, selectedRawItem);
+
+        if (!selectedRawItem || !selectedRawItem.itemName) { // Check for itemName (the string key)
+             console.error(`[selectCraftedItemKey] Error: Selected item at index ${randomIndex} is invalid or missing itemName!`, selectedRawItem);
+             return null;
+        }
+        // console.log(`[selectCraftedItemKey] Returning key: ${selectedRawItem.itemName}`);
+        return selectedRawItem.itemName; // <<< RETURN THE STRING KEY
+   }
+
+    showResult(craftedItemData) {
+         this.clearAllUI(); // Clear input UI
+         this.currentState = 'RESULT';
+         const width = this.cameras.main.width;
+         const height = this.cameras.main.height;
+
+         this.resultPopup = this.add.container(width / 2, height / 2);
+
+         const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setInteractive();
+         this.resultPopup.add(overlay);
+
+         const panelWidth = width * 0.6;
+         const panelHeight = height * 0.5;
+         const panelBorderColor = rarityColors[craftedItemData.rarity] || 0xffffff;
+         const panel = this.ui.createPanel(0, 0, panelWidth, panelHeight, {
+              borderColor: panelBorderColor
+         });
+         this.resultPopup.add(panel.container);
+
+
+         const resultTitle = this.add.text(0, -panelHeight * 0.4, 'Crafting Successful!', {
+              fontSize: this.ui.fontSize.md, fill: '#aaffaa'
+         }).setOrigin(0.5);
+         this.resultPopup.add(resultTitle);
+
+          let itemIcon = null;
+          if (craftedItemData.iconKey && this.textures.exists(craftedItemData.iconKey)) {
+              itemIcon = this.add.image(0, -panelHeight * 0.15, craftedItemData.iconKey).setDisplaySize(80, 80);
+              this.resultPopup.add(itemIcon);
           }
 
-         this.selectedMaterials[slotIndex] = { itemInstance: itemInstance, originalIndex: originalInventoryIndex };
+          const nameText = this.add.text(0, -panelHeight * 0.15 + 60, craftedItemData.inGameName, {
+              fontSize: this.ui.fontSize.md, fill: '#ffffff'
+          }).setOrigin(0.5);
+          this.resultPopup.add(nameText);
 
-         if (itemData.iconKey && this.textures.exists(itemData.iconKey)) {
-             slot.itemIcon.setTexture(itemData.iconKey).setVisible(true);
-             slot.placeholder.setVisible(false);
-             slot.border.setStrokeStyle(2, 0x00ff00);
-         } else {
-              slot.itemIcon.setVisible(false);
-              slot.placeholder.setVisible(true);
-              slot.border.setStrokeStyle(2, 0xff0000);
-         }
+          const rarityText = this.add.text(0, -panelHeight * 0.15 + 85, craftedItemData.rarity, {
+               fontSize: this.ui.fontSize.sm, fill: panelBorderColor
+          }).setOrigin(0.5);
+          this.resultPopup.add(rarityText);
 
-         const requiredMaterials = CRAFTING_CONFIG.crafting_recipes[this.currentCategory];
-         this.updateInventoryDisplay(requiredMaterials); // Refresh inventory highlighting/interactivity
-         this.updateCraftButtonState();
-         this.updateTierSumDisplay();
-     }
 
-     removeMaterialFromSlot(slotIndex) {
-         if (slotIndex < 0 || slotIndex >= 3 || !this.selectedMaterials[slotIndex]) return;
+          let statsString = craftedItemData.effects ? Object.entries(craftedItemData.effects).map(([stat, value]) => `${stat.charAt(0).toUpperCase() + stat.slice(1)}: ${value > 0 ? '+' : ''}${value}`).join('\n') : 'No special effects.';
+          const statsText = this.add.text(0, 0, statsString, {
+              fontSize: this.ui.fontSize.sm, fill: '#cccccc', align: 'center', wordWrap: {width: panelWidth * 0.8}
+          }).setOrigin(0.5);
+          this.resultPopup.add(statsText);
 
-         this.selectedMaterials[slotIndex] = null;
+          const buttonY = panelHeight * 0.4;
+          const buttonSpacing = panelWidth * 0.3;
 
-         const slot = this.materialSlots[slotIndex];
-         slot.itemIcon.setVisible(false);
-         slot.placeholder.setVisible(true);
-         slot.border.setStrokeStyle(2, 0x5599ff);
+          // Done Button
+          const doneButton = this.ui.createButton(-buttonSpacing / 2, buttonY, 'Done', () => {
+               this.clearResultState();
+               this.displayCategorySelection(); // Go back to category selection
+          }, { width: 140, height: 40 });
+          this.resultPopup.add(doneButton.container);
 
-         const requiredMaterials = CRAFTING_CONFIG.crafting_recipes[this.currentCategory];
-         this.updateInventoryDisplay(requiredMaterials); // Refresh inventory highlighting/interactivity
-         this.updateCraftButtonState();
-         this.updateTierSumDisplay();
-     }
-
-     updateCraftButtonState() {
-         const allSlotsFilled = this.selectedMaterials.every(material => material !== null);
-         const hasEnoughGold = (gameState.player.gold || 0) >= CRAFTING_GOLD_COST;
-
-         if (this.craftButton) {
-              if (allSlotsFilled && hasEnoughGold) {
-                   this.craftButton.enable();
-                   this.craftButton.container.setAlpha(1);
-              } else {
-                   this.craftButton.disable();
-                   this.craftButton.container.setAlpha(0.5);
-              }
-         }
-
-          if (this.tierSumText) { // Check tierSumText exists
-                const tierSum = this.calculateTierSum();
-                if (allSlotsFilled && !hasEnoughGold) {
-                    this.tierSumText.setText(`Total Tier: ${tierSum} (Need ${CRAFTING_GOLD_COST} Gold)`);
-                    this.tierSumText.setFill('#ffaaaa');
-                } else {
-                     this.tierSumText.setText(`Total Tier: ${tierSum}`); // Reset text
-                     this.tierSumText.setFill('#ffffaa'); // Reset color
-                }
-          }
-     }
-
-     calculateTierSum() {
-         return this.selectedMaterials.reduce((sum, selected) => {
-             if (selected?.itemInstance) { // Safely access itemInstance
-                 const itemData = getItemData(selected.itemInstance.itemId);
-                 return sum + (itemData?.tier || 0);
-             }
-             return sum;
-         }, 0);
-     }
-
-     updateTierSumDisplay() {
-          if (!this.tierSumText) return; // Safety check
-
-          const tierSum = this.calculateTierSum();
-          const hasEnoughGold = (gameState.player.gold || 0) >= CRAFTING_GOLD_COST;
-          const allSlotsFilled = this.selectedMaterials.every(material => material !== null);
-
-           this.tierSumText.setText(`Total Tier: ${tierSum}`); // Always show tier sum
-           if (allSlotsFilled && !hasEnoughGold) {
-               this.tierSumText.setFill('#ffaaaa'); // Warning color if no gold
-           } else {
-               this.tierSumText.setFill('#ffffaa'); // Normal color otherwise
-           }
-     }
-
-     // --- Crafting Logic ---
-
-     craftItem() {
-          if (!this.craftButton || this.craftButton.disabled) return;
-          if (!this.selectedMaterials.every(m => m !== null)) {
-               this.showTemporaryFeedback("Fill all material slots!");
-               return;
-          }
-          if ((gameState.player.gold || 0) < CRAFTING_GOLD_COST) {
-              this.showTemporaryFeedback(`Need ${CRAFTING_GOLD_COST} Gold!`);
-              return;
-          }
-
-         console.log("Attempting to craft...");
-         let canAffordMaterials = true;
-         const materialsToConsume = {};
-
-         for (const selected of this.selectedMaterials) {
-             const itemId = selected.itemInstance.itemId;
-             materialsToConsume[itemId] = (materialsToConsume[itemId] || 0) + 1;
-         }
-         for (const itemId in materialsToConsume) {
-             const needed = materialsToConsume[itemId];
-             const itemInInventory = gameState.player.inventory.items.find(invItem => invItem.itemId === itemId);
-             if (!itemInInventory || itemInInventory.quantity < needed) {
-                 canAffordMaterials = false;
-                 this.showTemporaryFeedback(`Not enough ${getItemData(itemId)?.inGameName || itemId}!`);
-                 break;
-             }
-         }
-         if (!canAffordMaterials) return;
-
-         const tierSum = this.calculateTierSum();
-         const craftedRarity = this.determineRarity(tierSum);
-         if (!craftedRarity) { this.showTemporaryFeedback("Crafting Failed!"); return; }
-         const craftedItemData = this.selectCraftedItem(this.currentCategory, craftedRarity);
-         if (!craftedItemData) { this.showTemporaryFeedback("Crafting Failed! (No matching item found)"); return; }
-
-         // --- Commit Crafting ---
-         this.safePlaySound('anvil-hit'); // Add an anvil sound or similar
-
-         // 5. Deduct Gold
-         gameState.player.gold = (gameState.player.gold || 0) - CRAFTING_GOLD_COST;
-         this.updateGoldDisplay();
-
-         // 6. Consume Materials
-          for (const selected of this.selectedMaterials) {
-              const itemId = selected.itemInstance.itemId;
-              const itemIndex = gameState.player.inventory.items.findIndex(invItem => invItem.itemId === itemId);
-              if (itemIndex > -1) {
-                  gameState.player.inventory.items[itemIndex].quantity -= 1;
-                  if (gameState.player.inventory.items[itemIndex].quantity <= 0) {
-                      gameState.player.inventory.items.splice(itemIndex, 1);
-                  }
-              }
-          }
-
-         // 7. Add Crafted Item
-         if (!gameState.player.inventory.items) gameState.player.inventory.items = [];
-          const spaceAvailable = (gameState.player.inventory.maxItems || 20) > gameState.player.inventory.items.length;
-          if (!spaceAvailable) {
-               this.showTemporaryFeedback("Inventory Full!");
-               // Item is lost, gold/mats already consumed
-               this.clearInputState();
-               this.displayCraftingInput(this.currentCategory);
-               return;
-          }
-         gameState.player.inventory.items.push({ itemId: craftedItemData.itemId, quantity: 1 });
-
-         // 8. Show Result
-         this.showResult(craftedItemData);
-
-         // 9. Reset input state (materials removed from slots implicitly by clearAllUI in showResult)
-          this.selectedMaterials = [null, null, null];
-     }
-
-     // ... (determineRarity, selectCraftedItem remain the same) ...
-     determineRarity(tierSum) {
-         // Clamp tierSum to the valid range of the probability chart
-         const minTier = Math.min(...Object.keys(CRAFTING_CONFIG.tier_probability_chart).map(Number));
-         const maxTier = Math.max(...Object.keys(CRAFTING_CONFIG.tier_probability_chart).map(Number));
-         const effectiveTierSum = Math.max(minTier, Math.min(tierSum, maxTier));
-
-         const probabilities = CRAFTING_CONFIG.tier_probability_chart[effectiveTierSum.toString()];
-         if (!probabilities) {
-             console.warn(`No probability data for effective tier sum: ${effectiveTierSum}. Defaulting to Common.`);
-             return "Common";
-         }
-
-         const roll = Math.random() * 100;
-         let cumulativeProb = 0;
-         const rarityOrder = ["Legendary", "Epic", "Rare", "Uncommon", "Common"];
-
-         for (const rarity of rarityOrder) {
-             cumulativeProb += probabilities[rarity] || 0;
-             if (roll < cumulativeProb) {
-                 return rarity;
-             }
-         }
-         return "Common";
-     }
-
-     selectCraftedItem(category, rarity) {
-          const targetTier = rarityToTier(rarity);
-          const targetEquipmentType = categoryToEquipmentType[category];
-
-          if (!targetEquipmentType) return null;
-
-          const possibleItems = Object.values(itemDatabase).filter(item => {
-               if (item.type !== 'equipment') return false;
-               if (item.tier !== targetTier) return false;
-               if (item.category !== targetEquipmentType) return false;
-
-               if (targetEquipmentType === 'Weapon') {
-                    const expectedIconKey = categoryToEquipmentIconKey[category];
-                    const actualIconKey = items.getEquipmentIconKey(item.itemName, item.category);
-                    if (actualIconKey !== expectedIconKey) return false;
+          // Craft Again Button
+          const craftAgainButton = this.ui.createButton(buttonSpacing / 2, buttonY, 'Craft Again', () => {
+               this.clearResultState();
+               if (this.currentCategory) {
+                    this.displayCraftingInput(this.currentCategory);
+               } else {
+                    this.displayCategorySelection();
                }
-               return true;
+          }, { width: 140, height: 40 });
+          this.resultPopup.add(craftAgainButton.container);
+
+
+          this.resultPopup.setScale(0);
+          this.tweens.add({
+              targets: this.resultPopup,
+              scale: 1,
+              duration: 300,
+              ease: 'Back.easeOut'
           });
+    }
 
-          if (possibleItems.length === 0) return null;
-
-          const randomIndex = Math.floor(Math.random() * possibleItems.length);
-          return getItemData(possibleItems[randomIndex].itemId); // Return a fresh copy
-     }
-
-     showResult(craftedItemData) {
-          this.clearAllUI(); // Clear input UI
-          this.currentState = 'RESULT';
+     showTemporaryFeedback(message, color = '#ffaaaa') {
+          if (!this.scene || !this.scene.key) { // Check if scene is still valid
+               console.warn("Scene context lost, cannot show feedback:", message);
+               return;
+          }
           const width = this.cameras.main.width;
           const height = this.cameras.main.height;
+          const feedbackText = this.add.text(width / 2, height * 0.8, message, {
+              fontSize: this.ui.fontSize.sm, fill: color, backgroundColor: '#000000cc', padding: { x: 10, y: 5 }, align: 'center'
+          }).setOrigin(0.5).setDepth(100);
 
-          this.resultPopup = this.add.container(width / 2, height / 2);
-
-          const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setInteractive();
-          this.resultPopup.add(overlay);
-
-          const panelWidth = width * 0.6;
-          const panelHeight = height * 0.5;
-          const panelBorderColor = rarityColors[craftedItemData.rarity] || 0xffffff;
-          const panel = this.ui.createPanel(0, 0, panelWidth, panelHeight, {
-               borderColor: panelBorderColor
-          });
-          this.resultPopup.add(panel.container);
-
-
-          const resultTitle = this.add.text(0, -panelHeight * 0.4, 'Crafting Successful!', {
-               fontSize: this.ui.fontSize.md, fill: '#aaffaa'
-          }).setOrigin(0.5);
-          this.resultPopup.add(resultTitle);
-
-           let itemIcon = null;
-           if (craftedItemData.iconKey && this.textures.exists(craftedItemData.iconKey)) {
-               itemIcon = this.add.image(0, -panelHeight * 0.15, craftedItemData.iconKey).setDisplaySize(80, 80);
-               this.resultPopup.add(itemIcon);
-           }
-
-           const nameText = this.add.text(0, -panelHeight * 0.15 + 60, craftedItemData.inGameName, {
-               fontSize: this.ui.fontSize.md, fill: '#ffffff'
-           }).setOrigin(0.5);
-           this.resultPopup.add(nameText);
-
-           const rarityText = this.add.text(0, -panelHeight * 0.15 + 85, craftedItemData.rarity, {
-                fontSize: this.ui.fontSize.sm, fill: panelBorderColor
-           }).setOrigin(0.5);
-           this.resultPopup.add(rarityText);
-
-
-           let statsString = craftedItemData.effects ? Object.entries(craftedItemData.effects).map(([stat, value]) => `${stat.charAt(0).toUpperCase() + stat.slice(1)}: ${value > 0 ? '+' : ''}${value}`).join('\n') : 'No special effects.';
-           const statsText = this.add.text(0, 0, statsString, {
-               fontSize: this.ui.fontSize.sm, fill: '#cccccc', align: 'center', wordWrap: {width: panelWidth * 0.8}
-           }).setOrigin(0.5);
-           this.resultPopup.add(statsText);
-
-           const buttonY = panelHeight * 0.4;
-           const buttonSpacing = panelWidth * 0.3;
-
-           // Done Button
-           const doneButton = this.ui.createButton(-buttonSpacing / 2, buttonY, 'Done', () => {
-                this.clearResultState();
-                this.displayCategorySelection(); // Go back to category selection
-           }, { width: 140, height: 40 });
-           this.resultPopup.add(doneButton.container);
-
-           // Craft Again Button
-           const craftAgainButton = this.ui.createButton(buttonSpacing / 2, buttonY, 'Craft Again', () => {
-                this.clearResultState();
-                if (this.currentCategory) {
-                     this.displayCraftingInput(this.currentCategory);
-                } else {
-                     this.displayCategorySelection();
-                }
-           }, { width: 140, height: 40 });
-           this.resultPopup.add(craftAgainButton.container);
-
-
-           this.resultPopup.setScale(0);
-           this.tweens.add({
-               targets: this.resultPopup,
-               scale: 1,
-               duration: 300,
-               ease: 'Back.easeOut'
-           });
+          if (this.tweens) {
+               this.tweens.add({
+                   targets: feedbackText,
+                   alpha: 0,
+                   y: '-=30',
+                   delay: 1500,
+                   duration: 500,
+                   onComplete: () => { if (feedbackText.active) feedbackText.destroy(); } // Check active before destroy
+               });
+          } else {
+               this.time.delayedCall(2000, () => { if (feedbackText.active) feedbackText.destroy(); });
+          }
      }
 
-      showTemporaryFeedback(message, color = '#ffaaaa') {
-           if (!this.scene || !this.scene.key) {
-                console.warn("Scene context lost, cannot show feedback:", message);
-                return;
-           }
-           const width = this.cameras.main.width;
-           const height = this.cameras.main.height;
-           const feedbackText = this.add.text(width / 2, height * 0.8, message, {
-               fontSize: this.ui.fontSize.sm, fill: color, backgroundColor: '#000000cc', padding: { x: 10, y: 5 }, align: 'center'
-           }).setOrigin(0.5).setDepth(100);
-
-           if (this.tweens) {
-                this.tweens.add({
-                    targets: feedbackText,
-                    alpha: 0,
-                    y: '-=30',
-                    delay: 1500,
-                    duration: 500,
-                    onComplete: () => { if (feedbackText.active) feedbackText.destroy(); }
-                });
-           } else {
-                this.time.delayedCall(2000, () => { if (feedbackText.active) feedbackText.destroy(); });
-           }
-      }
 }
 
 export default CraftingScene;
