@@ -166,6 +166,13 @@ export default class EncounterScene extends BaseScene {
             this.combatEngine.startCombat(); // Start the engine logic
             this.combatAudio.playBattleMusic();
         });
+
+        if (this.transitions) {
+            this.transitions.fadeIn(); // Fade in this scene smoothly
+        } else {
+            console.warn(`TransitionManager not found in ${this.scene.key}, skipping fade-in.`);
+        }
+        console.log(`${this.scene.key} Create End`); 
     }
 
     update(time, delta) {}

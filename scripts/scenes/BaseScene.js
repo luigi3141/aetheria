@@ -122,6 +122,13 @@ export default class BaseScene extends Phaser.Scene {
         return imageObject; // Return the created image or placeholder
     }
     
+    shutdown() {
+        console.log(`--- ${this.scene.key} SHUTDOWN ---`);
+        // Call super.shutdown() if extending BaseScene and it has one
+        // if (super.shutdown) {
+        //     super.shutdown();
+        // }
+    }
     /**
      * Initialize safe asset handling methods
      * Adds methods for safely handling assets with proper error management

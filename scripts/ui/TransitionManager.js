@@ -1,245 +1,110 @@
-/**
- * TransitionManager - Handles scene transitions with animations and effects
- */
+// ---- File: TransitionManager.js ----
+
 class TransitionManager {
-    /**
-     * Initialize the transition manager
-     * @param {Phaser.Scene} scene - The scene to attach this manager to
-     */
     constructor(scene) {
         this.scene = scene;
-        this.isTransitioning = false;
+        // REMOVE isTransitioning flag for this simplified approach
+        // this.isTransitioning = false;
+        console.log(`[TransitionManager] Initialized for scene: ${scene.scene.key}`); // Add log
     }
 
     /**
-     * Dungeon entry transition with fade effect and animation
-     * @param {Function} callback - Function to call after transition completes
+     * Simple fade-to-black transition specifically for changing scenes.
+     * Executes the callback WHEN the screen is fully black, BEFORE fading back in.
+     * @param {Function} callback - Function to call to START the next scene.
+     * @param {number} duration - Duration of the fade-in to black.
      */
-    dungeonEntry(callback) {
-        if (this.isTransitioning) return;
-        this.isTransitioning = true;
-        
+    fade(callback, duration = 400) { // Reduced default duration slightly
+        console.log(`[Fade] Starting fade transition for scene change in ${this.scene.scene.key}...`);
+
+        // --- Safety Check ---
+        if (!this.scene || !this.scene.sys.isActive()) {
+            console.warn("[Fade] Scene is not active. Aborting fade.");
+            // Optionally try to force callback if needed? Risky.
+            // if(callback) callback();
+            return;
+        }
+
         // Get screen dimensions
         const width = this.scene.cameras.main.width;
         const height = this.scene.cameras.main.height;
-        
-        // Create fade rectangle
+
+        // Create fade rectangle - make sure it's on top
         const fadeRect = this.scene.add.rectangle(0, 0, width, height, 0x000000)
             .setOrigin(0)
             .setAlpha(0)
-            .setDepth(1000); // Ensure it's above everything
-        
-        // Play door sound if available
-        try {
-            if (this.scene.sound.get('door-open')) {
-                this.scene.sound.play('door-open', { volume: 0.5 });
-            }
-        } catch (e) {
-            console.warn('Door open sound not available:', e);
+            .setDepth(9999); // Use a very high depth
+
+        console.log("[Fade] Fade rectangle created.");
+
+        // Disable input for the current scene during transition
+        // Check if input system exists and is active
+        if(this.scene.input?.enabled) {
+            this.scene.input.enabled = false;
+            console.log("[Fade] Scene input disabled.");
         }
-        
-        // Create door animation if not exists
-        if (!this.scene.anims.exists('door-open')) {
-            try {
-                this.scene.anims.create({
-                    key: 'door-open',
-                    frames: this.scene.anims.generateFrameNumbers('door', { start: 0, end: 5 }),
-                    frameRate: 10,
-                    repeat: 0
-                });
-            } catch (e) {
-                console.warn('Door animation creation failed:', e);
-            }
-        }
-        
-        // Add door sprite in center
-        let door;
-        try {
-            door = this.scene.add.sprite(width / 2, height / 2, 'door')
-                .setDepth(1001) // Above the fade rectangle
-                .setScale(3)
-                .setAlpha(0);
-        } catch (e) {
-            console.warn('Door sprite creation failed:', e);
-            // Create a fallback rectangle instead
-            door = this.scene.add.rectangle(width / 2, height / 2, 100, 100, 0x3366ff)
-                .setDepth(1001)
-                .setAlpha(0);
-        }
-        
-        // Fade in
-        this.scene.tweens.add({
-            targets: fadeRect,
-            alpha: 1,
-            duration: 250,
-            onComplete: () => {
-                // Show door and play animation
-                this.scene.tweens.add({
-                    targets: door,
-                    alpha: 1,
-                    duration: 100,
-                    onComplete: () => {
-                        // Try to play animation if it's a sprite
-                        if (door.play && typeof door.play === 'function') {
-                            try {
-                                door.play('door-open');
-                                
-                                // Wait for animation to finish
-                                door.on('animationcomplete', () => {
-                                    this.completeFadeTransition(fadeRect, door, callback);
-                                });
-                            } catch (e) {
-                                console.warn('Door animation play failed:', e);
-                                // If animation fails, just wait a bit then continue
-                                this.scene.time.delayedCall(500, () => {
-                                    this.completeFadeTransition(fadeRect, door, callback);
-                                });
-                            }
-                        } else {
-                            // If it's not a sprite (fallback rectangle), just wait a bit then continue
-                            this.scene.time.delayedCall(500, () => {
-                                this.completeFadeTransition(fadeRect, door, callback);
-                            });
-                        }
-                    }
-                });
-            }
-        });
-    }
-    
-    /**
-     * Helper method to complete the fade transition
-     * @private
-     */
-    completeFadeTransition(fadeRect, transitionObject, callback) {
-        // Execute callback (scene change)
-        if (callback) callback();
-        
-        // Fade out
-        this.scene.tweens.add({
-            targets: [fadeRect, transitionObject],
-            alpha: 0,
-            duration: 250,
-            onComplete: () => {
-                // Clean up
-                fadeRect.destroy();
-                transitionObject.destroy();
-                this.isTransitioning = false;
-            }
-        });
-    }
-    
-    /**
-     * Enemy encounter transition with flash effect and enemy animations
-     * @param {Array} enemies - Array of enemy sprites to animate
-     * @param {Function} callback - Function to call after transition completes
-     */
-    enemyEncounter(enemies = [], callback) {
-        if (this.isTransitioning) return;
-        this.isTransitioning = true;
-        
-        // Get screen dimensions
-        const width = this.scene.cameras.main.width;
-        const height = this.scene.cameras.main.height;
-        
-        // Create flash rectangle
-        const flashRect = this.scene.add.rectangle(0, 0, width, height, 0xffffff)
-            .setOrigin(0)
-            .setAlpha(0)
-            .setDepth(1000); // Ensure it's above everything
-        
-        // Play combat sound if available
-        try {
-            if (this.scene.sound.get('combat-start')) {
-                this.scene.sound.play('combat-start', { volume: 0.6 });
-            }
-        } catch (e) {
-            console.warn('Combat start sound not available:', e);
-        }
-        
-        // Flash effect
-        this.scene.tweens.add({
-            targets: flashRect,
-            alpha: 0.5,
-            duration: 150,
-            yoyo: true,
-            onComplete: () => {
-                // Animate enemies if they exist and are valid
-                if (enemies && enemies.length > 0) {
-                    enemies.forEach(enemy => {
-                        try {
-                            // Store original scale if it exists
-                            const originalScale = enemy.scale || 1;
-                            
-                            // Set initial scale to 0
-                            enemy.setScale(0);
-                            
-                            // Bounce in
-                            this.scene.tweens.add({
-                                targets: enemy,
-                                scale: originalScale,
-                                duration: 300,
-                                ease: 'Back.Out',
-                            });
-                        } catch (e) {
-                            console.warn('Enemy animation failed:', e);
-                        }
-                    });
-                }
-                
-                // Clean up
-                this.scene.tweens.add({
-                    targets: flashRect,
-                    alpha: 0,
-                    duration: 100,
-                    onComplete: () => {
-                        flashRect.destroy();
-                        this.isTransitioning = false;
-                        if (callback) callback();
-                    }
-                });
-            }
-        });
-    }
-    
-    /**
-     * Simple fade transition between scenes
-     * @param {Function} callback - Function to call after fade completes
-     * @param {number} duration - Duration of the fade in milliseconds
-     */
-    fade(callback, duration = 500) {
-        if (this.isTransitioning) return;
-        this.isTransitioning = true;
-        
-        // Get screen dimensions
-        const width = this.scene.cameras.main.width;
-        const height = this.scene.cameras.main.height;
-        
-        // Create fade rectangle
-        const fadeRect = this.scene.add.rectangle(0, 0, width, height, 0x000000)
-            .setOrigin(0)
-            .setAlpha(0)
-            .setDepth(1000); // Ensure it's above everything
-            
-        // Simple fade in and out
+
+
+        // Fade IN to black
+        console.log("[Fade] Starting fade-in tween...");
         this.scene.tweens.add({
             targets: fadeRect,
             alpha: 1,
             duration: duration,
+            ease: 'Power2', // Smoother ease
             onComplete: () => {
-                // Execute callback at peak of fade
-                if (callback) callback();
-                
-                // Fade out and cleanup
-                this.scene.tweens.add({
-                    targets: fadeRect,
-                    alpha: 0,
-                    duration: duration,
-                    onComplete: () => {
-                        fadeRect.destroy();
-                        this.isTransitioning = false;
+                console.log("[Fade] Fade-in COMPLETE.");
+                try {
+                    if (callback) {
+                        console.log("[Fade] Executing scene change callback...");
+                        callback(); // <<< This should call navigationManager.navigateTo -> scene.start()
+                        console.log("[Fade] Scene change callback finished.");
+                    } else {
+                        console.warn("[Fade] No callback provided for scene change.");
+                         // If no callback, maybe just re-enable input and destroy rect?
+                         if(this.scene.input) this.scene.input.enabled = true;
+                         if(fadeRect.active) fadeRect.destroy();
                     }
-                });
+                    // --- DO NOT START FADE-OUT HERE ---
+                    // The fade-out should happen in the *next* scene's create method
+                    // or be handled by a global transition layer.
+                    // We also don't destroy fadeRect here because the new scene starts immediately.
+                    // If the new scene DOESN'T handle fade-out, this rect will persist.
+
+                } catch (e) {
+                    console.error("[Fade] Error during scene change callback:", e);
+                    // Re-enable input on error to prevent getting stuck
+                    if(this.scene.input) this.scene.input.enabled = true;
+                    console.log("[Fade - catch] Attempting to destroy fadeRect", fadeRect);
+
+                    if(fadeRect.active) fadeRect.destroy(); // Clean up on error
+                }
+            },
+            // Added onError handler for the tween itself
+            onError: (tween, target) => {
+                console.error("[Fade] Error occurred during fade-in tween.");
+                if(this.scene.input) this.scene.input.enabled = true; // Re-enable input
+                console.log("[Fade - onError] Attempting to destroy fadeRect", fadeRect);
+
+                if(fadeRect.active) fadeRect.destroy(); // Clean up
+            }
+        });
+    }
+
+    // You might add a separate method for fading *in* when a new scene starts
+    fadeIn(duration = 400) {
+        console.log(`[FadeIn] Fading in scene: ${this.scene.scene.key}`);
+         if (!this.scene || !this.scene.sys.isActive()) return;
+
+        // Assume camera already has fade effect applied or create overlay
+        this.scene.cameras.main.fadeIn(duration, 0, 0, 0, (camera, progress) => {
+            if (progress === 1) {
+                console.log(`[FadeIn] Scene ${this.scene.scene.key} fade-in complete.`);
+                 // Re-enable input after fade-in
+                 if(this.scene.input) {
+                    this.scene.input.enabled = true;
+                    console.log(`[FadeIn] Scene ${this.scene.scene.key} input enabled.`);
+                 }
             }
         });
     }

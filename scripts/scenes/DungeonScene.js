@@ -101,6 +101,13 @@ class DungeonScene extends BaseScene {
 
         // Create inventory button
         this.createInventoryButton();
+
+        if (this.transitions) {
+            this.transitions.fadeIn(); // Fade in this scene smoothly
+        } else {
+            console.warn(`TransitionManager not found in ${this.scene.key}, skipping fade-in.`);
+        }
+        console.log(`${this.scene.key} Create End`); 
     }
 
     initializeDungeon() {

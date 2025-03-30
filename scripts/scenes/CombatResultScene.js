@@ -174,11 +174,20 @@ class CombatResultScene extends BaseScene {
             }
         }
         // --- <<< END LEVEL INCREMENT >>> ---
-
+        console.log("Calling this.transitions.fade..."); // Log before calling
+        if (!this.transitions) { console.error("!!! this.transitions is missing !!!"); return; } // Add check
+    
         this.transitions.fade(() => {
-            // Pass updated dungeon state if needed, though it's in gameState
-            navigationManager.navigateTo(this, 'DungeonScene', { fromCombat: true /*, updatedDungeon: gameState.currentDungeon */ });
+            // --- ADD THIS LOG ---
+            console.log(">>> Fade callback started <<<");
+            // --- END ADD ---
+            if (!navigationManager) { console.error("!!! navigationManager is missing !!!"); return; } // Add check
+    
+            console.log("Attempting navigation via navigationManager...");
+            navigationManager.navigateTo(this, 'DungeonScene', { fromCombat: true });
+            console.log("navigationManager.navigateTo called.");
         });
+        console.log("this.transitions.fade call finished."); // Log after calling
     }
 
     /**
