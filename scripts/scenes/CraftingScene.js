@@ -116,7 +116,7 @@ class CraftingScene extends BaseScene {
 
     createNavigationButtons() {
         const width = this.cameras.main.width; const height = this.cameras.main.height;
-        this.backButtonInstance = this.ui.createButton( width * 0.15, height * 0.92, 'Back', () => { this.safePlaySound('button-click'); if (this.currentState === 'INPUT' || this.currentState === 'RESULT') { this.clearInputState(); this.clearResultState(); this.displayCategorySelection(); } else { navigationManager.navigateTo(this, 'OverworldScene'); } }, { width: 120, height: 45, fontSize: this.ui.fontSize.sm } );
+        this.backButtonInstance = this.ui.createButton( width * 0.15, height * 0.92, 'Back', () => { this.safePlaySound('button-click'); if (this.currentState === 'INPUT' || this.currentState === 'RESULT') { this.clearInputState(); this.clearResultState(); this.displayCategorySelection(); } else { navigationManager.navigateTo(this, 'OverworldScene'); } }, { width: 120, height: 45, fontSize: this.ui.fontSize.sm, depth: 10 } );
     }
 
     giveDebugMaterials() {
@@ -124,24 +124,62 @@ class CraftingScene extends BaseScene {
     }
 
     clearAllUI() {
-        if (this.categoryContainer) this.categoryContainer.destroy(); if (this.inputContainer) this.inputContainer.destroy(); if (this.inventoryContainer) this.inventoryContainer.destroy(); if (this.resultPopup) this.resultPopup.destroy();
-        this.categoryContainer = null; this.inputContainer = null; this.inventoryContainer = null; this.resultPopup = null; this.materialSlots = []; this.craftButton = null; this.tierSumText = null; this.tierSumBg = null; this.costText = null; this.costTextBg = null;
+        // Destroy elements specific to input or result states
+        if (this.categoryContainer) this.categoryContainer.destroy();
+        if (this.inputContainer) this.inputContainer.destroy();
+        if (this.inventoryContainer) this.inventoryContainer.destroy();
+        if (this.resultPopup) this.resultPopup.destroy();
+
+        this.categoryContainer = null;
+        this.inputContainer = null;
+        this.inventoryContainer = null;
+        this.resultPopup = null;
+        this.materialSlots = [];
+        this.craftButton = null;
+        this.tierSumText = null; this.tierSumBg = null;
+        this.costText = null; this.costTextBg = null;
+        // **DO NOT CLEAR this.currentCategory here**
     }
+
     clearInputState() {
-        if (this.inputContainer) this.inputContainer.destroy(); if (this.inventoryContainer) this.inventoryContainer.destroy();
-        this.inputContainer = null; this.inventoryContainer = null; this.materialSlots = []; this.craftButton = null; this.tierSumText = null; this.tierSumBg = null; this.costText = null; this.costTextBg = null; this.selectedMaterials = [null, null, null]; this.currentCategory = null;
+        // Destroy only the UI elements associated with the input screen
+        if (this.inputContainer) this.inputContainer.destroy();
+        if (this.inventoryContainer) this.inventoryContainer.destroy();
+        this.inputContainer = null;
+        this.inventoryContainer = null;
+        this.materialSlots = [];
+        this.craftButton = null;
+        this.tierSumText = null; this.tierSumBg = null;
+        this.costText = null; this.costTextBg = null;
+        // Reset only the selected materials, keep the category
+        this.selectedMaterials = [null, null, null];
+        // **DO NOT CLEAR this.currentCategory here**
     }
     clearResultState() { if (this.resultPopup) this.resultPopup.destroy(); this.resultPopup = null; }
 
     displayCategorySelection() {
-        this.clearAllUI(); this.currentState = 'CATEGORY_SELECT'; const width = this.cameras.main.width; const height = this.cameras.main.height; this.categoryContainer = this.add.container(width / 2, height * 0.5); const categories = Object.keys(CRAFTING_CONFIG.crafting_recipes); const buttonWidth = 180; const buttonHeight = 60; const spacingY = 80; const startY = -((categories.length - 1) * spacingY) / 2; if (this.backButtonInstance) { this.backButtonInstance.setText('Overworld'); }
+        this.clearAllUI();
+        this.currentState = 'CATEGORY_SELECT';
+        this.currentCategory = null; // <<< Reset category only when going back to selection
+        const width = this.cameras.main.width; const height = this.cameras.main.height; this.categoryContainer = this.add.container(width / 2, height * 0.5); const categories = Object.keys(CRAFTING_CONFIG.crafting_recipes); const buttonWidth = 180; const buttonHeight = 60; const spacingY = 80; const startY = -((categories.length - 1) * spacingY) / 2; if (this.backButtonInstance) { this.backButtonInstance.setText('Overworld'); }
         categories.forEach((categoryName, index) => { let iconKey = ''; if (categoryName === 'Melee') iconKey = 'icon-melee'; else if (categoryName === 'Ranged') iconKey = 'icon-ranged'; else if (categoryName === 'Wand') iconKey = 'icon-wand'; else if (categoryName === 'Armour') iconKey = 'icon-armour'; const yPos = startY + index * spacingY; const button = this.ui.createButton( 0, yPos, categoryName, () => this.selectCategory(categoryName), { width: buttonWidth, height: buttonHeight } ); this.categoryContainer.add(button.container); if (iconKey && this.textures.exists(iconKey)) { const icon = this.add.image(-buttonWidth/2 - 30, yPos, iconKey).setDisplaySize(40, 40); this.categoryContainer.add(icon); } });
     }
 
-    selectCategory(categoryName) { console.log(`Category selected: ${categoryName}`); this.currentCategory = categoryName; this.displayCraftingInput(categoryName); }
-
+    selectCategory(categoryName) {
+        console.log(`Category selected: ${categoryName}`);
+        this.currentCategory = categoryName;
+        // Set requiredMaterials based on the selected category
+        this.requiredMaterials = CRAFTING_CONFIG.crafting_recipes[categoryName]; // Assuming this holds ['Sharps', 'Sharps', 'Strings'], etc.
+        console.log("Required material categories set:", this.requiredMaterials);
+        this.displayCraftingInput(categoryName); // Now displayCraftingInput will have access
+    }
+    
     displayCraftingInput(categoryName) {
-        this.clearAllUI();
+        if (!categoryName || !CRAFTING_CONFIG.crafting_recipes[categoryName]) {
+            console.error(`Invalid category name passed to displayCraftingInput: ${categoryName}. Returning to category select.`);
+            this.displayCategorySelection();
+            return;
+        }this.clearAllUI();
         this.currentState = 'INPUT';
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
@@ -154,7 +192,14 @@ class CraftingScene extends BaseScene {
 
         if (this.backButtonInstance) { this.backButtonInstance.setText('Back'); }
 
-        const requiredMaterials = CRAFTING_CONFIG.crafting_recipes[categoryName];
+        const requiredMaterialCategories = CRAFTING_CONFIG.crafting_recipes[categoryName];
+        if (!requiredMaterialCategories || !Array.isArray(requiredMaterialCategories) || requiredMaterialCategories.length !== 3) {
+            console.error(`Invalid or missing recipe configuration for category: ${categoryName}`);
+            this.showTemporaryFeedback("Error: Invalid recipe data.");
+            this.displayCategorySelection(); // Go back safely
+            return;
+       }
+        this.updateInventoryDisplay(requiredMaterialCategories); // Pass the categories
         const slotSize = 70;
         const slotSpacing = 90;
         const totalSlotWidth = (3 * slotSize) + (2 * (slotSpacing - slotSize));
@@ -163,7 +208,9 @@ class CraftingScene extends BaseScene {
         this.materialSlots = [];
 
         for (let i = 0; i < 3; i++) {
-            const slotX = startXSlots + i * slotSpacing; const requiredCategory = requiredMaterials[i]; const placeholderIconKey = categoryIconKeys[requiredCategory] || 'icon-default-material'; const slotContainer = this.add.container(slotX, slotsY); const border = this.add.rectangle(0, 0, slotSize, slotSize, 0x222233, 0.8).setStrokeStyle(2, 0x5599ff); const placeholderIcon = this.add.image(0, 0, placeholderIconKey); if (!this.textures.exists(placeholderIconKey)) { placeholderIcon.setVisible(false); } else { placeholderIcon.setDisplaySize(slotSize * 0.7, slotSize * 0.7).setAlpha(0.5); } const itemIcon = this.add.image(0, 0, '').setVisible(false).setDisplaySize(slotSize*0.8, slotSize*0.8); const tooltipText = this.add.text(0, slotSize / 2 + 10, `Requires: ${requiredCategory}`, { fontSize: '10px', fill: '#ccc' }).setOrigin(0.5).setVisible(false); slotContainer.add([border, placeholderIcon, itemIcon, tooltipText]); this.inputContainer.add(slotContainer); border.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.removeMaterialFromSlot(i)).on('pointerover', () => tooltipText.setVisible(true)).on('pointerout', () => tooltipText.setVisible(false)); this.materialSlots.push({ container: slotContainer, border: border, placeholder: placeholderIcon, itemIcon: itemIcon, requiredCategory: requiredCategory, currentItem: null, tooltip: tooltipText });
+            const slotX = startXSlots + i * slotSpacing; 
+            const requiredCategory = requiredMaterialCategories[i];
+            const placeholderIconKey = categoryIconKeys[requiredCategory] || 'icon-default-material'; const slotContainer = this.add.container(slotX, slotsY); const border = this.add.rectangle(0, 0, slotSize, slotSize, 0x222233, 0.8).setStrokeStyle(2, 0x5599ff); const placeholderIcon = this.add.image(0, 0, placeholderIconKey); if (!this.textures.exists(placeholderIconKey)) { placeholderIcon.setVisible(false); } else { placeholderIcon.setDisplaySize(slotSize * 0.7, slotSize * 0.7).setAlpha(0.5); } const itemIcon = this.add.image(0, 0, '').setVisible(false).setDisplaySize(slotSize*0.8, slotSize*0.8); const tooltipText = this.add.text(0, slotSize / 2 + 10, `Requires: ${requiredCategory}`, { fontSize: '10px', fill: '#ccc' }).setOrigin(0.5).setVisible(false); slotContainer.add([border, placeholderIcon, itemIcon, tooltipText]); this.inputContainer.add(slotContainer); border.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.removeMaterialFromSlot(i)).on('pointerover', () => tooltipText.setVisible(true)).on('pointerout', () => tooltipText.setVisible(false)); this.materialSlots.push({ container: slotContainer, border: border, placeholder: placeholderIcon, itemIcon: itemIcon, requiredCategory: requiredCategory, currentItem: null, tooltip: tooltipText });
         }
 
         // --- Tier Sum Text & BG ---
@@ -201,7 +248,7 @@ class CraftingScene extends BaseScene {
          if (this.inventoryContainer.scrollbarBg) this.inputContainer.add(this.inventoryContainer.scrollbarBg.setDepth(13));
          if (this.inventoryContainer.scrollbarHandle) this.inputContainer.add(this.inventoryContainer.scrollbarHandle.setDepth(14));
 
-        this.updateInventoryDisplay(requiredMaterials);
+        this.updateInventoryDisplay(requiredMaterialCategories);
 
         this.craftButton = this.ui.createButton(
             width / 2,
@@ -220,11 +267,18 @@ class CraftingScene extends BaseScene {
         this.inventoryContainer.clear();
 
         const inventory = gameState.player.inventory.items || [];
-        const currentInventoryState = JSON.parse(JSON.stringify(inventory)); // Use copy
+        const currentInventoryState = JSON.parse(JSON.stringify(inventory));
+        console.log('Updating inventory display for required materials:', filterCategories);
 
+        console.log('Player inventory items:', gameState.player.inventory.items);
         const relevantMaterials = currentInventoryState.filter(itemInstance => {
+            console.log('Processing invItem:', itemInstance);
+            if (!itemInstance) {
+                // This console.warn is already inside getItemData, but logging here confirms context
+                console.warn(`[CraftingScene Loop] Item data not found for ID: ${itemInstance.itemId}`);
+                return; // Skip this inventory item if data is missing
+           }
             const itemData = getItemData(itemInstance.itemId);
-            // Ensure itemData exists before proceeding
             return itemData && itemData.type === 'material' && itemInstance.quantity > 0 && filterCategories.includes(itemData.category);
         });
 
@@ -238,16 +292,16 @@ class CraftingScene extends BaseScene {
 
             relevantMaterials.forEach((itemInstance, inventoryIndex) => {
                 const itemData = getItemData(itemInstance.itemId);
-                if (!itemData) { // Skip if item data somehow missing after initial filter
-                    console.warn(`[Crafting UpdateInv] Skipping item instance with now invalid ID:`, itemInstance.itemId);
+                if (!itemData) {
+                    console.warn(`[Crafting UpdateInv] Skipping item instance with invalid ID:`, itemInstance.itemId);
                     return;
                 }
 
                 const itemRow = this.add.container(0, 0);
                 const itemBg = this.add.rectangle( containerWidth / 2, itemHeight / 2, containerWidth - 20, itemHeight, 0x2a2a3e, 0.6 ).setOrigin(0.5);
-                // --- Set itemBg interactive with its own bounds ---
                 // Define hit area relative to the Rectangle's origin (0.5, 0.5)
                 const hitAreaRect = new Phaser.Geom.Rectangle(-itemBg.width / 2, -itemBg.height / 2, itemBg.width, itemBg.height);
+                // **Crucially, make itemBg interactive within the itemRow container**
                 itemBg.setInteractive(hitAreaRect, Phaser.Geom.Rectangle.Contains);
                 itemBg.input.cursor = 'pointer';
 
@@ -262,27 +316,29 @@ class CraftingScene extends BaseScene {
                 const canAddMore = availableQuantity > 0;
 
                 itemBg.removeListener('pointerdown'); itemBg.removeListener('pointerover'); itemBg.removeListener('pointerout');
-                // itemBg.disableInteractive(); // Don't disable here, manage through input.enabled
                 itemText.setAlpha(1); itemBg.setFillStyle(0x2a2a3e, 0.6); itemBg.setStrokeStyle();
+                 // Default to input disabled unless explicitly enabled
+                if(itemBg.input) itemBg.input.enabled = false;
 
 
                 if (!canAddMore) {
                     itemBg.setFillStyle(0x111111, 0.7); itemText.setAlpha(0.4);
-                    if (itemBg.input) itemBg.input.enabled = false; // Disable input
+                    // Input remains disabled
                 } else {
-                     if (itemBg.input) itemBg.input.enabled = true; // Ensure input is enabled
-                     else { // If input somehow doesn't exist yet, re-set interactive
+                    if (itemBg.input) { // Check if input component exists
+                         itemBg.input.enabled = true; // Explicitly enable
+                     } else { // If it doesn't exist (shouldn't happen often), setInteractive again
                           itemBg.setInteractive(hitAreaRect, Phaser.Geom.Rectangle.Contains);
                           itemBg.input.cursor = 'pointer';
+                          console.warn("Re-enabled input for itemBg", itemData.itemId);
                      }
 
                      itemBg.on('pointerdown', (pointer) => {
                         pointer.event.stopPropagation(); // Prevent scroll container drag
-                        // --- Re-check availability at click time ---
+
                         const currentGameStateItem = gameState.player.inventory.items.find(invItem => invItem.itemId === itemInstance.itemId);
                         const actualQuantity = currentGameStateItem ? currentGameStateItem.quantity : 0;
                         const currentCountInSlotsOnClick = this.selectedMaterials.reduce((count, slot) => count + (slot && slot.itemInstance.itemId === itemInstance.itemId ? 1 : 0), 0);
-                        // --- End Re-check ---
 
                         if (actualQuantity > currentCountInSlotsOnClick) {
                              console.log(`[Crafting CLICK] Click OK for: ${itemData.inGameName} (Available: ${availableQuantity}, Actual: ${actualQuantity}, In Slots: ${currentCountInSlotsOnClick})`);
@@ -290,8 +346,7 @@ class CraftingScene extends BaseScene {
                         } else {
                              console.warn(`[Crafting CLICK] Click denied for ${itemData.inGameName}. No longer available (Actual Qty: ${actualQuantity}, In Slots: ${currentCountInSlotsOnClick}).`);
                              this.showTemporaryFeedback("None available!");
-                             // Optional: Refresh the display immediately if click denied
-                             // this.updateInventoryDisplay(filterCategories);
+                             // Optional refresh: this.updateInventoryDisplay(filterCategories);
                         }
                     });
                     itemBg.on('pointerover', () => { if (itemBg.input?.enabled) itemBg.setFillStyle(0x3a3a4e, 0.8); });
