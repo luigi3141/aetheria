@@ -88,8 +88,8 @@ const CLASS_DEFINITIONS = {
 };
 
 // Define Scaling factors (adjust these to balance damage)
-const STR_ATTACK_SCALE = 1.2;
-const AGI_ATTACK_SCALE = 0.8; // Agility contributes less directly to raw attack than STR
+const STR_ATTACK_SCALE = 0.8;
+const AGI_ATTACK_SCALE = 0.4; // Agility contributes less directly to raw attack than STR
 const INT_MAGIC_ATTACK_SCALE = 1.5;
 const CON_HP_SCALE = 5; // How much 1 CON point adds to Max HP (in addition to level growth)
 
@@ -273,7 +273,6 @@ class CharacterManager {
         // Calculate base contributions from stats *before* adding class base damage
         const physicalStatContribution = Math.floor(currentStrength * STR_ATTACK_SCALE) + Math.floor(currentAgility * AGI_ATTACK_SCALE);
         const magicalStatContribution = Math.floor(currentIntelligence * INT_MAGIC_ATTACK_SCALE);
-
         // Initialize attack values with stat contributions
         let finalAttack = physicalStatContribution;
         let finalMagicAttack = magicalStatContribution;
@@ -288,9 +287,9 @@ class CharacterManager {
             finalMagicAttack += classBaseDamage;
         }
 
-        // Add equipment bonuses
-        character.currentAttack = Math.max(0, Math.floor(finalAttack + bonusAttack)); // Ensure non-negative
-        character.currentMagicAttack = Math.max(0, Math.floor(finalMagicAttack + bonusMagicAttack)); // Ensure non-negative
+        // --- Set current attack based *only* on scaled stats + equipment ---
+        character.currentAttack = Math.max(0, Math.floor(physicalStatContribution + bonusAttack));
+        character.currentMagicAttack = Math.max(0, Math.floor(magicalStatContribution + bonusMagicAttack));
         character.currentDefense = Math.max(0, Math.floor(bonusDefense)); // Defense primarily from gear
 
         // Ensure current health/mana aren't exceeding new max

@@ -420,39 +420,41 @@ class CharacterSelectScene extends Phaser.Scene {
             // HP = Base + (Growth * (Lvl-1)) + (CON * Scale) + EquipBonus
             // At level 1, Growth term is 0. No equipment bonus.
             const calculatedLvl1Hp = Math.floor(
-                (classDef.baseHp || 40) // Use the adjusted internal base
-                + (baseCon * CON_HP_SCALE)
+                (classDef.baseHp || 40)
+                + (baseCon * CON_HP_SCALE) // Uses imported CON_HP_SCALE
             );
 
-            // Calculate Mana (Level 1 formula)
-            // Mana = Base + (Growth * (Lvl-1)) + (INT * Scale) + EquipBonus
+            // Mana (Uses INT_MAGIC_ATTACK_SCALE)
             const calculatedLvl1Mana = Math.floor(
                 (classDef.baseMana || 50)
-                 + (baseInt * (INT_MAGIC_ATTACK_SCALE / 2)) // Example scaling - match CharacterManager!
+                 // Make sure the formula here matches CharacterManager if mana depends on INT
+                 + (baseInt * (INT_MAGIC_ATTACK_SCALE / 2)) // Uses imported INT_MAGIC_ATTACK_SCALE
             );
 
-            // Calculate Base Damage contribution (without equipment)
-            // This shows the *starting* damage potential based on class base damage and primary stat
+            // --- >>> CORRECTED Base Damage Calculation for PREVIEW <<< ---
+            // Calculate contributions from STATS ONLY, using imported SCALES
             const physicalStatContribution = Math.floor(baseStr * STR_ATTACK_SCALE) + Math.floor(baseAgi * AGI_ATTACK_SCALE);
             const magicalStatContribution = Math.floor(baseInt * INT_MAGIC_ATTACK_SCALE);
-            let baseAttackPreview = physicalStatContribution;
-            let baseMagicAttackPreview = magicalStatContribution;
-            const classBaseDamage = classDef.baseDamage || 0;
-            const primaryAttr = classDef.primaryAttribute;
-            if (primaryAttr === 'strength' || primaryAttr === 'agility') {
-                baseAttackPreview += classBaseDamage;
-            } else if (primaryAttr === 'intelligence') {
-                baseMagicAttackPreview += classBaseDamage;
-            }
-            // Decide what to show for "Base Damage" - maybe the primary attack type's value?
-            const displayedBaseDamage = (primaryAttr === 'strength' || primaryAttr === 'agility') ? baseAttackPreview : baseMagicAttackPreview;
-            // --- End Calculations ---
 
+            // Determine which stat contribution represents the primary damage type for display
+            const primaryAttr = classDef.primaryAttribute;
+            let displayedBaseDamage = 0;
+
+            if (primaryAttr === 'strength' || primaryAttr === 'agility') {
+                displayedBaseDamage = physicalStatContribution; // Show the scaled physical contribution
+            } else if (primaryAttr === 'intelligence') {
+                displayedBaseDamage = magicalStatContribution; // Show the scaled magical contribution
+            } else {
+                // Fallback if primary attribute isn't defined? Show physical?
+                displayedBaseDamage = physicalStatContribution;
+            }
 
             // --- Update Text Objects ---
-            this.hpValueText.setText(calculatedLvl1Hp.toFixed(0)); // Show calculated 100 (or close)
-            this.manaValueText.setText(calculatedLvl1Mana.toFixed(0)); // Show calculated Lvl 1 Mana
-            this.baseDmgValueText.setText(displayedBaseDamage.toFixed(0)); // Show calculated Lvl 1 primary damage
+            this.hpValueText.setText(calculatedLvl1Hp.toFixed(0));
+            this.manaValueText.setText(calculatedLvl1Mana.toFixed(0));
+            // --- Use the CORRECTLY calculated damage for display ---
+            this.baseDmgValueText.setText(Math.max(0, displayedBaseDamage).toFixed(0)); // Ensure non-negative
+            // --- Update primary stats ---
             this.strValueText.setText(baseStr.toFixed(0));
             this.agiValueText.setText(baseAgi.toFixed(0));
             this.intValueText.setText(baseInt.toFixed(0));
