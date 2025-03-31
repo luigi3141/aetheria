@@ -31,6 +31,12 @@ class InventoryScene extends BaseScene {
         this.potionsMpBar = null;
         this.materialsInfoMessage = null;
 
+        // Add references for the new static potion UI
+        this.potionDisplayGroup = null; // Container/Group for potion elements
+        this.hpPotionInfo = { text: null, button: null, data: null };
+        this.manaPotionInfo = { text: null, button: null, data: null };
+        this.isConsuming = false; // Flag to prevent double clicks
+
         // Static content container (created once)
         this.equipmentSlotsContainer = null; // The main container holding all slot visuals
         this.isSwitchingTabs = false; // Flag to prevent issues with rapid tab switching
@@ -157,6 +163,8 @@ class InventoryScene extends BaseScene {
         // Display the initial tab (which will create its dynamic content)
         // No need for events.once('create'), create() completes synchronously here
         this.setActiveTab(this.currentTab);
+        console.log("InventoryScene Create End");
+
 
         // --- MODIFIED FADE IN AT THE END ---
         if (this.transitions) {
@@ -220,7 +228,10 @@ class InventoryScene extends BaseScene {
         console.log("setActiveTab: Cleaning up previous tab content...");
         if (this.equipmentListContainer) { this.equipmentListContainer.destroy(); this.equipmentListContainer = null; }
         if (this.materialsListContainer) { this.materialsListContainer.destroy(); this.materialsListContainer = null; }
-        if (this.potionsListContainer) { this.potionsListContainer.destroy(); this.potionsListContainer = null; }
+        if (this.potionDisplayGroup) { this.potionDisplayGroup.destroy(true); this.potionDisplayGroup = null; } // Destroy group and children
+        this.hpPotionInfo = { text: null, button: null, data: null };
+        this.manaPotionInfo = { text: null, button: null, data: null };
+
         if (this.potionsHpBar) { this.potionsHpBar.destroy(); this.potionsHpBar = null; }
         if (this.potionsMpBar) { this.potionsMpBar.destroy(); this.potionsMpBar = null; }
         if (this.materialsInfoMessage) { this.materialsInfoMessage.destroy(); this.materialsInfoMessage = null; }
@@ -228,24 +239,17 @@ class InventoryScene extends BaseScene {
         // --- End Cleanup ---
 
         // --- Manage visibility of STATIC equipment slots ---
-        this.equipmentSlotsContainer?.setVisible(tabName === 'Equipment'); // Use optional chaining
+        this.equipmentSlotsContainer?.setVisible(tabName === 'Equipment');
 
         // --- Create/Show content for the NEW active tab ---
         console.log(`setActiveTab: Displaying content for ${tabName}`);
         switch (tabName) {
-            case 'Equipment':
-                this.displayEquipmentTab();
-                break;
-            case 'Materials':
-                this.displayMaterialsTab();
-                break;
-            case 'Potions':
-                this.displayPotionsTab();
-                break;
+            case 'Equipment': this.displayEquipmentTab(); break;
+            case 'Materials': this.displayMaterialsTab(); break;
+            case 'Potions': this.displayPotionsTab(); break; // Will now create static elements
         }
         console.log(`setActiveTab: Finished displaying ${tabName}`);
 
-        // Reset flag after a short delay to allow setup
         this.time.delayedCall(50, () => { this.isSwitchingTabs = false; });
     }
 
@@ -886,122 +890,191 @@ equipItem(itemId) {
 
 
     displayPotionsTab() {
-        const width = this.cameras.main.width; const height = this.cameras.main.height;
-        const barWidth = 250; const barX = width * 0.5;
-        const hpBarY = height * 0.3; const mpBarY = hpBarY + 40; // Increased spacing
+        const width = this.cameras.main.width;
+        const height = this.cameras.main.height;
+        const barWidth = 250;
+        const barX = width * 0.5;
+        const hpBarY = height * 0.3; // Position bars higher
+        const mpBarY = hpBarY + 40;
 
-        // Create NEW status bars
+        // --- Create/Update Status Bars ---
+        // Destroy previous if they exist (safety check, though setActiveTab should handle it)
+        if (this.potionsHpBar) this.potionsHpBar.destroy();
+        if (this.potionsMpBar) this.potionsMpBar.destroy();
+        // Create new bars
         this.potionsHpBar = this.ui.createStatusBar(barX, hpBarY, gameState.player.health, gameState.player.maxHealth, { width: barWidth, textPrefix: 'HP', barColor: 0x00ff00 });
         this.potionsMpBar = this.ui.createStatusBar(barX, mpBarY, gameState.player.mana, gameState.player.maxMana, { width: barWidth, textPrefix: 'MP', barColor: 0x0000ff });
 
-        const listWidth = width * 0.7; const listHeight = height * 0.35;
-        const listX = width * 0.5; const listY = height * 0.65;
-        this.potionsListContainer = new ScrollableContainer(this, listX, listY, listWidth, listHeight, { padding: 10, backgroundColor: 0x1a2e1a, borderColor: 0x7fbf7f });
+        // --- Create Container for Potion UI Elements ---
+        // This group will hold the static potion displays
+        this.potionDisplayGroup = this.add.group();
 
-        const inventory = gameState.player.inventory.items || [];
-        const potionItems = inventory.filter(itemInstance => {
-            const itemData = getItemData(itemInstance.itemId);
-            // Filter specifically for items with a potionEffect defined
-            return itemData && itemData.potionEffect;
-         });
+        // --- Potion Display Area Setup ---
+        const potionAreaWidth = width * 0.7;
+        const potionAreaHeight = height * 0.35; // Area below bars
+        const potionAreaX = width * 0.5;
+        const potionAreaY = height * 0.60; // Center below bars
+        const cardWidth = potionAreaWidth * 0.45; // Width for each potion card
+        const cardHeight = potionAreaHeight * 0.8; // Height for potion cards
+        const spacingX = potionAreaWidth * 0.05; // Space between cards
 
-        if (potionItems.length === 0) {
-            this.potionsListContainer.addText('No potions or consumables.', { fill: '#aaaaaa', fontSize: this.ui.fontSize.sm });
-        } else {
-            let currentY = 0; const itemHeight = 45; const iconSize = 30;
-            const backgroundsToListen = [];
+        const hpCardX = potionAreaX - spacingX / 2 - cardWidth / 2;
+        const mpCardX = potionAreaX + spacingX / 2 + cardWidth / 2;
+        const cardY = potionAreaY;
 
-            potionItems.forEach((itemInstance) => {
-                const itemData = getItemData(itemInstance.itemId); if (!itemData?.potionEffect) return; // Should not happen due to filter, but safe check
-                const itemRow = this.add.container(0, 0);
-                const itemBg = this.add.rectangle(listWidth / 2, itemHeight / 2, listWidth - 20, itemHeight, 0x2a3e2a, 0).setOrigin(0.5);
-                let icon = null;
-                if (itemData.iconKey && this.textures.exists(itemData.iconKey)) {
-                     icon = this.add.image(20 + iconSize/2, itemHeight / 2, itemData.iconKey).setDisplaySize(iconSize, iconSize).setOrigin(0.5);
-                    itemRow.add(icon);
-                 } else {
-                      console.warn(`Icon texture '${itemData.iconKey}' not found for potion ${itemData.itemId}`);
-                 }
-                const effectStat = itemData.potionEffect.stat || '???'; const effectValue = itemData.potionEffect.value || 0;
-                const effectText = `Restores ${effectValue} ${effectStat.toUpperCase()}`; const fullText = `${itemData.inGameName} (x${itemInstance.quantity}) - ${effectText}`;
-                const itemText = this.add.text(20 + iconSize + 15, itemHeight / 2, fullText, { fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm, fill: '#ffffff' }).setOrigin(0, 0.5);
-                itemRow.add([itemBg, itemText]);
-                this.potionsListContainer.addItem(itemRow, currentY);
-                backgroundsToListen.push({ bg: itemBg, itemId: itemInstance.itemId });
-                currentY += itemHeight + 5;
-            });
+        // --- Create HP Potion Card ---
+        this.createPotionCard('hp-potion', hpCardX, cardY, cardWidth, cardHeight, this.hpPotionInfo);
 
-             this.time.delayedCall(10, () => {
-                 if (!this || !this.scene?.key || this.scene.key !== 'InventoryScene') return;
-                 backgroundsToListen.forEach(item => {
-                      // Double check if bg is still valid and part of the scene
-                     if (item.bg && item.bg.scene === this && item.bg.active) {
-                          try {
-                             item.bg.setInteractive({ useHandCursor: true });
-                             item.bg.on('pointerover', () => { if (item.bg?.active) item.bg.setFillStyle(0x3a4e3a, 0.7); });
-                             item.bg.on('pointerout', () => { if (item.bg?.active) item.bg.setFillStyle(0x2a3e2a, 0); });
-                             item.bg.on('pointerdown', () => { if (item.bg?.active) this.consumePotion(item.itemId); });
-                         } catch (e) {
-                              console.warn(`Error setting interactivity for potion item ${item.itemId}:`, e);
-                         }
-                     } else {
-                          console.warn("Skipping listener attachment for destroyed or invalid potion background.");
-                     }
-                 });
-             }, [], this);
-        }
-        this.potionsListContainer.updateMaxScroll();
-        this.potionsListContainer.setVisible(true);
+        // --- Create MP Potion Card ---
+        this.createPotionCard('mana-potion', mpCardX, cardY, cardWidth, cardHeight, this.manaPotionInfo);
+
+        // --- Initial Button State Update ---
+        this.updateConsumeButtonStates();
     }
 
+    createPotionCard(itemId, x, y, width, height, infoObject) {
+        const itemData = getItemData(itemId);
+        if (!itemData) {
+            console.error(`Cannot create card: Item data not found for ${itemId}`);
+            return;
+        }
+        infoObject.data = itemData; // Store data for later use
 
-    consumePotion(itemId) {
-        if (!gameState.player?.inventory?.items) return;
-        const itemData = getItemData(itemId); if (!itemData?.potionEffect) return;
-        const { stat, value } = itemData.potionEffect;
-        let success = false; let message = "";
+        const panel = this.ui.createPanel(x, y, width, height, {
+             fillColor: 0x1a2e1a, borderColor: 0x7fbf7f, depth: 1
+        });
+        this.potionDisplayGroup.add(panel.container); // Add panel container to group
 
-        if (stat === 'health') {
-            if (gameState.player.health >= gameState.player.maxHealth) message = "Health is already full!";
-            else { HealthManager.updatePlayerHealth(value, true); success = true; message = `Used ${itemData.inGameName}. Restored ${value} HP.`; }
-        } else if (stat === 'mana') {
-            if (gameState.player.mana >= gameState.player.maxMana) message = "Mana is already full!";
-            else { HealthManager.updatePlayerMana(value, true); success = true; message = `Used ${itemData.inGameName}. Restored ${value} MP.`; }
-        } else message = `Unknown potion effect: ${stat}`;
+        // Positioning relative to panel center (0,0)
+        const iconSize = 40;
+        const contentStartY = -height * 0.5 + 30; // Start below top edge
 
-        // --- Create Feedback Text ---
-        // Ensure UI Manager and createText are available
-        if (this.ui && typeof this.ui.createText === 'function') {
-             const feedbackText = this.ui.createText(this.cameras.main.width / 2, this.cameras.main.height * 0.8, message, { fontSize: this.ui.fontSize.sm, color: success ? '#aaffaa' : '#ffaaaa'});
-             // Add a simple fade-out tween
-             this.tweens.add({ targets: feedbackText, alpha: 0, duration: 1500, ease: 'Power1', onComplete: () => feedbackText.destroy()});
-        } else {
-             console.log(message); // Fallback logging
+        // Icon
+        if (itemData.iconKey && this.textures.exists(itemData.iconKey)) {
+            const icon = this.add.image(0, contentStartY + iconSize / 2, itemData.iconKey)
+                .setDisplaySize(iconSize, iconSize)
+                .setOrigin(0.5);
+            panel.add(icon); // Add icon to panel container
+            this.potionDisplayGroup.add(icon); // Also add directly to group for easy destruction
         }
 
+        // Text Info (Name, Quantity, Effect)
+        const textY = contentStartY + iconSize + 20;
+        const quantity = this.getPotionQuantity(itemId);
+        const effectText = `Restores ${itemData.potionEffect?.value || '?'} ${itemData.potionEffect?.stat?.toUpperCase() || '???'}`;
+        const infoStr = `${itemData.inGameName}\nQuantity: ${quantity}\n${effectText}`;
 
+        infoObject.text = this.add.text(0, textY, infoStr, {
+            fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm + 'px', fill: '#ffffff', align: 'center', lineSpacing: 6
+        }).setOrigin(0.5, 0); // Center horizontally, align top vertically
+        panel.add(infoObject.text);
+        this.potionDisplayGroup.add(infoObject.text);
+
+        // Consume Button
+        const buttonY = height * 0.5 - 40; // Position near bottom
+        infoObject.button = this.ui.createButton(0, buttonY, 'Consume',
+            () => this.consumePotion(itemId),
+            { width: width * 0.6, height: 40, fontSize: this.ui.fontSize.sm }
+        );
+        panel.add(infoObject.button.container);
+        this.potionDisplayGroup.add(infoObject.button.container);
+    }
+
+    // --- Helper to get current quantity ---
+    getPotionQuantity(itemId) {
+         const itemInstance = gameState.player.inventory?.items?.find(invItem => invItem.itemId === itemId);
+         return itemInstance ? itemInstance.quantity : 0;
+    }
+    consumePotion(itemId) {
+        // Prevent consuming if already busy or button disabled
+        if (this.isConsuming || !this.canConsumePotion(itemId)) return;
+
+        this.isConsuming = true; // Set flag
+        this.safePlaySound('button-click'); // Play click sound
+
+        const itemData = getItemData(itemId);
+        if (!itemData?.potionEffect) {
+            console.error("Invalid potion data for consumption:", itemId);
+            this.isConsuming = false;
+            return;
+        }
+
+        const { stat, value } = itemData.potionEffect;
+        const player = gameState.player;
+        let success = false;
+        let message = "";
+
+        // --- Apply Effect ---
+        if (stat === 'health') {
+            const needed = player.maxHealth - player.health;
+            if (needed <= 0) {
+                message = "Health is already full!";
+            } else {
+                const healed = Math.min(needed, value); // Heal only up to max
+                HealthManager.updatePlayerHealth(healed, true); // Use relative update
+                success = true;
+                message = `Used ${itemData.inGameName}. Restored ${healed} HP.`;
+            }
+        } else if (stat === 'mana') {
+             const needed = player.maxMana - player.mana;
+             if (needed <= 0) {
+                 message = "Mana is already full!";
+             } else {
+                 const restored = Math.min(needed, value); // Restore only up to max
+                 HealthManager.updatePlayerMana(restored, true); // Use relative update
+                 success = true;
+                 message = `Used ${itemData.inGameName}. Restored ${restored} MP.`;
+             }
+        } else {
+            message = `Unknown potion effect: ${stat}`;
+        }
+
+        // --- Show Feedback ---
+        this.showTemporaryFeedback(message, success ? '#aaffaa' : '#ffaaaa');
+
+        // --- If successful, update inventory and UI ---
         if (success) {
-            this.safePlaySound('heal', {volume: 0.4});
-            const itemIndex = gameState.player.inventory.items.findIndex(invItem => invItem.itemId === itemId);
+            this.safePlaySound('heal'); // Use heal sound
+
+            // Decrement quantity / remove item
+            const itemIndex = player.inventory.items.findIndex(invItem => invItem.itemId === itemId);
             if (itemIndex > -1) {
-                gameState.player.inventory.items[itemIndex].quantity -= 1;
-                if (gameState.player.inventory.items[itemIndex].quantity <= 0) gameState.player.inventory.items.splice(itemIndex, 1);
+                player.inventory.items[itemIndex].quantity -= 1;
+                if (player.inventory.items[itemIndex].quantity <= 0) {
+                    player.inventory.items.splice(itemIndex, 1);
+                }
+                console.log(`Consumed ${itemId}. Remaining:`, this.getPotionQuantity(itemId));
+            } else {
+                console.warn(`Tried to consume ${itemId}, but not found in inventory.`);
             }
 
-             // --- Refresh UI Elements ---
-             // Ensure bars exist before updating
-             if(this.potionsHpBar && typeof this.potionsHpBar.update === 'function') this.potionsHpBar.update(gameState.player.health, gameState.player.maxHealth);
-             if(this.potionsMpBar && typeof this.potionsMpBar.update === 'function') this.potionsMpBar.update(gameState.player.mana, gameState.player.maxMana);
-
-             // Ensure list exists before destroying and recreating
-             if (this.potionsListContainer) {
-                this.potionsListContainer.destroy(); // Destroy the old list
-                this.potionsListContainer = null;
-                this.displayPotionsTab(); // Recreate the list to show updated quantities/removed items
-             }
+            // --- Update UI Elements ---
+            this.updatePotionDisplaysAndBars(); // New function to update everything
+            this.saveGameState(); // Save after successful consumption
         }
+
+        // --- Re-enable button after delay ---
+        this.time.delayedCall(300, () => { // 300ms delay
+            this.isConsuming = false;
+            this.updateConsumeButtonStates(); // Re-check button states after delay
+        });
     }
 
+    canConsumePotion(itemId) {
+        const quantity = this.getPotionQuantity(itemId);
+        if (quantity <= 0) return false; // No potion left
+
+        const itemData = getItemData(itemId);
+        if (!itemData?.potionEffect) return false; // Invalid data
+
+        const player = gameState.player;
+        if (itemData.potionEffect.stat === 'health') {
+            return player.health < player.maxHealth; // Can consume if not full health
+        } else if (itemData.potionEffect.stat === 'mana') {
+            return player.mana < player.maxMana; // Can consume if not full mana
+        }
+        return false; // Unknown potion type
+    }
 
     createReturnButton() {
         const width = this.cameras.main.width; const height = this.cameras.main.height;
@@ -1020,45 +1093,112 @@ equipItem(itemId) {
             { width: 180, height: 50 }
         );
     }
-
-    shutdown() {
-        console.log("InventoryScene shutdown starting...");
-        // Destroy DYNAMIC content containers safely
-        if (this.equipmentListContainer && typeof this.equipmentListContainer.destroy === 'function') this.equipmentListContainer.destroy();
-        if (this.materialsListContainer && typeof this.materialsListContainer.destroy === 'function') this.materialsListContainer.destroy();
-        if (this.potionsListContainer && typeof this.potionsListContainer.destroy === 'function') this.potionsListContainer.destroy();
-        if (this.potionsHpBar && typeof this.potionsHpBar.destroy === 'function') this.potionsHpBar.destroy();
-        if (this.potionsMpBar && typeof this.potionsMpBar.destroy === 'function') this.potionsMpBar.destroy();
-        if (this.materialsInfoMessage && typeof this.materialsInfoMessage.destroy === 'function') this.materialsInfoMessage.destroy();
-
-        // Destroy STATIC container (created in create) safely
-        if (this.equipmentSlotsContainer && typeof this.equipmentSlotsContainer.destroy === 'function') this.equipmentSlotsContainer.destroy(true); // true to destroy children
-
-        // Destroy tab buttons safely
-        for (const name in this.tabButtons) {
-           if (this.tabButtons[name] && typeof this.tabButtons[name].destroy === 'function') {
-               try {
-                    this.tabButtons[name].destroy();
-               } catch (e) {
-                    console.warn(`Error destroying tab button ${name}:`, e);
-               }
-           }
-        }
-        this.tabButtons = {}; // Clear references
-
-        // Nullify references to dynamic content
-        this.equipmentListContainer = null;
-        this.materialsListContainer = null;
-        this.potionsListContainer = null;
-        this.potionsHpBar = null;
-        this.potionsMpBar = null;
-        this.materialsInfoMessage = null;
-        this.equipmentSlotsContainer = null; // Also nullify static container reference
-        this.equipmentSlots = {}; // Clear slot element references
-
-        console.log("InventoryScene shutdown cleanup complete.");
-        // If BaseScene has a shutdown, call it: super.shutdown();
+// --- NEW Helper to update potion UI and bars ---
+updatePotionDisplaysAndBars() {
+    // Update HP Bar
+    if (this.potionsHpBar) {
+        this.potionsHpBar.update(gameState.player.health, gameState.player.maxHealth);
     }
+    // Update MP Bar
+    if (this.potionsMpBar) {
+        this.potionsMpBar.update(gameState.player.mana, gameState.player.maxMana);
+    }
+
+    // Update HP Potion Text
+    if (this.hpPotionInfo.text && this.hpPotionInfo.data) {
+         const quantity = this.getPotionQuantity('hp-potion');
+         const effectText = `Restores ${this.hpPotionInfo.data.potionEffect?.value || '?'} HP`;
+         this.hpPotionInfo.text.setText(`${this.hpPotionInfo.data.inGameName}\nQuantity: ${quantity}\n${effectText}`);
+    }
+    // Update MP Potion Text
+    if (this.manaPotionInfo.text && this.manaPotionInfo.data) {
+         const quantity = this.getPotionQuantity('mana-potion');
+         const effectText = `Restores ${this.manaPotionInfo.data.potionEffect?.value || '?'} MP`;
+         this.manaPotionInfo.text.setText(`${this.manaPotionInfo.data.inGameName}\nQuantity: ${quantity}\n${effectText}`);
+    }
+
+    // Update Button States
+    this.updateConsumeButtonStates();
+}
+
+
+// --- NEW Function to Update Consume Button Enable/Disable State ---
+updateConsumeButtonStates() {
+    // HP Potion Button
+    if (this.hpPotionInfo.button) {
+        const canConsume = this.canConsumePotion('hp-potion') && !this.isConsuming;
+        this.hpPotionInfo.button.enable(canConsume);
+        if(this.hpPotionInfo.button.container) this.hpPotionInfo.button.container.setAlpha(canConsume ? 1 : 0.5);
+    }
+    // Mana Potion Button
+    if (this.manaPotionInfo.button) {
+         const canConsume = this.canConsumePotion('mana-potion') && !this.isConsuming;
+         this.manaPotionInfo.button.enable(canConsume);
+          if(this.manaPotionInfo.button.container) this.manaPotionInfo.button.container.setAlpha(canConsume ? 1 : 0.5);
+    }
+}
+
+// --- Add saveGameState function (copy from PotionShopScene or CraftingScene) ---
+saveGameState() {
+    console.log("[InventoryScene] Saving gameState to localStorage...");
+    try {
+        const stateToSave = { player: gameState.player }; // Save relevant state
+        window.localStorage.setItem('gameState', JSON.stringify(stateToSave));
+        console.log("[InventoryScene] GameState saved.");
+    } catch (e) { console.error("[InventoryScene] Error saving gameState:", e); }
+}
+
+showTemporaryFeedback(message, color = '#ffffff') { // Renamed from PotionShopScene
+     if (!this.ui || !this.cameras?.main) return;
+     const width = this.cameras.main.width;
+     const height = this.cameras.main.height;
+     const feedbackText = this.add.text(width / 2, height - 40, message, {
+         fontFamily: "'VT323'",
+         fontSize: (this.ui?.fontSize?.sm || 12) + 'px',
+         fill: color,
+         backgroundColor: '#000000cc',
+         padding: { x: 10, y: 5 },
+         align: 'center'
+     }).setOrigin(0.5).setDepth(100);
+
+     this.tweens?.add({
+         targets: feedbackText, alpha: 0, y: '-=20', delay: 1500, duration: 500, ease: 'Power1',
+         onComplete: () => { if (feedbackText.active) feedbackText.destroy(); }
+     });
+ }
+ shutdown() {
+    console.log("InventoryScene shutdown starting...");
+    // Destroy dynamic content containers safely
+    if (this.equipmentListContainer) this.equipmentListContainer.destroy();
+    if (this.materialsListContainer) this.materialsListContainer.destroy();
+    // Destroy potion group and children
+    if (this.potionDisplayGroup) this.potionDisplayGroup.destroy(true);
+    if (this.potionsHpBar) this.potionsHpBar.destroy();
+    if (this.potionsMpBar) this.potionsMpBar.destroy();
+    if (this.materialsInfoMessage) this.materialsInfoMessage.destroy();
+
+    // Destroy STATIC container (created in create) safely
+    if (this.equipmentSlotsContainer) this.equipmentSlotsContainer.destroy(true);
+
+    // Destroy tab buttons safely
+    // ... (keep existing tab button cleanup) ...
+    for (const name in this.tabButtons) { /* ... destroy tabButtons[name] ... */ }
+    this.tabButtons = {};
+
+    // Nullify references
+    this.equipmentListContainer = null;
+    this.materialsListContainer = null;
+    this.potionDisplayGroup = null; // Nullify new group
+    this.potionsHpBar = null;
+    this.potionsMpBar = null;
+    this.materialsInfoMessage = null;
+    this.equipmentSlotsContainer = null;
+    this.equipmentSlots = {};
+    this.hpPotionInfo = { text: null, button: null, data: null }; // Reset potion info
+    this.manaPotionInfo = { text: null, button: null, data: null };
+
+    console.log("InventoryScene shutdown cleanup complete.");
+}
 }
 
 export default InventoryScene;
