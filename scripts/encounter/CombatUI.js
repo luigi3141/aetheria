@@ -159,12 +159,16 @@ export default class CombatUI {
 
     updatePlayerHealth() {
         const player = gameState.player;
-        this.statusBars.playerHealth.update(player.health, player.maxHealth);
+        if (this.statusBars.playerHealth) { // Check existence
+            this.statusBars.playerHealth.update(player.health, player.maxHealth);
+        }
     }
 
     updatePlayerMana() {
         const player = gameState.player;
-        this.statusBars.playerMana.update(player.mana, player.maxMana);
+        if (this.statusBars.playerMana) { // Check existence
+            this.statusBars.playerMana.update(player.mana, player.maxMana);
+        }
     }
 
     createEnemyHealthBar(enemy) {
@@ -206,38 +210,71 @@ export default class CombatUI {
     }
     
     updateEnemyHealthBar(enemy) {
-        if (!enemy || !enemy.displayElements || !enemy.displayElements.healthBar) return;
-        
+        if (!enemy?.displayElements?.healthBar) return; // Check existence safely
         enemy.displayElements.healthBar.update(enemy.health, enemy.maxHealth);
     }
     
     enableActionButtons() {
-        console.log("[CombatUI] Enabling action buttons..."); // Add log
-        Object.values(this.buttons).forEach((button, index) => {
+        console.log("[CombatUI] Enabling action buttons...");
+        Object.values(this.buttons).forEach((button) => { // Simplified loop
             if (button && typeof button.enable === 'function') {
-                 // --- Use the Button's own method ---
                  button.enable();
-                 // --- Optionally reset alpha if disable changes it ---
-                 // if(button.container) button.container.setAlpha(1);
-                 // console.log(`Button ${index} enabled.`);
-            } else {
-                console.warn(`Button at index ${index} invalid or missing enable method.`);
+                 // if(button.container) button.container.setAlpha(1); // Optional alpha reset
             }
         });
     }
 
-     disableActionButtons() {
-        console.log("[CombatUI] Disabling action buttons..."); // Add log
-         Object.values(this.buttons).forEach((button, index) => {
+    disableActionButtons() {
+        console.log("[CombatUI] Disabling action buttons...");
+         Object.values(this.buttons).forEach((button) => { // Simplified loop
              if (button && typeof button.disable === 'function') {
-                  // --- Use the Button's own method ---
                   button.disable();
-                  // --- Optionally set alpha ---
-                  // if(button.container) button.container.setAlpha(0.5);
-                   // console.log(`Button ${index} disabled.`);
-             } else {
-                 console.warn(`Button at index ${index} invalid or missing disable method.`);
+                  // if(button.container) button.container.setAlpha(0.5); // Optional alpha set
              }
          });
      }
+     destroy() {
+        console.log("[CombatUI] Destroying UI elements...");
+
+        // Destroy buttons
+        console.log("- Destroying buttons...");
+        Object.values(this.buttons).forEach(button => {
+            if (button && typeof button.destroy === 'function') {
+                try { button.destroy(); } catch (e) { console.warn("Error destroying button:", e); }
+            }
+        });
+        this.buttons = {};
+
+        // Destroy status bars
+        console.log("- Destroying status bars...");
+        Object.values(this.statusBars).forEach(statusBar => {
+            if (statusBar && typeof statusBar.destroy === 'function') {
+                try { statusBar.destroy(); } catch (e) { console.warn("Error destroying status bar:", e); }
+            }
+        });
+        this.statusBars = {};
+
+        // Destroy text elements created by CombatUI
+        console.log("- Destroying text elements...");
+        if (this.playerNameText && typeof this.playerNameText.destroy === 'function') {
+             try { this.playerNameText.destroy(); } catch (e) { console.warn("Error destroying playerNameText:", e); }
+        }
+        this.playerNameText = null;
+
+        // Destroy enemy name texts (if stored like this)
+        Object.values(this.enemyNameText).forEach(text => {
+             if (text && typeof text.destroy === 'function') {
+                 try { text.destroy(); } catch (e) { console.warn("Error destroying enemy name text:", e); }
+             }
+        });
+        this.enemyNameText = {};
+
+        // Destroy panels if stored
+        // if (this.playerPanel && typeof this.playerPanel.destroy === 'function') this.playerPanel.destroy();
+        // if (this.enemyPanel && typeof this.enemyPanel.destroy === 'function') this.enemyPanel.destroy();
+        // this.playerPanel = null;
+        // this.enemyPanel = null;
+
+        console.log("[CombatUI] UI elements destroyed.");
+    }
 }

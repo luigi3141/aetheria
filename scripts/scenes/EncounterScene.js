@@ -154,7 +154,7 @@ export default class EncounterScene extends BaseScene {
         this.combatLog.addEncounterMessage(enemy, difficulty, difficultyColor);
 
         // --- Start Combat After Delay ---
-        this.time.delayedCall(1500, () => {
+        this.time.delayedCall(1250, () => {
             messageContainer.destroy();
             this.combatEngine.setEnemies(this.enemies); // Set enemies in engine
             this.combatUI.createCombatUI(); // Create main UI elements
@@ -273,7 +273,7 @@ export default class EncounterScene extends BaseScene {
         };
 
         // Navigate to CombatResultScene
-        this.time.delayedCall(1500, () => {
+        this.time.delayedCall(1000, () => {
              // Check scene validity before starting next one
              if (this.scene.isActive()) {
                  navigationManager.navigateTo(this, 'CombatResultScene');
@@ -285,7 +285,7 @@ export default class EncounterScene extends BaseScene {
         // Set combat result in gameState
         gameState.combatResult = { outcome: 'defeat' };
         // Navigate to DefeatScene
-         this.time.delayedCall(1500, () => {
+         this.time.delayedCall(1000, () => {
              if (this.scene.isActive()) {
                  navigationManager.navigateTo(this, 'DefeatScene');
              }
