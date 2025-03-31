@@ -160,9 +160,9 @@ const enemyData = {
         },
         description: "A young but dangerous beast with razor claws and a deafening screech."
     },
-    "briar-sprite": {
-        name: "Briar Sprite",
-        sprite: "BRIAR_SPRITE", // Add to AssetConfig.js
+    "briar-spirit": {
+        name: "Briar Spirit",
+        sprite: "BRIAR_SPIRIT", // Add to AssetConfig.js
         level: 6,
         baseHealth: 80,
         baseAttack: 17,
@@ -172,8 +172,8 @@ const enemyData = {
             gold: { min: 30, max: 30 },
             experience: { min: 30, max: 30 },
             items: [ // Updated with specific IDs and estimated chances
-                { id: "briar-sprite-pelt", chance: 0.5 },   // Tier 3
-                { id: "briar-sprite-branch", chance: 0.5} // Tier 3
+                { id: "briar-spirit-pelt", chance: 0.5 },   // Tier 3
+                { id: "briar-spirit-branch", chance: 0.5} // Tier 3
             ]
         },
         description: "A mischievous forest spirit that drains vitality and hurls thorns."

@@ -37,8 +37,10 @@ class InventoryScene extends BaseScene {
     }
 
     init(data) {
+
         this.returnSceneKey = gameState.previousScene || 'OverworldScene';
         console.log(`InventoryScene init - Will return to ${this.returnSceneKey}`);
+        console.log("[Inv Init] gameState inventory BEFORE localStorage load:", JSON.parse(JSON.stringify(gameState.player.inventory.items)));
 
         // Load saved state
         const savedState = window.localStorage.getItem('gameState');
@@ -46,10 +48,14 @@ class InventoryScene extends BaseScene {
             const parsedState = JSON.parse(savedState);
             if (parsedState.player) {
                 // Update only inventory and stats, not scene-specific data
+                console.log("[Inv Init] Loading from localStorage...");
+
                 gameState.player.inventory = parsedState.player.inventory;
                 gameState.player.gold = parsedState.player.gold;
                 gameState.player.experience = parsedState.player.experience;
                 gameState.player.experienceToNextLevel = parsedState.player.experienceToNextLevel;
+                console.log("[Inv Init] gameState inventory AFTER localStorage load:", JSON.parse(JSON.stringify(gameState.player.inventory.items)));
+
             }
         }
 

@@ -26,7 +26,7 @@ const DUNGEON_DATA = {
             'wild-boar',         // Level 4
             'thorn-lurker',      // Level 5
             'owlbear-cub',       // Level 5
-            'briar-sprite',      // Level 6
+            'briar-spirit',      // Level 6
             'entling',           // Level 6
             'horned-stag',       // Level 7
             'feral-druid',       // Level 8  <-- Needed for level 8 encounters

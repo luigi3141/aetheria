@@ -672,19 +672,21 @@ class CraftingScene extends BaseScene {
 
           // Done Button
           const doneButton = this.ui.createButton(-buttonSpacing / 2, buttonY, 'Done', () => {
-               this.clearResultState();
-               this.displayCategorySelection(); // Go back to category selection
+            this.saveGameState(); // Call a new save function
+            this.clearResultState();
+            this.displayCategorySelection(); // Go back to category selection
           }, { width: 140, height: 40 });
           this.resultPopup.add(doneButton.container);
 
           // Craft Again Button
           const craftAgainButton = this.ui.createButton(buttonSpacing / 2, buttonY, 'Craft Again', () => {
-               this.clearResultState();
-               if (this.currentCategory) {
-                    this.displayCraftingInput(this.currentCategory);
-               } else {
-                    this.displayCategorySelection();
-               }
+            this.saveGameState(); // Call a new save function
+            this.clearResultState();
+            if (this.currentCategory) {
+                this.displayCraftingInput(this.currentCategory);
+            } else {
+                this.displayCategorySelection();
+            }
           }, { width: 140, height: 40 });
           this.resultPopup.add(craftAgainButton.container);
 
@@ -697,7 +699,34 @@ class CraftingScene extends BaseScene {
               ease: 'Back.easeOut'
           });
     }
-
+    saveGameState() {
+        console.log("[CraftingScene] Saving gameState to localStorage...");
+        try {
+            // Only save essential parts to avoid bloating localStorage
+            const stateToSave = {
+                 player: {
+                     // Include all necessary player data that might change
+                     name: gameState.player.name,
+                     class: gameState.player.class,
+                     level: gameState.player.level,
+                     health: gameState.player.health, // Current health might change? Unlikely in crafting
+                     maxHealth: gameState.player.maxHealth,
+                     mana: gameState.player.mana,
+                     maxMana: gameState.player.maxMana,
+                     experience: gameState.player.experience,
+                     experienceToNextLevel: gameState.player.experienceToNextLevel,
+                     gold: gameState.player.gold, // Gold definitely changes
+                     inventory: gameState.player.inventory, // Save the whole inventory object
+                     // Add other relevant stats if they can change outside combat/level up
+                 }
+                 // Add other top-level gameState parts if needed (e.g., quests, discovered dungeons)
+            };
+            window.localStorage.setItem('gameState', JSON.stringify(stateToSave));
+             console.log("[CraftingScene] GameState saved.");
+        } catch (e) {
+            console.error("[CraftingScene] Error saving gameState:", e);
+        }
+    }
      showTemporaryFeedback(message, color = '#ffaaaa') {
           if (!this.scene || !this.scene.key) { // Check if scene is still valid
                console.warn("Scene context lost, cannot show feedback:", message);
