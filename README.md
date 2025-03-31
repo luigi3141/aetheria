@@ -1,4 +1,4 @@
-# Echoes of Aetheria
+# Gates of Aetheria
 
 A fantasy RPG game built with Phaser 3, featuring pixel-art graphics, turn-based combat, and procedurally generated dungeons.
 
