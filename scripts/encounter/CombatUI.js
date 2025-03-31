@@ -207,10 +207,32 @@ export default class CombatUI {
     }
     
     enableActionButtons() {
-        Object.values(this.buttons).forEach(button => button.bg.setInteractive());
+        console.log("[CombatUI] Enabling action buttons..."); // Add log
+        Object.values(this.buttons).forEach((button, index) => {
+            if (button && typeof button.enable === 'function') {
+                 // --- Use the Button's own method ---
+                 button.enable();
+                 // --- Optionally reset alpha if disable changes it ---
+                 // if(button.container) button.container.setAlpha(1);
+                 // console.log(`Button ${index} enabled.`);
+            } else {
+                console.warn(`Button at index ${index} invalid or missing enable method.`);
+            }
+        });
     }
 
-    disableActionButtons() {
-        Object.values(this.buttons).forEach(button => button.bg.disableInteractive());
-    }
+     disableActionButtons() {
+        console.log("[CombatUI] Disabling action buttons..."); // Add log
+         Object.values(this.buttons).forEach((button, index) => {
+             if (button && typeof button.disable === 'function') {
+                  // --- Use the Button's own method ---
+                  button.disable();
+                  // --- Optionally set alpha ---
+                  // if(button.container) button.container.setAlpha(0.5);
+                   // console.log(`Button ${index} disabled.`);
+             } else {
+                 console.warn(`Button at index ${index} invalid or missing disable method.`);
+             }
+         });
+     }
 }

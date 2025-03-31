@@ -6,6 +6,8 @@ import gameState from '../gameState.js';
 import HealthManager from '../utils/HealthManager.js';
 // Import CharacterManager if needed to trigger stat recalculation on buffs/debuffs
 // import CharacterManager from '../utils/CharacterManager.js';
+import { processItemLoss } from '../utils/PenaltyManager.js'; // Import the new function
+import navigationManager from '../navigation/NavigationManager.js';
 
 /**
  * Handles combat mechanics and turn management
@@ -241,18 +243,24 @@ export default class CombatEngine {
         this.gameOver = true;
         this.disablePlayerActions();
 
-        // Log, animate, process defeat (keep existing logic)
-        this.scene.combatLog.addLogEntry(this.scene.combatText.getDefeatMessage('player'), false, '#ffaaaa'); // Red defeat text
+        // Log defeat
+        this.scene.combatLog.addLogEntry(this.scene.combatText.getDefeatMessage('player'), false, '#ffaaaa');
+
+        // --- >>> Process Item Loss on Defeat <<< ---
+        const lostItems = processItemLoss(0.70); // 70% chance
+        // --- >>> END Item Loss <<< ---
+
+        // Animate defeat
         this.scene.spriteManager.animateDefeat('player', () => {
              this.scene.time.delayedCall(1500, () => {
-                 if (this.scene && this.scene.scene.key === 'EncounterScene') {
-                      // Use processDefeat if defined in EncounterScene, otherwise go direct
-                      if (typeof this.scene.processDefeat === 'function') {
-                          this.scene.processDefeat();
-                      } else {
-                          gameState.combatResult = { outcome: 'defeat' };
-                          this.scene.scene.start('DefeatScene', { retreated: false });
-                      }
+                 if (this.scene && this.scene.scene.isActive()) { // Check if scene still active
+                     // --- >>> Navigate to DefeatScene with Data <<< ---
+                     console.log("[CombatEngine] Navigating to DefeatScene after player defeat.");
+                     navigationManager.navigateTo(this.scene, 'DefeatScene', {
+                          outcome: 'defeat',
+                          lostItems: lostItems // Pass the array of lost item data
+                     });
+                     // --- >>> END Navigation <<< ---
                  }
              });
         });

@@ -11,6 +11,7 @@ import { calculateDifficulty } from '../utils/DifficultyManager.js';
 import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import { generateLoot } from '../data/enemies.js';
+import { processItemLoss } from '../utils/PenaltyManager.js';
 
 import items from '../data/items.js'; // Import the entire default export object
 const { getItemData } = items; // Destructure getItemData from the imported object
@@ -32,6 +33,8 @@ export default class EncounterScene extends BaseScene {
             // Prevent further execution in this scene
             this.scene.pause(); // Or stop() if appropriate
         }
+        this.events.on('wake', this.onWake, this);        
+        this.events.on(Phaser.Scenes.Events.RESUME, this.onResume, this); // Listen for RESUME
     }
 
     preload() {
@@ -187,6 +190,53 @@ export default class EncounterScene extends BaseScene {
 
     console.log(`${this.scene.key} Create End`); // Optional log
     }
+    openInventory() {
+        console.log("[EncounterScene] Launching Inventory and sleeping...");
+        // Pass necessary data, including the key of THIS scene to wake up
+        const dataToInventory = {
+             returnSceneKey: this.scene.key // Tell Inventory where to return
+             // Add any other data Inventory might need from Encounter
+        };
+        // Prevent further actions in EncounterScene while Inventory is open
+        if(this.combatEngine) this.combatEngine.disablePlayerActions();
+        // Pause potentially running tweens or timers if needed
+
+        // Launch Inventory on top and sleep EncounterScene
+        this.scene.launch('InventoryScene', dataToInventory);
+        this.scene.sleep(); // Pause update loop and rendering
+    }
+
+     onResume() {
+        console.log("[EncounterScene] RESUME event received.");
+        // Try fading in here instead of onWake
+        if (this.transitions && this.sys.isActive()) {
+             console.log("[EncounterScene onResume] Triggering scene fade in.");
+             this.transitions.fadeIn();
+        } else {
+             // Fallback if no transitions
+             this.cameras.main.setAlpha(1);
+             if(this.input) this.input.enabled = true;
+        }
+    }
+    onWake(sys, data) {
+        console.log("[EncounterScene] Waking up.", data);
+        // Refresh UI data state
+        if (this.combatUI) {
+             this.combatUI.updatePlayerHealth();
+             this.combatUI.updatePlayerMana();
+        }
+        // Re-enable actions (this might still need the delay in Button.enable)
+         if (this.combatEngine && !this.combatEngine.gameOver && this.combatEngine.currentTurn === 'player') {
+              this.combatEngine.enablePlayerActions();
+         }
+        // DO NOT trigger fadeIn here anymore
+   }
+
+     shutdown() { // Ensure wake listener is removed on full shutdown
+          this.events.off('wake', this.onWake, this);
+     this.events.off(Phaser.Scenes.Events.RESUME, this.onResume, this); // Remove RESUME listener
+
+     }
 
     update(time, delta) {}
 
@@ -241,17 +291,42 @@ export default class EncounterScene extends BaseScene {
         });
     }
 
+    // Modify handleRetreat - This function is likely called by the Retreat button's callback
     handleRetreat() {
-        this.combatLog.addLogEntry('You retreat from battle!');
-        // Set combat result in gameState
-        gameState.combatResult = { outcome: 'retreat' };
-        // Navigate to Overworld directly on retreat? Or a specific retreat summary?
-        // Let's go to Overworld for now.
-         this.time.delayedCall(1000, () => {
-             if (this.scene.isActive()) {
-                  navigationManager.navigateTo(this, 'OverworldScene');
-             }
-        });
+        // --- Confirmation Dialog ---
+        const confirmRetreat = confirm(
+            "Retreat from battle?\nYou might abandon some items if you flee!"
+        );
+
+        if (confirmRetreat) {
+            console.log("[EncounterScene] Player confirmed retreat.");
+            this.combatLog.addLogEntry('You attempt to retreat...', false); // Log attempt
+
+            // Disable actions immediately
+            if (this.combatEngine) this.combatEngine.disablePlayerActions();
+
+            // --- Process Item Loss on Retreat ---
+            const lostItems = processItemLoss(0.40); // 40% chance
+            // --- End Item Loss ---
+
+            // Short delay for effect before navigating
+            this.time.delayedCall(750, () => {
+                 if (this.scene.isActive()) { // Check if scene still active
+                     // --- Navigate to DefeatScene with Data ---
+                     console.log("[EncounterScene] Navigating to DefeatScene after retreat.");
+                     navigationManager.navigateTo(this, 'DefeatScene', {
+                          outcome: 'retreat',
+                          lostItems: lostItems // Pass the array of lost item data
+                     });
+                     // --- End Navigation ---
+                 }
+            });
+
+        } else {
+            console.log("[EncounterScene] Player cancelled retreat.");
+            // Optionally add a log message like "You decide to stand and fight!"
+             this.combatLog.addLogEntry('You decide to stand and fight!', false);
+        }
     }
 
     updateEnemyHealth(enemy) {

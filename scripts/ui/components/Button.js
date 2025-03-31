@@ -267,9 +267,64 @@ class Button {
      * @returns {Button} This button for chaining
      */
     enable() {
+        // --- Safety Checks ---
+        // Ensure the scene and the button background are still valid and active
+        if (!this.scene || !this.scene.sys?.isActive() || !this.bg || !this.bg.active) {
+            console.warn(`[Button ${this.text}] Cannot enable: Scene or button background invalid/inactive.`);
+            this.disabled = true; // Ensure it's marked as disabled if we can't enable
+            return this;
+        }
+        // --- End Safety Checks ---
+
         this.disabled = false;
-        this.bg.fillColor = this.fillColor;
-        this.textObj.setAlpha(1);
+        this.bg.setFillStyle(this.fillColor); // Restore visual state
+        if (this.textObj) this.textObj.setAlpha(1); // Restore text alpha
+
+        // --- Handle Input Component ---
+        if (this.bg.input) {
+            // Input component exists, just ensure it's enabled
+            if (!this.bg.input.enabled) {
+                this.bg.input.enabled = true;
+                // console.log(`[Button ${this.text}] Input component re-enabled.`);
+            } else {
+                // console.log(`[Button ${this.text}] Input component already enabled.`);
+            }
+        } else {
+            // Input component is MISSING - Recreate it immediately
+            console.warn(`[Button ${this.text}] Input component missing on enable. Re-creating immediately.`);
+            try {
+                this.bg.setInteractive({ useHandCursor: true });
+                // Verify it was created
+                if(this.bg.input) {
+                     console.log(`[Button ${this.text}] Input component successfully recreated.`);
+                } else {
+                     console.error(`[Button ${this.text}] FAILED to recreate input component via setInteractive!`);
+                     // Might need further investigation if this happens
+                }
+            } catch (e) {
+                 console.error(`[Button ${this.text}] Error during setInteractive in enable():`, e);
+                 // Button might remain non-interactive
+            }
+        }
+        // --- End Input Handling ---
+
+        // --- REMOVE the delayedCall fallback ---
+        /* REMOVE THIS BLOCK:
+        if (!inputHandled) {
+            console.warn(`[Button ${this.text}] Input component missing, attempting delayed re-creation.`);
+             this.scene.time.delayedCall(10, () => {
+                 if (this.scene?.sys?.isActive() && this.bg?.active) {
+                     if (!this.bg.input) {
+                          console.warn(`[Button ${this.text}] Re-adding interactivity in enable() via delayedCall.`);
+                          this.bg.setInteractive({ useHandCursor: true });
+                     } else if (!this.bg.input.enabled) {
+                          this.bg.input.enabled = true;
+                     }
+                 } else { // Warn // }
+             });
+        }
+        */
+
         return this;
     }
     
@@ -278,9 +333,17 @@ class Button {
      * @returns {Button} This button for chaining
      */
     disable() {
+        if (!this.bg || !this.scene || !this.scene.sys?.isActive()) return this; // Add scene active check
         this.disabled = true;
-        this.bg.fillColor = 0x666666;
-        this.textObj.setAlpha(0.5);
+        // Set disabled visual state
+        this.bg.setFillStyle(0x666666);
+        if(this.textObj) this.textObj.setAlpha(0.5);
+        // --- Disable Input ---
+        // Directly disable if input exists
+        if (this.bg.input?.enabled) {
+             this.bg.input.enabled = false;
+        }
+         // console.log(`[Button ${this.text}] Disabled.`);
         return this;
     }
     

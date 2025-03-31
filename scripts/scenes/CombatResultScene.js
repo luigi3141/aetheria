@@ -8,6 +8,7 @@ import { ASSET_PATHS } from '../config/AssetConfig.js';
 import items from '../data/items.js';
 import CharacterManager from '../utils/CharacterManager.js';
 import { getDungeonData } from '../data/DungeonConfig.js';
+import HealthManager from '../utils/HealthManager.js';
 
 const { getItemData } = items;
 
