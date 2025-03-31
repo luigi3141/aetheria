@@ -372,9 +372,9 @@ class CharacterSelectScene extends Phaser.Scene {
 
                 if (newPlayer) {
                     gameState.player = newPlayer;
-                     // Optionally set sprite/portrait here, or let OverworldScene handle it
-                     // gameState.player.sprite = ASSET_PATHS.PLAYERS[...]
-                     // gameState.player.portrait = ASSET_PATHS.PORTRAITS[...]
+                    const playerClassUpper = playerClass.toUpperCase();
+                    gameState.player.sprite = ASSET_PATHS.PLAYERS[playerClassUpper] || ASSET_PATHS.PLAYERS.DEFAULT;
+                    gameState.player.portrait = ASSET_PATHS.PORTRAITS[playerClassUpper] || ASSET_PATHS.PORTRAITS.DEFAULT;
                     console.log('Character created via Manager:', gameState.player);
                     navigationManager.navigateTo(this, 'OverworldScene');
                 } else { /* Handle error */ }
