@@ -42,10 +42,10 @@ export default class EncounterScene extends BaseScene {
         const combatData = gameState.combatData;
         if (!combatData) {
             console.error("Cannot preload enemies: gameState.combatData is missing.");
-            return; // Avoid errors if data is missing
+            return;
         }
 
-        const dungeon = combatData.dungeon; // Includes current level
+        const dungeon = combatData.dungeon;
         const isBoss = combatData.isBoss || false;
 
         // --- Generate enemies based on gameState ---
@@ -96,6 +96,10 @@ export default class EncounterScene extends BaseScene {
 
         this.playerSpriteKey = spriteKey;
         this.enemiesToPreload = enemies;
+
+        // Load combat effect sprites as regular images
+        this.load.image('slash', ASSET_PATHS.EFFECTS.SLASH);
+        this.load.image('fire', ASSET_PATHS.EFFECTS.FIRE);
     }
 
     create(data) { // data argument might be empty here
@@ -190,6 +194,34 @@ export default class EncounterScene extends BaseScene {
 
     console.log(`${this.scene.key} Create End`); // Optional log
     }
+
+    processPlayerAttack(type = 'basic') {
+        const enemy = this.enemies[0];
+        const playerSprite = this.spriteManager.playerSprite;
+        const enemySprite = this.spriteManager.enemySprite;
+
+        // Play effect animation based on attack type
+        const effectKey = type === 'basic' ? 'slash' : 'fire';
+        this.combatUI.playEffectAnimation(effectKey, enemySprite.x, enemySprite.y, () => {
+            // Process damage after animation completes
+            this.combatEngine.processPlayerAttack(type);
+        });
+    }
+
+    processEnemyAttack() {
+        const enemy = this.enemies[0];
+        const playerSprite = this.spriteManager.playerSprite;
+        const enemySprite = this.spriteManager.enemySprite;
+
+        // Play slash effect for enemy attack, offset slightly to be more visible
+        const effectX = playerSprite.x;
+        const effectY = playerSprite.y; // Offset upward to be more visible
+        this.combatUI.playEffectAnimation('slash', effectX, effectY, () => {
+            // Process damage after animation completes
+            this.combatEngine.processEnemyAttack(true);
+        });
+    }
+
     /*
     openInventory() {
         console.log("[EncounterScene] Launching Inventory and sleeping...");

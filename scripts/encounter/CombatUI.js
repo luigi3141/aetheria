@@ -1,5 +1,6 @@
 import { LAYOUT } from '../ui/layout/LayoutHelper.js';
 import gameState from '../gameState.js';
+import { ASSET_PATHS } from '../config/AssetConfig.js';
 
 export default class CombatUI {
     constructor(scene) {
@@ -137,11 +138,13 @@ export default class CombatUI {
         };
 
         this.buttons.attack = createStyledButton(startX, 'Attack', 0x2ecc71, 0x27ae60, () => {
-            this.scene.combatEngine.processPlayerAttack('basic');
+            this.disableActionButtons();
+            this.scene.processPlayerAttack('basic');
         });
         
         this.buttons.special = createStyledButton(startX + spacing, 'Special', 0x9b59b6, 0x8e44ad, () => {
-            this.scene.combatEngine.processPlayerAttack('special');
+            this.disableActionButtons();
+            this.scene.processPlayerAttack('special');
         });
         /*
         this.buttons.inventory = createStyledButton(startX + spacing * 2, 'Inventory', 0x888888, 0x666666, () => {
@@ -233,7 +236,29 @@ export default class CombatUI {
              }
          });
      }
-     destroy() {
+     
+    playEffectAnimation(effectKey, targetX, targetY, onComplete = null) {
+        const effect = this.scene.add.sprite(targetX, targetY, effectKey)
+            .setScale(2)
+            .setDepth(3000) // Increased depth to be above both player and enemy (1000)
+            .setAlpha(0);
+
+        // Create a simple fade in/out animation using tweens instead of sprite animation
+        this.scene.tweens.add({
+            targets: effect,
+            alpha: { from: 0, to: 1 },
+            duration: 300, // Increased duration to be more visible
+            ease: 'Linear',
+            yoyo: true,
+            hold: 100, // Hold at full opacity for a moment
+            onComplete: () => {
+                effect.destroy();
+                if (onComplete) onComplete();
+            }
+        });
+    }
+
+    destroy() {
         console.log("[CombatUI] Destroying UI elements...");
 
         // Destroy buttons

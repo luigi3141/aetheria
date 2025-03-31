@@ -43,7 +43,9 @@ export default class SpriteManager {
           LAYOUT.COMBAT.SPRITES.PLAYER.x * this.scene.scale.width,
           LAYOUT.COMBAT.SPRITES.PLAYER.y * this.scene.scale.height,
           key
-        ).setScale(1);
+        )
+        .setScale(1)
+        .setDepth(1000); // Set player sprite depth
         
         // Add a slight bobbing animation
         this.scene.tweens.add({
@@ -76,11 +78,10 @@ export default class SpriteManager {
             LAYOUT.COMBAT.SPRITES.ENEMY.x * this.scene.scale.width,
             LAYOUT.COMBAT.SPRITES.ENEMY.y * this.scene.scale.height,
             spriteKey
-        ).setScale(1)
-        .setDepth(1000) // Ensure it's above other elements
-        .setVisible(true); // Ensure it's visible
-        console.log('Enemy sprite position:', this.enemySprite.x, this.enemySprite.y);
-
+        )
+        .setScale(1)
+        .setDepth(1000) // Keep enemy sprite depth consistent with player
+        .setVisible(true);
     
         // Add a slight bobbing animation to make the enemy sprite feel alive
         this.scene.tweens.add({

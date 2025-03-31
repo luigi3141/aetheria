@@ -160,12 +160,11 @@ export default class CombatEngine {
     /**
      * Process an enemy attack on the player
      */
-    processEnemyAttack() {
+    processEnemyAttack(fromAnimation = false) {
         // Added check for gameOver at the start
         if (this.gameOver || !this.enemies.length || !gameState.player) return;
 
         // --- Enemy Action Selection (Currently only basic attack) ---
-        // TODO: Implement enemy AI to choose abilities based on cooldowns, health etc.
         const enemy = this.enemies[0]; // Assuming single enemy
         const attackType = 'basic'; // Defaulting to basic
 
@@ -175,10 +174,14 @@ export default class CombatEngine {
              return;
         }
 
+        // Only trigger animation if this isn't being called from the animation completion
+        if (!fromAnimation) {
+            this.scene.processEnemyAttack();
+            return;
+        }
 
         // --- Calculate Damage ---
         // 1. Determine Base Attack Power
-        // Use currentAttack for enemies as well, assuming it exists and includes buffs/base stat
         let baseAttackPower = enemy.currentAttack || enemy.attack || 5; // Default to 5 if no attack stat
 
         // 2. Apply Randomization (+/- 20%)
@@ -195,31 +198,25 @@ export default class CombatEngine {
         // 4. Get Target Defense (Player's defense)
         const playerDefense = gameState.player.currentDefense || 0;
 
-        // 5. Apply Flat Defense Reduction (Minimum 1 Damage)
+        // 4. Apply Flat Defense Reduction (Minimum 1 Damage)
         const actualDamage = Math.max(1, randomizedRawDamage - playerDefense);
 
         // --- Apply Effects ---
-        // Use HealthManager or direct update
-        HealthManager.updatePlayerHealth(-actualDamage, true); // Subtract damage (relative)
+        gameState.player.health = Math.max(0, gameState.player.health - actualDamage);
 
         // --- Update UI and Log ---
         this.scene.combatUI.updatePlayerHealth();
-        const message = this.scene.combatText.getAttackMessage('enemy', attackType, actualDamage, didCrit);
-        // Pass false for isPlayerAction, CombatLog will handle round increment after enemy turn
-        this.scene.combatLog.addLogEntry(message, false);
+        const message = this.scene.combatText.getAttackMessage('enemy', attackType, actualDamage);
+        this.scene.combatLog.addLogEntry(message, false); // Not player action
 
-        // --- Animation and Turn Progression ---
-        // TODO: Specific enemy attack animations
-        this.scene.spriteManager.animateAttack('enemy', () => {
-            if (gameState.player.health <= 0) {
-                this.handlePlayerDefeat();
-            } else {
-                this.endEnemyTurn(); // Finish enemy turn
-            }
-        });
+        // Check for player defeat
+        if (gameState.player.health <= 0) {
+            this.handlePlayerDefeat();
+        } else {
+            // End enemy turn if player survives
+            this.endEnemyTurn();
+        }
     }
-
-    // calculatePlayerDamage and calculateEnemyDamage are removed as logic is now inline
 
     handleEnemyDefeat(enemy) {
         if (this.gameOver) return; // Prevent multiple triggers
@@ -352,12 +349,9 @@ export default class CombatEngine {
 
         // Add delay before enemy acts for pacing
         this.scene.time.delayedCall(1200, () => { // Increased delay
-             if (this.gameOver) return; // Check again in case player conceded etc.
-             // --- Enemy AI Logic Placeholder ---
-             // TODO: Choose ability here based on enemy.abilities, cooldowns etc.
-             // For now, just basic attack
-             this.processEnemyAttack();
-             // --- End AI Placeholder ---
+            if (this.gameOver) return; // Check again in case player conceded etc.
+            // Start enemy attack with animation
+            this.processEnemyAttack(false); // Start with animation
         });
     }
 
