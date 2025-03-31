@@ -399,17 +399,29 @@ class CombatResultScene extends BaseScene {
         if (gameState.player.experience >= gameState.player.experienceToNextLevel) {
             this.handleLevelUp();
         }
-// Check for player level up AFTER adding experience
-if (gameState.player && gameState.player.experience >= gameState.player.experienceToNextLevel) {
-    // Call CharacterManager to handle the level up logic consistently
-    if (typeof CharacterManager !== 'undefined' && CharacterManager.applyLevelUp) {
-        CharacterManager.applyLevelUp(gameState.player);
-        this.displayLevelUpMessage(); // Separate UI display logic
+        // Check for player level up AFTER adding experience
+        if (gameState.player && gameState.player.experience >= gameState.player.experienceToNextLevel) {
+            // Call CharacterManager to handle the level up logic consistently
+            if (typeof CharacterManager !== 'undefined' && CharacterManager.applyLevelUp) {
+                CharacterManager.applyLevelUp(gameState.player);
+                this.displayLevelUpMessage(); // Separate UI display logic
     } else {
          console.warn("CharacterManager or applyLevelUp not available. Level up stats not applied.");
          // Fallback basic level up if needed, but ideally use CharacterManager
     }
 }
+        // Only restore mana if the outcome wasn't a defeat where perhaps penalties apply
+        if (combatResult.outcome === 'victory' || combatResult.outcome === 'retreat') {
+            const maxMana = gameState.player.maxMana || 50; // Get max mana (with fallback)
+            const manaToRestore = Math.floor(maxMana * 0.20); // Calculate 20%
+
+            if (manaToRestore > 0) {
+                console.log(`Restoring ${manaToRestore} mana (20% of ${maxMana}) after combat.`);
+                // Use HealthManager to safely add mana, respecting the cap
+                HealthManager.updatePlayerMana(manaToRestore, true); // true for relative update
+            }
+        }
+        // --- >>> END MANA RESTORE <<< ---
         // Add items to inventory
         const lootItemsArray = combatResult.loot || [];
         if (lootItemsArray.length > 0) {

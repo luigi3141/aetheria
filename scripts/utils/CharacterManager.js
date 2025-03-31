@@ -190,8 +190,8 @@ class CharacterManager {
          // --- Recalculate all derived stats ---
          this.recalculatePlayerStats(character);
 
-         // Restore health and mana fully on level up AFTER recalculating max values
-         character.health = character.maxHealth;
+         // Restore health partially and mana fully on level up AFTER recalculating max values
+         character.health = Math.min(character.health + 10, character.maxHealth);
          character.mana = character.maxMana;
 
          console.log(`Character ${character.name} leveled up to ${character.level}! Stats recalculated.`);
