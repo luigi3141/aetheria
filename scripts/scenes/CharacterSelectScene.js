@@ -1,466 +1,423 @@
+// ---- File: CharacterSelectScene.js ----
+
 import UIManager from '../ui/UIManager.js';
 import Button from '../ui/components/Button.js';
 import SelectionGrid from '../ui/components/SelectionGrid.js';
 import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import { ASSET_PATHS, AssetHelper } from '../config/AssetConfig.js';
+// --- Import CLASS_DEFINITIONS directly ---
+import CharacterManager, { CLASS_DEFINITIONS } from '../utils/CharacterManager.js';
 
-/**
- * CharacterSelectScene - Scene for character creation and customization
- */
 class CharacterSelectScene extends Phaser.Scene {
     constructor() {
         super({ key: 'CharacterSelectScene' });
+        // References for stat text objects
+        this.strValueText = null;
+        this.agiValueText = null;
+        this.intValueText = null;
+        this.conValueText = null;
+        this.classGrid = null; // Initialize classGrid reference
+        this.nameInput = null; // Initialize nameInput reference
+        this.characterPreview = null; // Initialize preview reference
     }
 
     preload() {
-        // Load character assets
-        if (!this.textures.exists('background')) {
-            this.load.image('background', ASSET_PATHS.BACKGROUNDS.CHARACTER);
+        // Load background - Use a specific key
+        if (!this.textures.exists('char_select_bg')) { // Use a unique key
+            this.load.image('char_select_bg', ASSET_PATHS.BACKGROUNDS.CHARACTER);
         }
-        
-        // Load character portraits for different classes
-        if (!this.textures.exists('warrior')) {
-            this.load.image('warrior', ASSET_PATHS.PLAYERS.WARRIOR);
-        }
-        if (!this.textures.exists('mage')) {
-            this.load.image('mage', ASSET_PATHS.PLAYERS.MAGE);
-        }
-        if (!this.textures.exists('rogue')) {
-            this.load.image('rogue', ASSET_PATHS.PLAYERS.ROGUE);
-        }
-        if (!this.textures.exists('cleric')) {
-            this.load.image('cleric', ASSET_PATHS.PLAYERS.CLERIC);
-        }
-        if (!this.textures.exists('ranger')) {
-            this.load.image('ranger', ASSET_PATHS.PLAYERS.RANGER);
-        }
-        if (!this.textures.exists('bard')) {
-            this.load.image('bard', ASSET_PATHS.PLAYERS.BARD);
-        }        
+
+        // Load character PORTRAITS (used in preview) - Ensure keys match ASSET_PATHS
+        const classes = ['warrior', 'mage', 'rogue', 'cleric', 'ranger', 'bard'];
+        classes.forEach(className => {
+            const upperClass = className.toUpperCase();
+            const portraitPath = ASSET_PATHS.PORTRAITS[upperClass] || ASSET_PATHS.PORTRAITS.DEFAULT;
+            // Use lowercase class name as the texture key to match updateCharacterPreview
+            if (!this.textures.exists(className)) {
+                this.load.image(className, portraitPath);
+            }
+        });
     }
 
     create() {
-        // Get screen dimensions
+        console.log("CharacterSelectScene Create Start");
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
-        
-        // Create UI Manager
-        this.ui = new UIManager(this);
-        
-        // Add background
-        this.add.image(width/2, height/2, 'background').setDisplaySize(width, height);
-        
-        
-        // Create the title
-        this.ui.createTitle(width/2, height * 0.08, 'Character Creation', {
+
+        // --- Initialize UI Manager FIRST ---
+        // Note: Extending BaseScene automatically creates this.ui if initializeScene is called
+        // If not extending BaseScene, uncomment the line below
+        // this.ui = new UIManager(this);
+        // If extending BaseScene, call initializeScene (assuming it creates this.ui)
+         if (typeof this.initializeScene === 'function') {
+             this.initializeScene();
+         } else {
+             // Fallback if not extending BaseScene properly
+             this.ui = new UIManager(this);
+             console.warn("CharacterSelectScene is not extending BaseScene or initializeScene is missing. Manually created UIManager.");
+         }
+
+
+        // --- Add Background ---
+        // Use the specific key loaded in preload and set depth to be behind everything
+        this.add.image(width / 2, height / 2, 'char_select_bg')
+            .setDisplaySize(width, height)
+            .setDepth(0); // Ensure it's at the back
+
+        // --- Create Title ---
+        this.ui.createTitle(width / 2, height * 0.08, 'Character Creation', {
             fontSize: this.ui.fontSize.lg
-        });
-        
-        // Create the main layout container
+        }).setDepth(1); // Ensure title is above background
+
+        // --- Create Main Layout ---
         this.createMainLayout();
-        
-        // Create the bottom buttons
+
+        // --- Create Bottom Buttons ---
         this.createNavigationButtons();
-        
-        // Initialize with default selections
-        this.updateCharacterPreview();
+
+        // --- Initial Update ---
+        this.time.delayedCall(50, () => { // Delay slightly
+            console.log("Delayed initial update. CharacterManager:", CharacterManager);
+            if (this.classGrid) {
+                this.updateCharacterPreview(); // Update portrait and stats
+            } else {
+                console.warn("Class grid not initialized for initial update.");
+            }
+        });
+        console.log("CharacterSelectScene Create End");
     }
-    
-    /**
-     * Create the main layout for character creation
-     */
+
     createMainLayout() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
-        
-        // Use a more balanced layout with proper spacing
-        // Left column is 30% of width, right side split into two equal columns
-        const leftColumnWidth = width * 0.4;
-        const rightSideWidth = width - leftColumnWidth;
-        const rightColumnWidth = rightSideWidth / 2;
-        
-        // === LEFT COLUMN - Character Preview ===
-        this.createCharacterPreviewSection(
-            leftColumnWidth / 2, 
-            height * 0.4
-        );
-        
-        // === MIDDLE COLUMN - Character Class ===
-        this.createClassSelectionSection(
-            leftColumnWidth + (rightColumnWidth ), 
-            height * 0.33
-        );
-        
-        // === BOTTOM SECTION - Character Name ===
-        this.createNameInputSection(
-            width / 2, 
-            height * 0.65
-        );
-    }
-    
-    /**
-     * Create the character preview section
-     */
-    createCharacterPreviewSection(x, y) {
-        // Create section label with enhanced styling
-        /*
-        this.characterLabel = this.ui.createSectionLabel(
-            x, 
-            y - this.ui.spacing.xl * 2, 
-            'CHARACTER PREVIEW',
-            {
-                sideMarkers: true,
-                animate: true
-            }
-        );
-        */
 
-        // Create character preview with enhanced visuals
-        this.characterPreview = this.ui.createCharacterPreview(
-            x, 
-            y, 
-            'warrior', // Start with warrior as default
-            { 
-                id: 'character-preview',
-                panelScale: 1.5,
-                size: Math.min(this.cameras.main.width * 0.2, this.cameras.main.height * 0.2),
-                spriteScale: 1 // Increase sprite scale
-            }
-        );
-        
-        // Add stats text with enhanced styling
+        // --- Layout Adjustments ---
+        const commonPanelHeight = height * 0.60; // Slightly taller again for more stats
+        const commonTopY = height * 0.18; // Adjusted Downward more
+        const commonCenterY = commonTopY + commonPanelHeight / 2;
+
+        const previewPanelWidth = width * 0.28;
+        const statsPanelWidth = width * 0.28;
+        const classSelectWidth = width * 0.28;
+
+        const totalPanelWidth = previewPanelWidth + statsPanelWidth + classSelectWidth;
+        const totalSpacing = width - totalPanelWidth;
+        const spacing = totalSpacing / 4;
+
+        const previewX = spacing + previewPanelWidth / 2;
+        const statsX = previewX + previewPanelWidth / 2 + spacing + statsPanelWidth / 2;
+        const classSelectX = statsX + statsPanelWidth / 2 + spacing + classSelectWidth / 2;
+
+        const nameInputY = commonTopY + commonPanelHeight + 40; // Position name input below panels
+
+        console.log(`Layout X Positions: Preview=${previewX.toFixed(0)}, Stats=${statsX.toFixed(0)}, ClassSelect=${classSelectX.toFixed(0)}`);
+        console.log(`Layout Common Center Y: ${commonCenterY.toFixed(0)}`);
+
+
+        // --- Create Sections ---
+        this.createCharacterPreviewSection(previewX, commonCenterY, previewPanelWidth, commonPanelHeight);
+        this.createStatsPreviewSection(statsX, commonCenterY, statsPanelWidth, commonPanelHeight); // Pass height
+        this.createClassSelectionSection(classSelectX, commonCenterY, classSelectWidth, commonPanelHeight); // Use same Y/Height
+        this.createNameInputSection(width / 2, nameInputY); // Use new Y
+    }
+
+    createCharacterPreviewSection(x, y, panelWidth, panelHeight) {
+         // --- Create Panel Manually ---
+        const previewPanel = this.ui.createPanel(x, y, panelWidth, panelHeight, {
+             fillColor: 0x222233, fillAlpha: 0.8, borderColor: 0x9999aa, borderThickness: 2, depth: 1
+        });
+
+        // Add Portrait Inside Panel
+        const playerClass = this.classGrid ? this.classGrid.getSelectedItem().toLowerCase() : 'warrior'; // Get initial class
+        const portraitY = y - panelHeight * 0.1; // Position portrait slightly higher within panel
+        const portraitSize = Math.min(panelWidth * 0.7, panelHeight * 0.5); // Size relative to panel
+
+        // Use this.add.image directly and store reference
+        this.characterPortrait = this.add.image(x, portraitY, playerClass) // Use lowercase key matching preload
+             .setDisplaySize(portraitSize, portraitSize)
+             .setOrigin(0.5)
+             .setDepth(2); // Above panel bg
+
+        // Add Name Text Inside Panel
+        this.characterNameText = this.add.text(x, y + panelHeight * 0.25, // Position name lower
+            playerClass.charAt(0).toUpperCase() + playerClass.slice(1), {
+            fontFamily: "'Press Start 2P'", fontSize: this.ui.fontSize.sm + 'px', fill: '#ffffff', align: 'center'
+        }).setOrigin(0.5).setDepth(2);
+
+        // Store panel reference if needed later
+        this.characterPreviewPanel = previewPanel;
+
+        // --- Remove the call to ui.createCharacterPreview ---
         /*
-        this.statsText = this.ui.createSectionLabel(
-            x,
-            y + this.ui.spacing.xl * 2,
-            'STATS\nSTR: 10  AGI: 10\nINT: 10  CON: 10',
-            { 
-                fontSize: this.ui.fontSize.xs,
-                fontFamily: "'VT323'",
-                background: true,
-                animate: false
-            }
-        );
+        this.characterPreview = this.ui.createCharacterPreview( ... );
         */
     }
-    
-    /**
-     * Create the class selection section
-     */
-    createClassSelectionSection(x, y) {
-        // Available classes
+
+    createStatsPreviewSection(x, y, panelWidth, panelHeight) {
+        const statsPanel = this.ui.createPanel(x, y, panelWidth, panelHeight, {
+            fillColor: 0x282835, fillAlpha: 0.85, borderColor: 0xaaaaaa, borderThickness: 1, depth: 1
+        });
+
+        const titleHeight = 30;
+        const titleY = -panelHeight * 0.5 + titleHeight;
+        const panelTitle = this.add.text(0, titleY, 'Base Stats (Lvl 1)', { // Clarify Level 1
+            fontFamily: "'Press Start 2P'", fontSize: this.ui.fontSize.xs + 'px', fill: '#ffffff', align: 'center' // Smaller title
+        }).setOrigin(0.5);
+        statsPanel.add(panelTitle);
+
+        const labelStyle = { fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm + 'px', fill: '#cccccc', align: 'left' }; // Smaller stats text
+        const valueStyle = { fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm + 'px', fill: '#ffffaa', align: 'right' };
+
+        // Positioning RELATIVE TO PANEL CENTER (0,0)
+        const startY = titleY + 35; // Start stats lower
+        const labelX = -panelWidth * 0.4;
+        const valueX = panelWidth * 0.4;
+        // --- Adjust Spacing for 7 stats ---
+        const totalStatHeight = panelHeight - (titleHeight * 2) - 20; // Available height for stats
+        const spacing = totalStatHeight / 7; // Divide by number of stats
+        // --- End Spacing Adjustment ---
+
+        // Create text objects using RELATIVE coordinates
+        this.hpLabel = this.add.text(labelX, startY + spacing * 0, 'Health:', labelStyle).setOrigin(0, 0.5);
+        this.hpValueText = this.add.text(valueX, startY + spacing * 0, '?', valueStyle).setOrigin(1, 0.5);
+
+        this.manaLabel = this.add.text(labelX, startY + spacing * 1, 'Mana:', labelStyle).setOrigin(0, 0.5);
+        this.manaValueText = this.add.text(valueX, startY + spacing * 1, '?', valueStyle).setOrigin(1, 0.5);
+
+        this.baseDmgLabel = this.add.text(labelX, startY + spacing * 2, 'Base Damage:', labelStyle).setOrigin(0, 0.5);
+        this.baseDmgValueText = this.add.text(valueX, startY + spacing * 2, '?', valueStyle).setOrigin(1, 0.5);
+
+        this.strLabel = this.add.text(labelX, startY + spacing * 3, 'Strength:', labelStyle).setOrigin(0, 0.5);
+        this.strValueText = this.add.text(valueX, startY + spacing * 3, '?', valueStyle).setOrigin(1, 0.5);
+
+        this.agiLabel = this.add.text(labelX, startY + spacing * 4, 'Agility:', labelStyle).setOrigin(0, 0.5);
+        this.agiValueText = this.add.text(valueX, startY + spacing * 4, '?', valueStyle).setOrigin(1, 0.5);
+
+        this.intLabel = this.add.text(labelX, startY + spacing * 5, 'Intelligence:', labelStyle).setOrigin(0, 0.5);
+        this.intValueText = this.add.text(valueX, startY + spacing * 5, '?', valueStyle).setOrigin(1, 0.5);
+
+        this.conLabel = this.add.text(labelX, startY + spacing * 6, 'Constitution:', labelStyle).setOrigin(0, 0.5);
+        this.conValueText = this.add.text(valueX, startY + spacing * 6, '?', valueStyle).setOrigin(1, 0.5);
+
+
+        // Add to the panel's container
+        statsPanel.add([
+            this.hpLabel, this.hpValueText,
+            this.manaLabel, this.manaValueText,
+            this.baseDmgLabel, this.baseDmgValueText,
+            this.strLabel, this.strValueText,
+            this.agiLabel, this.agiValueText,
+            this.intLabel, this.intValueText,
+            this.conLabel, this.conValueText
+        ]);
+    }
+
+    createClassSelectionSection(x, y, panelWidth, panelHeight) {
         const classes = ['Warrior', 'Mage', 'Rogue', 'Cleric', 'Ranger', 'Bard'];
-        
-        // Create section label with enhanced styling
-        this.classLabel = this.ui.createTitle(
-            x, 
-            y - this.ui.spacing.xl * 1.8, 
-            'CHARACTER TYPE',
-            {
-                fontSize: this.ui.fontSize.md,
-                padding: this.ui.spacing.md
-            }
-        );
-        
-        // Create class selection grid
+
+        const classPanel = this.ui.createPanel(x, y, panelWidth, panelHeight, {
+             fillColor: 0x223322, fillAlpha: 0.8, borderColor: 0xaaffaa, borderThickness: 1, depth: 1
+        });
+
+        const titleHeight = 30;
+        const titleY = -panelHeight * 0.5 + titleHeight;
+        const panelTitle = this.add.text(0, titleY, 'Select Class', { /* ... styles ... */ }).setOrigin(0.5);
+        classPanel.add(panelTitle);
+
+        // Adjust Selection Grid Positioning
+        const gridOptions = {
+            columns: 1,
+            itemWidth: panelWidth * 0.8,
+            itemHeight: 40,
+            spacing: this.ui.spacing.sm,
+            fontSize: this.ui.fontSize.sm
+        };
+        const totalGridHeight = classes.length * gridOptions.itemHeight + (classes.length - 1) * gridOptions.spacing;
+        const gridStartY = titleY + titleHeight + (gridOptions.itemHeight / 2) + 10; // Start below title + padding
+
         this.classGrid = new SelectionGrid(
             this,
-            x,
-            y,
+            0, // X relative to panel center
+            gridStartY, // Use calculated start Y relative to panel center
             classes,
-            (className, index) => {
-                console.log(`Selected class: ${className}`);
-                gameState.player.class = className.toLowerCase();
-                this.updateCharacterPreview();
-                this.updateClassDescription(className);
-            },
-            {
-                columns: 2,
-                itemWidth: 160,  
-                itemHeight: 45,  
-                spacing: this.ui.spacing.lg,  
-                fontSize: this.ui.fontSize.md * 1.2  
-            }
+            (className, index) => { /* ... onSelect ... */ this.updateCharacterPreview(); },
+            gridOptions
         );
+
+        // --- Add grid buttons TO THE PANEL CONTAINER ---
+        // --- Use RELATIVE positions provided by SelectionGrid ---
+        this.classGrid.buttons.forEach(button => {
+            // SelectionGrid should calculate positions relative to its own X,Y
+            // When we add to the container, these become relative to the container's origin
+            classPanel.add([button.bg, button.text]);
+        });
+        // --- End Grid Button Adding ---
     }
-    
-    /**
-     * Create the name input section
-     */
+
     createNameInputSection(x, y) {
-        // Create section label with enhanced styling
+        const labelWidthEstimate = 120; // Estimate width of the label text
+        const inputWidth = 250;
+        const spacing = 20;
+
+        // Calculate positions to center the whole group
+        const totalWidth = labelWidthEstimate + inputWidth + spacing;
+        const startX = x - totalWidth / 2;
+
+        const labelX = startX + labelWidthEstimate / 2;
+        const inputX = startX + labelWidthEstimate + spacing + inputWidth / 2;
+
+
+        // --- Use createTitle for the Label for better visibility ---
         this.nameLabel = this.ui.createTitle(
-            x*0.5, 
-            y + this.ui.spacing.lg*1, 
-            'Set Name:',
-            {
-                fontSize: this.ui.fontSize.md,
-                padding: this.ui.spacing.md
-            }
+             labelX, y, 'Set Name:',
+             {
+                 fontSize: this.ui.fontSize.sm, // Smaller font
+                 padding: { x: 8, y: 4 }, // Smaller padding
+                 // No need to set depth here, createTitle handles it if necessary
+             }
         );
-        
-        // Create name input with a more obvious interactive appearance
+        // --- End Label Change ---
+
         this.nameInput = this.ui.createInputField(
-            x*1.2,
-            y + this.ui.spacing.lg*1,
-            'Adventurer',
-            (name) => {
-                const truncatedName = name.slice(0, 20);
-                console.log(`Character name set to: ${truncatedName}`);
-                gameState.player.name = truncatedName;
-            },
-            {
-                width: 300,
-                height: 50,
-                promptText: 'Enter your character name:',
-                id: 'name-input',
-                fillColor: 0x111111,
-                maxLength: 20
+            inputX, y, 'Adventurer',
+            (name) => { /* ... onChange ... */ },
+            { width: inputWidth, height: 40, depth: 1 }
+        );
+
+        // --- Fix Name Input Highlight ---
+        if (this.nameInput && this.nameInput.container) {
+            const inputContainer = this.nameInput.container;
+            const highlightWidth = 30;
+            const highlightHeight = this.nameInput.height - 10;
+            const startXRelative = -this.nameInput.width / 2 + highlightWidth / 2 + 5;
+            const endXRelative = this.nameInput.width / 2 - highlightWidth / 2 - 5;
+
+            const highlight = this.add.rectangle(
+                startXRelative, 0, highlightWidth, highlightHeight, 0xffffff, 0.15
+            ).setDepth(0);
+
+            inputContainer.add(highlight);
+            if(this.nameInput.text) this.nameInput.text.setDepth(1);
+
+            // Check if tween already exists before adding a new one
+            // (Though ideally this function is only called once in create)
+            if (!this.nameHighlightTween || !this.nameHighlightTween.isPlaying()) {
+                 this.nameHighlightTween = this.tweens.add({
+                     targets: highlight,
+                     x: endXRelative,
+                     duration: 2500,
+                     yoyo: true,
+                     repeat: -1,
+                     ease: 'Sine.easeInOut'
+                 });
+                 console.log("Name input highlight created and tween added.");
             }
-        );
 
-        // Create a sliding highlight effect
-        const highlightWidth = 40;
-        const highlightHeight = this.nameInput.height;
-        const startX = this.nameInput.container.x - this.nameInput.width/2 + highlightWidth/2;
-        const endX = this.nameInput.container.x + this.nameInput.width/2 - highlightWidth/2;
-        
-        const highlight = this.add.rectangle(
-            startX,
-            this.nameInput.container.y,
-            highlightWidth,
-            highlightHeight,
-            0xffffff,
-            0.1
-        );
+        } else { /* Warn */ }
 
-        // Add sliding animation
-        this.tweens.add({
-            targets: highlight,
-            x: endX,
-            duration: 2000,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
+        // --- REMOVE STRAY ANIMATION ---
+        // Carefully search this function and createMainLayout for any other
+        // this.add.rectangle or this.tweens.add that targets a rectangle
+        // that isn't part of a panel, the name input, or the highlight.
+        // For example, the old highlight code might still be lingering:
         /*
-        // Add a small hint text below the input field
-        const hintY = y + this.ui.spacing.md + 30;
-        this.nameHint = this.add.text(x, hintY, '(Click to edit)', {
-            fontFamily: "'VT323'",
-            fontSize: this.ui.fontSize.xs + 'px',
-            fill: '#aaaaaa',
-            align: 'center'
-        }).setOrigin(0.5);
-        
-        // Add a subtle animation to draw attention
-        this.tweens.add({
-            targets: this.nameHint,
-            alpha: 0.5,
-            duration: 1000,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
+        // DELETE THIS if it still exists:
+        const highlightWidth_OLD = 40;
+        const highlightHeight_OLD = this.nameInput.height; // Might error if nameInput is null
+        const startX_OLD = this.nameInput.container.x - this.nameInput.width/2 + highlightWidth_OLD/2;
+        const endX_OLD = this.nameInput.container.x + this.nameInput.width/2 - highlightWidth_OLD/2;
+        const highlight_OLD = this.add.rectangle( startX_OLD, this.nameInput.container.y, highlightWidth_OLD, highlightHeight_OLD, 0xffffff, 0.1);
+        this.tweens.add({ targets: highlight_OLD, x: endX_OLD, duration: 2000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         */
     }
-    
-    /**
-     * Create the bottom navigation buttons
-     */
+
+
     createNavigationButtons() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
-        
-        // Back button to return to the start screen
+        const buttonY = height * 0.92;
+
+        // Back button
         const backButton = new Button(
-            this,
-            width * 0.25,
-            height * 0.85,
-            'BACK',
+            this, width * 0.3, buttonY, 'BACK',
             () => {
-                console.log('Back button clicked');
-                navigationManager.navigateTo(this, 'StartScene');
+                if (typeof this.safePlaySound === 'function') this.safePlaySound('button-click');
+                navigationManager.navigateTo(this, 'StartScene')
             },
-            {
-                width: 120,
-                height: 50
-            }
+            { width: 150, height: 45 }
         );
-        
-        // Start game button to finalize character and start the game
+        if (backButton.container) backButton.container.setDepth(5); // Ensure buttons on top
+
+        // Start game button
         this.startButton = new Button(
-            this,
-            width * 0.75,
-            height * 0.85,
-            'START GAME',
+            this, width * 0.7, buttonY, 'START GAME',
             () => {
                 console.log('Start game button clicked');
-                
-                // Clear any existing game data when starting a new game
+                if (typeof this.safePlaySound === 'function') this.safePlaySound('button-click');
                 localStorage.removeItem('gameState');
-                console.log('Cleared previous game state from localStorage');
-                
-                // Initialize player object if it doesn't exist
-                if (!gameState.player) {
-                    gameState.player = {};
-                }
-                
-                // Get character info
-                const playerName = this.nameInput.getValue() || 'Adventurer';
+                console.log('Cleared previous game state');
+
+                const playerName = this.nameInput?.getValue() || 'Adventurer';
+                if (!this.classGrid) { console.error("Class Grid not ready."); return; }
                 const playerClass = this.classGrid.getSelectedItem().toLowerCase();
-                
-                // Store player class selection properly
-                const playerClassLower = this.classGrid.getSelectedItem().toLowerCase();
-                
-                // Store the player data to use in other scenes
-                gameState.player.name = playerName;
-                gameState.player.class = playerClassLower;
-                // Store sprite and portrait paths to use in other scenes
-                gameState.player.sprite = ASSET_PATHS.PLAYERS[playerClassLower.toUpperCase()] || ASSET_PATHS.PLAYERS.DEFAULT;
-                gameState.player.portrait = ASSET_PATHS.PORTRAITS[playerClassLower.toUpperCase()] || ASSET_PATHS.PORTRAITS.DEFAULT;
-                
-                // Generate stats based on class and race
-                let str = 10, agi = 10, int = 10, con = 10;
-                
-                // Adjust stats based on class
-                switch (playerClassLower) {
-                    case 'warrior':
-                        str += 3; con += 2;
-                        break;
-                    case 'mage':
-                        int += 4; agi += 1;
-                        break;
-                    case 'rogue':
-                        agi += 4; str += 1;
-                        break;
-                    case 'cleric':
-                        int += 2; con += 3;
-                        break;
-                    case 'ranger':
-                        agi += 3; str += 2;
-                        break;
-                    case 'bard':
-                        agi += 2; int += 3;
-                        break;
-                }
-                              
-                // Calculate derived stats
-                const maxHealth = 50 + (con * 5);
-                const maxMana = 20 + (int * 3);
-                
-                // Save character data to gameState
-                gameState.player.level = 1;
-                gameState.player.experience = 0;
-                gameState.player.experienceToNextLevel = 100;
-                gameState.player.health = maxHealth;
-                gameState.player.maxHealth = maxHealth;
-                gameState.player.mana = maxMana;
-                gameState.player.maxMana = maxMana;
-                
-                // Save stats to gameState
-                gameState.player.strength = str;
-                gameState.player.agility = agi;
-                gameState.player.intelligence = int;
-                gameState.player.constitution = con;
-                
-                // Navigate to the OverworldScene
-                console.log('Character created:', gameState.player);
-                navigationManager.navigateTo(this, 'OverworldScene');
+
+                const newPlayer = CharacterManager.createNewCharacter(playerName, playerClass);
+
+                if (newPlayer) {
+                    gameState.player = newPlayer;
+                     // Optionally set sprite/portrait here, or let OverworldScene handle it
+                     // gameState.player.sprite = ASSET_PATHS.PLAYERS[...]
+                     // gameState.player.portrait = ASSET_PATHS.PORTRAITS[...]
+                    console.log('Character created via Manager:', gameState.player);
+                    navigationManager.navigateTo(this, 'OverworldScene');
+                } else { /* Handle error */ }
             },
-            {
-                width: 200,
-                height: 50
-            }
+            { width: 180, height: 45 }
         );
-        
-        // Add shine effect to the start button for emphasis
+        if (this.startButton.container) this.startButton.container.setDepth(5); // Ensure buttons on top
         this.startButton.addShineEffect();
     }
-    
-    /**
-     * Update the class description text
-     * @param {string} className - Name of the selected class
-     */
-    updateClassDescription(className) {
-        if (!this.classDescText) return;
-        
-        let desc = '';
-        switch (className) {
-            case 'Warrior':
-                desc = 'Warriors excel at close combat\nand have high defense.';
-                break;
-            case 'Mage':
-                desc = 'Mages harness arcane power\nto cast devastating spells.';
-                break;
-            case 'Rogue':
-                desc = 'Rogues are stealthy and quick,\ndealing high damage.';
-                break;
-            case 'Cleric':
-                desc = 'Clerics heal allies and\nsmite foes with divine magic.';
-                break;
-            case 'Ranger':
-                desc = 'Rangers excel at ranged combat\nand wilderness survival.';
-                break;
-            case 'Bard':
-                desc = 'Bards inspire allies and\nconfuse enemies with magic.';
-                break;
-        }
-        
-        this.classDescText.setText(desc);
-    }
-    
-    /**
-     * Update the character preview based on selections
-     */
+
+
     updateCharacterPreview() {
-        const playerClass = this.classGrid ? this.classGrid.getSelectedItem().toLowerCase() : 'warrior';
-        
-        // Create character data object with sprite key
-        const characterData = {
-            name: playerClass.charAt(0).toUpperCase() + playerClass.slice(1),
-            sprite: playerClass // This matches the image keys we loaded in preload()
-        };
-        
-        console.log('Updating character preview:', {
-            class: playerClass,
-            characterData,
-            previewExists: !!this.characterPreview,
-            updateMethodExists: !!(this.characterPreview && this.characterPreview.updateCharacter),
-            loadedTextures: this.textures.list
-        });
-        
-        // Update the character preview sprite
-        if (this.characterPreview && this.characterPreview.updateCharacter) {
-            this.characterPreview.updateCharacter(characterData);
+        // --- Ensure text objects are created before updating ---
+        if (!this.classGrid || !this.ui || !this.characterPortrait || !this.characterNameText ||
+            !this.hpValueText || !this.manaValueText || !this.baseDmgValueText || !this.strValueText ||
+            !this.agiValueText || !this.intValueText || !this.conValueText)
+        {
+            // console.warn("UI elements not ready yet in updateCharacterPreview");
+            return; // Don't try to update if things aren't ready
         }
-        
-        // Generate some fake stats based on class and race
-        let str = 10, agi = 10, int = 10, con = 10;
-        
-        // Adjust stats based on class
-        switch (playerClass) {
-            case 'warrior':
-                str += 3; con += 2;
-                break;
-            case 'mage':
-                int += 4; agi += 1;
-                break;
-            case 'rogue':
-                agi += 4; str += 1;
-                break;
-            case 'cleric':
-                int += 2; con += 3;
-                break;
-            case 'ranger':
-                agi += 3; str += 2;
-                break;
-            case 'bard':
-                agi += 2; int += 3;
-                break;
+        // --- End Check ---
+
+        const playerClass = this.classGrid.getSelectedItem().toLowerCase();
+
+        // Update Portrait & Name Text
+        if (this.textures.exists(playerClass)) {
+            this.characterPortrait.setTexture(playerClass);
+        } else { /* Warn, set default */ }
+        this.characterNameText.setText(playerClass.charAt(0).toUpperCase() + playerClass.slice(1));
+
+        // Update Stats Display
+        const classDef = CLASS_DEFINITIONS[playerClass];
+
+        if (classDef) {
+            this.hpValueText.setText(classDef.baseHp?.toFixed(0) || '?');
+            this.manaValueText.setText(classDef.baseMana?.toFixed(0) || '?'); // Use baseMana
+            this.baseDmgValueText.setText(classDef.baseDamage?.toFixed(0) || '?');
+            this.strValueText.setText(classDef.baseStats?.strength.toFixed(0) || '?');
+            this.agiValueText.setText(classDef.baseStats?.agility.toFixed(0) || '?');
+            this.intValueText.setText(classDef.baseStats?.intelligence.toFixed(0) || '?');
+            this.conValueText.setText(classDef.baseStats?.constitution.toFixed(0) || '?');
+        } else {
+            console.warn(`No class definition found for: ${playerClass}`);
+            // Reset all stat values to '?'
+            this.hpValueText.setText('?'); this.manaValueText.setText('?'); this.baseDmgValueText.setText('?');
+            this.strValueText.setText('?'); this.agiValueText.setText('?'); this.intValueText.setText('?'); this.conValueText.setText('?');
         }
     }
 }
+
 
 export default CharacterSelectScene;
