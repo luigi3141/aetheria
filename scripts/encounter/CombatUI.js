@@ -116,11 +116,15 @@ export default class CombatUI {
     createCombatActionButtons() {
         const width = this.scene.cameras.main.width;
         const height = this.scene.cameras.main.height;
-        const spacing = 160;
+        // --- Adjust spacing/positioning if removing a button ---
+        const buttonCount = 3; // Now only 3 buttons: Attack, Special, Retreat
+        const totalButtonWidth = (buttonCount * 140) + ((buttonCount - 1) * 20); // Example width/spacing
+        const spacing = 160; // Keep spacing or adjust as needed
+        const startX = width / 2 - ((buttonCount - 1) * spacing) / 2; // Center the group
+
         const buttonY = height * 0.88;
         const buttonWidth = 140;
         const buttonHeight = 50;
-        const startX = width / 2 - spacing * 1.5;
 
         const createStyledButton = (x, label, color, hoverColor, callback) => {
             const btn = this.scene.ui.createButton(x, buttonY, label, callback, {
@@ -129,7 +133,7 @@ export default class CombatUI {
                 fillColor: color,
                 hoverColor: hoverColor
             });
-            return btn; 
+            return btn;
         };
 
         this.buttons.attack = createStyledButton(startX, 'Attack', 0x2ecc71, 0x27ae60, () => {
@@ -139,13 +143,14 @@ export default class CombatUI {
         this.buttons.special = createStyledButton(startX + spacing, 'Special', 0x9b59b6, 0x8e44ad, () => {
             this.scene.combatEngine.processPlayerAttack('special');
         });
-        
+        /*
         this.buttons.inventory = createStyledButton(startX + spacing * 2, 'Inventory', 0x888888, 0x666666, () => {
             gameState.previousScene = 'EncounterScene';
             this.scene.scene.start('InventoryScene');
         });
+        */
         
-        this.buttons.retreat = createStyledButton(startX + spacing * 3, 'Retreat', 0xe74c3c, 0xc0392b, () => {
+        this.buttons.retreat = createStyledButton(startX + spacing * 2, 'Retreat', 0xe74c3c, 0xc0392b, () => {
             this.scene.handleRetreat();
         });
     }

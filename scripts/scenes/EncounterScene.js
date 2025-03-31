@@ -190,6 +190,7 @@ export default class EncounterScene extends BaseScene {
 
     console.log(`${this.scene.key} Create End`); // Optional log
     }
+    /*
     openInventory() {
         console.log("[EncounterScene] Launching Inventory and sleeping...");
         // Pass necessary data, including the key of THIS scene to wake up
@@ -204,7 +205,7 @@ export default class EncounterScene extends BaseScene {
         // Launch Inventory on top and sleep EncounterScene
         this.scene.launch('InventoryScene', dataToInventory);
         this.scene.sleep(); // Pause update loop and rendering
-    }
+    }*/
 
      onResume() {
         console.log("[EncounterScene] RESUME event received.");
