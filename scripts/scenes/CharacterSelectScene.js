@@ -382,7 +382,7 @@ class CharacterSelectScene extends Phaser.Scene {
             { width: 180, height: 45 }
         );
         if (this.startButton.container) this.startButton.container.setDepth(5); // Ensure buttons on top
-        this.startButton.addShineEffect();
+        //this.startButton.addShineEffect();
     }
 
 

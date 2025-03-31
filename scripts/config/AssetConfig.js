@@ -16,7 +16,8 @@ export const ASSET_PATHS = {
         BATTLE_RESULT: 'assets/sprites/backgrounds/battle-result-bg.png',
         FOREST: 'assets/sprites/backgrounds/forest-bg.png',
         CAVERNS: 'assets/sprites/backgrounds/caverns-bg.png',
-        CRAFTING: 'assets/sprites/backgrounds/workshop-bg.png'
+        CRAFTING: 'assets/sprites/backgrounds/workshop-bg.png',
+        SHOP: 'assets/sprites/backgrounds/shop-bg.png'
     },
     
     // Character sprites

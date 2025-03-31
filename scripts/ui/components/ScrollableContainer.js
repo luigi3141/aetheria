@@ -190,48 +190,227 @@ class ScrollableContainer {
      * Setup input handling for scrolling
      */
     setupInputHandling() {
-         if (!this.scene || !this.scene.add || !this.scene.input) return; // Safety check
-        try {
-             this.interactiveArea = this.scene.add.rectangle(
-                 this.x, this.y, this.width, this.height, 0xffffff, 0
-             ).setInteractive();
-             this.managedObjects.push(this.interactiveArea); // Manage for destruction
+        if (!this.scene || !this.scene.add || !this.scene.input) return;
+       try {
+            // --- Interactive Area Setup ---
+            // Create the background rectangle for visual bounds and potentially wheel events
+            this.interactiveArea = this.scene.add.rectangle(
+                this.x, this.y, this.width, this.height, 0xffffff, 0
+            );
+            // Make it interactive *only* to detect if the pointer is *over* it for wheel events.
+            // DO NOT make it draggable here. Dragging will be handled by scene listeners.
+            this.interactiveArea.setInteractive(); // Needs to be interactive for isPointerOver
+            this.managedObjects.push(this.interactiveArea);
 
-            // Mouse wheel scrolling (Check if input system is ready)
-             if (this.scene.input.mouse?.enabled || this.scene.input.touch?.enabled) {
-                 this.scene.input.on('wheel', this.handleWheel, this); // Use named function
-             }
+           // --- Scene-Level Listeners ---
+           // Remove previous listeners to avoid duplicates if re-initialized
+           this.scene.input.off('wheel', this.handleWheel, this);
+           this.scene.input.off('pointerdown', this.handleScenePointerDown, this); // New handler name
+           this.scene.input.off('pointermove', this.handleScenePointerMove, this); // New handler name
+           this.scene.input.off('pointerup', this.handleScenePointerUp, this); // New handler name
+           this.scene.input.off('pointerupoutside', this.handleScenePointerUp, this); // New handler name
 
-            // Drag scrolling
-             this.interactiveArea.on('pointerdown', (pointer) => {
-                if(!this.valid) return; // Don't interact if invalid
-                this.isDragging = true;
-                this.lastDragY = pointer.y;
-             });
+           // Add new listeners
+           this.scene.input.on('wheel', this.handleWheel, this);
+           this.scene.input.on('pointerdown', this.handleScenePointerDown, this);
+           this.scene.input.on('pointermove', this.handleScenePointerMove, this);
+           this.scene.input.on('pointerup', this.handleScenePointerUp, this);
+           this.scene.input.on('pointerupoutside', this.handleScenePointerUp, this);
 
-             // Use scene-level pointermove and pointerup for better drag handling
-             this.scene.input.on('pointermove', this.handlePointerMove, this);
-             this.scene.input.on('pointerup', this.handlePointerUp, this);
-             this.scene.input.on('pointerupoutside', this.handlePointerUp, this); // Handle release outside
+           this.isDragging = false; // Initialize dragging state
 
-        } catch (e) {
-             console.error("Failed to setup input handling", e);
-             this.interactiveArea = null;
+       } catch (e) {
+            console.error("Failed to setup input handling", e);
+            this.interactiveArea = null;
+       }
+   }
+
+   // --- NEW Scene Pointer Down Handler ---
+       // ---- File: ScrollableContainer.js ----
+
+       handleScenePointerDown(pointer) {
+        // --- Initial Checks ---
+        // Ensure the container and scene systems are valid
+        if (!this.valid || !this.scene || !this.scene.input?.manager || !this.container) {
+            // console.warn("[ScrollContainer PointerDown] Invalid state (scene, input, or container missing).");
+            this.isDragging = false; // Ensure dragging is off if state is invalid
+            return;
         }
+
+        // --- Check if Pointer is Over This Container's Area ---
+        if (this.isPointerOver(pointer)) {
+            // --- Hit Test for Objects Under Pointer ---
+            const hitObjects = this.scene.input.hitTestPointer(pointer);
+            console.log(`[ScrollContainer hitTest] Objects under pointer (Count: ${hitObjects?.length || 0}):`, hitObjects?.map(o => o?.constructor?.name || 'Unknown'));
+
+            let clickedInteractiveChild = false; // Flag to track if an interactive child was clicked
+
+            // --- Iterate Through Hit Objects (Topmost First) ---
+            if (hitObjects && hitObjects.length > 0) {
+                for (const hitObject of hitObjects) {
+                    // Check if the hit object itself is interactive and enabled
+                    if (hitObject.input?.enabled) {
+                        console.log(`[ScrollContainer hitTest] Checking interactive hit object: ${hitObject.constructor?.name}`);
+
+                        // --- Parent Traversal Logic ---
+                        let tempParent = hitObject.parentContainer;
+                        let isChild = false;
+                        let depth = 0;
+                        const maxDepth = 10; // Safety limit for traversal
+                        // console.log(`  [Parent Check] Starting traversal from: ${hitObject.constructor?.name}. Target container:`, this.container);
+
+                        while (tempParent && depth < maxDepth) {
+                            // console.log(`    [Parent Check] Depth ${depth}: Parent is ${tempParent.constructor?.name}`);
+                            // Check if the current parent IS the scrollable content container
+                            if (tempParent === this.container) {
+                                isChild = true;
+                                // console.log("    [Parent Check] MATCH FOUND!");
+                                break; // Found ancestor, stop traversal
+                            }
+                            // Move up to the next parent
+                            tempParent = tempParent.parentContainer;
+                            depth++;
+                        }
+                        if (depth >= maxDepth) console.warn("[ScrollContainer hitTest] Parent traversal depth limit reached.");
+                        // console.log(`  [Parent Check] Finished traversal. isChild = ${isChild}`);
+                        // --- End Parent Traversal ---
+
+
+                        // --- Handle Result of Parent Check ---
+                        if (isChild) {
+                             // The interactive object belongs to this scroll container's content
+                             clickedInteractiveChild = true;
+                             console.log(`[ScrollContainer] Confirmed pointer down hit interactive child within scroll area: ${hitObject.constructor?.name}`);
+                             // Break the loop: We found the topmost interactive child within our container.
+                             // Let the event system handle the click for this child (e.g., the button).
+                             break;
+                        } else {
+                             // This interactive object isn't inside our scroll content container.
+                             // Continue the loop to check objects potentially underneath it.
+                             // console.log(`[ScrollContainer] Interactive object ${hitObject.constructor?.name} not child of target container.`);
+                        }
+
+                    } // End if (hitObject.input?.enabled)
+
+                    // Optimization: If we hit the main interactiveArea background itself,
+                    // we know we didn't hit a child within the content first.
+                    if (hitObject === this.interactiveArea || hitObject === this.background) {
+                        // console.log("[ScrollContainer hitTest] Hit main background, stopping deeper check.");
+                        break;
+                    }
+                } // End for loop
+            } else {
+                 // console.log("[ScrollContainer hitTest] No objects hit.");
+            } // End if hitObjects
+
+            // --- Drag Logic ---
+            // Only start dragging if the click did NOT land on an interactive child inside the content area
+            if (!clickedInteractiveChild) {
+                console.log("[ScrollContainer] PointerDown did NOT hit interactive child - Starting drag.");
+                this.isDragging = true;
+                this.lastDragY = pointer.y; // Initialize drag starting point
+            } else {
+                console.log("[ScrollContainer] PointerDown hit an interactive child - Drag NOT started.");
+                this.isDragging = false; // Ensure dragging is off if a child was clicked
+            }
+            // --- End Drag Logic ---
+
+        } else {
+            // Click was outside the container bounds
+            this.isDragging = false; // Ensure dragging is off
+        }
+    } // End handleScenePointerDown
+
+// --- NEW Scene Pointer Move Handler ---
+handleScenePointerMove(pointer) {
+    // Only scroll if dragging IS active AND the pointer is actually down
+    if (!this.valid || !this.isDragging || !pointer.isDown) {
+         // If pointer comes up unexpectedly, stop dragging
+         if (!pointer.isDown && this.isDragging) {
+              console.log("[ScrollContainer] PointerMove detected pointer up, stopping drag.");
+              this.isDragging = false;
+         }
+        return;
     }
 
+    // Calculate delta and scroll
+    const deltaY = this.lastDragY - pointer.y;
+    this.scroll(deltaY);
+    this.lastDragY = pointer.y; // Update last position for next move event
+}
+
+// --- NEW Scene Pointer Up Handler ---
+handleScenePointerUp(pointer) {
+    // Simply stop dragging when the pointer goes up, regardless of where
+    if (!this.valid) return;
+    if (this.isDragging) {
+         console.log("[ScrollContainer] PointerUp stopping drag.");
+        this.isDragging = false;
+    }
+}
+
+/*
+   handlePointerDownForDrag(pointer) {
+    if (!this.valid || !this.scene || !this.scene.input?.manager) return; // Add check for input manager
+
+    // Check if the pointerdown happened INSIDE the scroll container bounds
+    if (this.isPointerOver(pointer)) {
+
+        // --- >>> Check if pointer hit an interactive child <<< ---
+        // Get game objects under the pointer IN THIS SCENE
+        const topObject = this.scene.input.manager.hitTest(pointer, this.scene.children.list, this.scene.cameras.main, 1)[0];
+
+        // Check if the top object under the pointer:
+        // a) Has input enabled
+        // b) Is a child of our scrollable content container OR a child of an element within that container (like the button's bg)
+        let clickedInteractiveChild = false;
+        if (topObject && topObject.input?.enabled) {
+             // Traverse up the parent chain to see if it belongs to our scroll content
+             let parent = topObject.parentContainer;
+             while (parent) {
+                 if (parent === this.container) { // Is it directly in the scroll content?
+                      clickedInteractiveChild = true;
+                      break;
+                 }
+                 // Check if it's inside a row container which is inside the scroll content
+                 if (parent.parentContainer === this.container) {
+                      clickedInteractiveChild = true;
+                      break;
+                 }
+                 parent = parent.parentContainer;
+             }
+             // Handle case where the hit object *is* the scroll container itself (less likely)
+             if(topObject === this.container) clickedInteractiveChild = false; // Don't block drag if clicking container bg
+        }
+        // --- >>> End Check <<< ---
+
+
+        // Only start dragging if the click was NOT on an interactive child within the container
+        if (!clickedInteractiveChild) {
+            this.isDragging = true;
+            this.lastDragY = pointer.y;
+            console.log("[ScrollContainer] Drag Started (Pointer down was not on interactive child)");
+            // Optional: Stop further propagation ONLY if dragging starts
+            // pointer.event.stopPropagation();
+        } else {
+            console.log("[ScrollContainer] Pointer down hit an interactive child, drag NOT started.");
+            this.isDragging = false; // Ensure not dragging
+            // Allow the event to propagate to the button
+        }
+
+    } else {
+        this.isDragging = false; // Clicked outside
+    }
+}*/
      // --- Input Handlers ---
      handleWheel(pointer, gameObjects, deltaX, deltaY, deltaZ) {
         if (!this.valid || !this.interactiveArea || !this.isPointerOver(pointer)) {
             return;
         }
-        // Check if the wheel event target is within this container or its children
-        // This helps prevent unintended scrolling when multiple scroll areas exist.
-        // Note: `gameObjects` array might be empty or inaccurate depending on Phaser version/setup.
-        // Relying on isPointerOver is generally sufficient.
-        this.scroll(deltaY * 0.5); // Adjust scroll speed as needed
+        // console.log("[ScrollContainer] Wheel event over container");
+        this.scroll(deltaY * 0.5);
     }
-
+/*
     handlePointerMove(pointer) {
         if (!this.valid || !this.isDragging || !pointer.isDown) {
             return;
@@ -245,25 +424,19 @@ class ScrollableContainer {
         if (!this.valid) return;
         this.isDragging = false;
     }
-
+*/
     // --- End Input Handlers ---
 
     /**
      * Check if pointer is over the interactive area
      */
-    isPointerOver(pointer) {
-        // Ensure interactiveArea was created
+    isPointerOver(pointer) { // Keep this bounds check
         if (!this.interactiveArea) return false;
-        // GetBounds might fail if the object is destroyed or invalid
         try {
             const bounds = this.interactiveArea.getBounds();
             return bounds.contains(pointer.x, pointer.y);
-        } catch (e) {
-            // console.warn("Error getting bounds for interactiveArea", e);
-            return false;
-        }
+        } catch (e) { return false; }
     }
-
     /**
      * Add an item to the container
      */
@@ -478,48 +651,68 @@ if (!this.valid || !this.scene || !this.scene.add) {
      * Clean up all Phaser GameObjects created by this container.
      */
     destroy() {
-        if (!this.valid) return; // Already destroyed or invalid
+        // Prevent double destruction or errors if already invalid
+        if (!this.valid) {
+            console.warn("[ScrollableContainer] Attempted to destroy an already invalid or destroyed container.");
+            return;
+        }
         console.log(`[ScrollableContainer] Destroying elements for container at (${this.x}, ${this.y})`);
         this.valid = false; // Mark as invalid immediately
 
-         // Remove general scene listeners first to prevent errors during destruction
+         // --- Remove scene listeners ---
+         // Check if scene and input system are still accessible
          if(this.scene?.input) {
             this.scene.input.off('wheel', this.handleWheel, this);
-            this.scene.input.off('pointermove', this.handlePointerMove, this);
-            this.scene.input.off('pointerup', this.handlePointerUp, this);
-            this.scene.input.off('pointerupoutside', this.handlePointerUp, this);
+            this.scene.input.off('pointerdown', this.handleScenePointerDown, this);
+            this.scene.input.off('pointermove', this.handleScenePointerMove, this);
+            this.scene.input.off('pointerup', this.handleScenePointerUp, this);
+            this.scene.input.off('pointerupoutside', this.handleScenePointerUp, this);
+            console.log("[ScrollableContainer] Scene input listeners removed.");
+         } else {
+              console.warn("[ScrollableContainer] Scene or input system missing during destroy, listeners might remain.");
          }
+         // --- End remove scene listeners ---
 
-        // Destroy managed Phaser GameObjects
+
+        // --- Destroy managed Phaser GameObjects ---
+        // Iterate backwards to avoid issues with array modification during loop
         for (let i = this.managedObjects.length - 1; i >= 0; i--) {
              const obj = this.managedObjects[i];
+             // Check if object exists and has a destroy method
              if (obj && typeof obj.destroy === 'function') {
-                 // Check 'active' property - Phaser sets this to false on destruction
+                 // Check 'active' property - Phaser sets this to false on destruction,
+                 // helps prevent trying to destroy already destroyed objects.
                  if (obj.active !== false) {
                     try {
                          // Passing true ensures removal from scene display list etc.
                         obj.destroy(true);
                     } catch(e) {
-                        console.warn("[ScrollableContainer] Error during explicit destroy:", e, obj.constructor.name);
+                        // Log error but continue cleanup
+                        console.warn("[ScrollableContainer] Error during explicit destroy of managed object:", e, obj.constructor?.name || obj);
                     }
                  }
              }
          }
-        this.managedObjects = [];
+        this.managedObjects = []; // Clear the managed objects array
+        // --- End destroy managed objects ---
 
-        // Explicitly nullify references
+
+        // --- Nullify internal references ---
+        // This helps garbage collection and prevents accessing stale objects
         this.scene = null;
         this.background = null;
         this.border = null;
-        this.container = null;
+        this.container = null; // The Phaser container holding scrollable items
         this.maskGraphics = null;
         this.scrollbarBg = null;
         this.scrollbarHandle = null;
         this.interactiveArea = null;
         this.options = null;
-        this.items = []; // Clear items array on destroy
+        this.items = []; // Clear the tracked items array
+        // --- End nullify references ---
+
         console.log("[ScrollableContainer] Destruction complete.");
-    }
+    } // End destroy()
 }
 
 export default ScrollableContainer;
