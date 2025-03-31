@@ -889,95 +889,124 @@ equipItem(itemId) {
     }
 
 
-    displayPotionsTab() {
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
-        const barWidth = 250;
-        const barX = width * 0.5;
-        const hpBarY = height * 0.3; // Position bars higher
-        const mpBarY = hpBarY + 40;
+        // --- REVISED displayPotionsTab ---
+        displayPotionsTab() {
+            const width = this.cameras.main.width;
+            const height = this.cameras.main.height;
+            const barWidth = 250;
+            const barX = width * 0.5;
+            const hpBarY = height * 0.3;
+            const mpBarY = hpBarY + 40;
+    
+            // --- Create/Update Status Bars ---
+            if (this.potionsHpBar) this.potionsHpBar.destroy();
+            if (this.potionsMpBar) this.potionsMpBar.destroy();
+            this.potionsHpBar = this.ui.createStatusBar(barX, hpBarY, gameState.player.health, gameState.player.maxHealth, { width: barWidth, textPrefix: 'HP', barColor: 0x00ff00 });
+            this.potionsMpBar = this.ui.createStatusBar(barX, mpBarY, gameState.player.mana, gameState.player.maxMana, { width: barWidth, textPrefix: 'MP', barColor: 0x0000ff });
+    
+            // --- Create Container for Potion UI Elements ---
+            if (this.potionDisplayGroup) this.potionDisplayGroup.destroy(true);
+            this.potionDisplayGroup = this.add.group();
+    
+            // --- Potion Display Area Setup ---
+            const potionAreaWidth = width * 0.7;
+            const potionAreaHeight = height * 0.45;
+            // --- >>> DEFINE potionAreaX and Y FIRST <<< ---
+            const potionAreaX = width * 0.5;
+            const potionAreaY = height * 0.65;
+            // --- >>> END DEFINE <<< ---
+            const cardWidth = potionAreaWidth * 0.45;
+            const cardHeight = potionAreaHeight * 0.9;
+            const spacingX = potionAreaWidth * 0.05;
+    
+            // --- Calculate Card X positions AFTER defining potionAreaX ---
+            const hpCardX = potionAreaX - spacingX / 2 - cardWidth / 2;
+            const mpCardX = potionAreaX + spacingX / 2 + cardWidth / 2;
+            const cardY = potionAreaY; // Cards are centered vertically in the area
+    
+            // --- Create HP Potion Card ---
+            this.createPotionCard('hp-potion', hpCardX, cardY, cardWidth, cardHeight, this.hpPotionInfo);
+    
+            // --- Create MP Potion Card ---
+            this.createPotionCard('mana-potion', mpCardX, cardY, cardWidth, cardHeight, this.manaPotionInfo);
+    
+            // --- Initial Button State Update ---
+            this.updateConsumeButtonStates();
+        }
 
-        // --- Create/Update Status Bars ---
-        // Destroy previous if they exist (safety check, though setActiveTab should handle it)
-        if (this.potionsHpBar) this.potionsHpBar.destroy();
-        if (this.potionsMpBar) this.potionsMpBar.destroy();
-        // Create new bars
-        this.potionsHpBar = this.ui.createStatusBar(barX, hpBarY, gameState.player.health, gameState.player.maxHealth, { width: barWidth, textPrefix: 'HP', barColor: 0x00ff00 });
-        this.potionsMpBar = this.ui.createStatusBar(barX, mpBarY, gameState.player.mana, gameState.player.maxMana, { width: barWidth, textPrefix: 'MP', barColor: 0x0000ff });
-
-        // --- Create Container for Potion UI Elements ---
-        // This group will hold the static potion displays
-        this.potionDisplayGroup = this.add.group();
-
-        // --- Potion Display Area Setup ---
-        const potionAreaWidth = width * 0.7;
-        const potionAreaHeight = height * 0.35; // Area below bars
-        const potionAreaX = width * 0.5;
-        const potionAreaY = height * 0.60; // Center below bars
-        const cardWidth = potionAreaWidth * 0.45; // Width for each potion card
-        const cardHeight = potionAreaHeight * 0.8; // Height for potion cards
-        const spacingX = potionAreaWidth * 0.05; // Space between cards
-
-        const hpCardX = potionAreaX - spacingX / 2 - cardWidth / 2;
-        const mpCardX = potionAreaX + spacingX / 2 + cardWidth / 2;
-        const cardY = potionAreaY;
-
-        // --- Create HP Potion Card ---
-        this.createPotionCard('hp-potion', hpCardX, cardY, cardWidth, cardHeight, this.hpPotionInfo);
-
-        // --- Create MP Potion Card ---
-        this.createPotionCard('mana-potion', mpCardX, cardY, cardWidth, cardHeight, this.manaPotionInfo);
-
-        // --- Initial Button State Update ---
-        this.updateConsumeButtonStates();
-    }
-
-    createPotionCard(itemId, x, y, width, height, infoObject) {
+    createPotionCard(itemId, x, y, width, height, infoObject) { // height is now larger
         const itemData = getItemData(itemId);
-        if (!itemData) {
-            console.error(`Cannot create card: Item data not found for ${itemId}`);
-            return;
-        }
-        infoObject.data = itemData; // Store data for later use
+        if (!itemData) { /* ... error ... */ return; }
+        infoObject.data = itemData;
 
-        const panel = this.ui.createPanel(x, y, width, height, {
-             fillColor: 0x1a2e1a, borderColor: 0x7fbf7f, depth: 1
-        });
-        this.potionDisplayGroup.add(panel.container); // Add panel container to group
+        const panel = this.ui.createPanel(x, y, width, height, { /* ... styles ... */ });
+        if (!this.potionDisplayGroup) this.potionDisplayGroup = this.add.group();
+        this.potionDisplayGroup.add(panel.container);
 
-        // Positioning relative to panel center (0,0)
+        // --- Positioning relative to panel center (0,0) for TALLER panel ---
         const iconSize = 40;
-        const contentStartY = -height * 0.5 + 30; // Start below top edge
+        const contentTopMargin = 25;     // Keep margin from top
+        const iconTextSpacing = 15;      // Increased space below icon
+        const textBlockLineHeight = 18; // Approx height per line of text (adjust based on font/lineSpacing)
+        const textBlockHeight = textBlockLineHeight * 3; // For 3 lines (Name, Qty, Effect)
+        const buttonHeightForLayout = 40;
+        const buttonBottomMargin = 20;   // Increased margin below button
 
-        // Icon
+        // Icon Y: Positioned below the top margin
+        const iconY = -height * 0.5 + contentTopMargin + iconSize / 2;
+
+        // Text Start Y: Positioned below icon
+        const textStartY = iconY + iconSize / 2 + iconTextSpacing;
+
+        // Button Center Y: Positioned above the bottom margin
+        const buttonY = height * 0.5 - buttonBottomMargin - buttonHeightForLayout / 2;
+
+        // --- Icon ---
+        let icon = null;
         if (itemData.iconKey && this.textures.exists(itemData.iconKey)) {
-            const icon = this.add.image(0, contentStartY + iconSize / 2, itemData.iconKey)
-                .setDisplaySize(iconSize, iconSize)
-                .setOrigin(0.5);
-            panel.add(icon); // Add icon to panel container
-            this.potionDisplayGroup.add(icon); // Also add directly to group for easy destruction
+            icon = this.add.image(0, iconY, itemData.iconKey)
+                .setDisplaySize(iconSize, iconSize).setOrigin(0.5);
+            panel.add(icon);
+            this.potionDisplayGroup.add(icon);
         }
 
-        // Text Info (Name, Quantity, Effect)
-        const textY = contentStartY + iconSize + 20;
+        // --- Text Info ---
         const quantity = this.getPotionQuantity(itemId);
-        const effectText = `Restores ${itemData.potionEffect?.value || '?'} ${itemData.potionEffect?.stat?.toUpperCase() || '???'}`;
+        const effectValue = itemData.potionEffect?.value || '?';
+        const effectStat = itemData.potionEffect?.stat?.toUpperCase() || '???';
+        const effectText = `Restores ${effectValue} ${effectStat}`;
         const infoStr = `${itemData.inGameName}\nQuantity: ${quantity}\n${effectText}`;
 
-        infoObject.text = this.add.text(0, textY, infoStr, {
-            fontFamily: "'VT323'", fontSize: this.ui.fontSize.sm + 'px', fill: '#ffffff', align: 'center', lineSpacing: 6
-        }).setOrigin(0.5, 0); // Center horizontally, align top vertically
+        // Check if text will overlap button based on calculations
+         if (textStartY + textBlockHeight > buttonY - buttonHeightForLayout / 2 - 5) { // Add small buffer
+             console.warn(`Potential overlap for ${itemId}: Text ends near ${textStartY + textBlockHeight}, Button starts near ${buttonY - buttonHeightForLayout / 2}`);
+             // Consider reducing lineSpacing or fontSize further if this occurs often
+         }
+
+        infoObject.text = this.add.text(0, textStartY, infoStr, {
+            fontFamily: "'VT323'",
+            fontSize: (this.ui?.fontSize?.sm || 12) + 'px',
+            fill: '#ffffff',
+            align: 'center',
+            lineSpacing: 6 // Keep or adjust line spacing
+        }).setOrigin(0.5, 0); // Origin middle-top
         panel.add(infoObject.text);
         this.potionDisplayGroup.add(infoObject.text);
 
-        // Consume Button
-        const buttonY = height * 0.5 - 40; // Position near bottom
+        // --- Consume Button ---
         infoObject.button = this.ui.createButton(0, buttonY, 'Consume',
             () => this.consumePotion(itemId),
-            { width: width * 0.6, height: 40, fontSize: this.ui.fontSize.sm }
+            { width: width * 0.7, height: buttonHeightForLayout, fontSize: this.ui?.fontSize?.sm || 12 }
         );
         panel.add(infoObject.button.container);
         this.potionDisplayGroup.add(infoObject.button.container);
+
+        // --- Set Initial Button State ---
+        const canConsume = this.canConsumePotion(itemId) && !this.isConsuming;
+        if (infoObject.button) {
+             infoObject.button.enable(canConsume);
+             if(infoObject.button.container) infoObject.button.container.setAlpha(canConsume ? 1 : 0.5);
+        }
     }
 
     // --- Helper to get current quantity ---
