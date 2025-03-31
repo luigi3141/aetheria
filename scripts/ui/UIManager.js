@@ -298,7 +298,8 @@ class UIManager {
             // Adjust text position for padding
             label.setPosition(padding, 0);
         }
-        
+        let pulseTween = null;
+        let markerTween = null;
         
         // Add side markers if requested
         if (sideMarkers) {
@@ -325,7 +326,7 @@ class UIManager {
         // Add animation if requested
         if (animate) {
             // Pulse animation for text
-            this.scene.tweens.add({
+            pulseTween = this.scene.tweens.add({ // Assign to pulseTween
                 targets: label,
                 alpha: { from: 1, to: 0.7 },
                 duration: 1500,
@@ -336,7 +337,7 @@ class UIManager {
             
             // If side markers are present, add animation for them too
             if (sideMarkers && label.sideMarkers) {
-                this.scene.tweens.add({
+                markerTween = this.scene.tweens.add({ // Assign to markerTween
                     targets: [label.sideMarkers.left, label.sideMarkers.right],
                     alpha: { from: 1, to: 0.5 },
                     duration: 1000,
@@ -360,7 +361,18 @@ class UIManager {
         // Override the container's destroy method to properly clean up all elements
         const originalDestroy = container.destroy;
         container.destroy = function(fromScene) {
+            console.log(`[UIManager] Destroying SectionLabel container for "${label.text}"`); // Add log
             // If being destroyed from scene cleanup, use original destroy
+            if (pulseTween && pulseTween.isPlaying()) {
+                console.log("[UIManager] Stopping pulse tween.");
+                pulseTween.stop();
+                pulseTween = null; // Clear reference
+            }
+            if (markerTween && markerTween.isPlaying()) {
+                console.log("[UIManager] Stopping marker tween.");
+                markerTween.stop();
+                markerTween = null; // Clear reference
+            }
             if (fromScene) {
                 originalDestroy.call(this);
                 return;

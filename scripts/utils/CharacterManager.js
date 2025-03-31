@@ -5,14 +5,14 @@ import items from '../data/items.js';
 const { getItemData } = items;
 
 // --- NEW: Define Class Definitions ---
-const CLASS_DEFINITIONS = {
+const CLASS_DEFINITIONS = {    
     'warrior': {
         name: 'Warrior',
         primaryAttribute: 'strength',
         baseDamage: 8.0,
         baseStats: { strength: 12.0, agility: 8.0, intelligence: 8.0, constitution: 12.0 },
         growthPerLevel: { strength: 2.5, agility: 0.5, intelligence: 0.5, constitution: 1.5 },
-        baseHp: 100.0,
+        baseHp: 40.0,
         hpGrowth: 10.0,
         // Define base mana if needed, or default
         baseMana: 30.0, // Example base mana
@@ -24,7 +24,7 @@ const CLASS_DEFINITIONS = {
         baseDamage: 7.0,
         baseStats: { strength: 10.0, agility: 10.0, intelligence: 12.0, constitution: 8.0 }, // Corrected base STR/AGI/CON
         growthPerLevel: { strength: 0.5, agility: 1.0, intelligence: 3.0, constitution: 0.5 },
-        baseHp: 100.0,
+        baseHp: 60.0,
         hpGrowth: 6.0,
         baseMana: 100.0,
         manaGrowth: 10.0
@@ -35,7 +35,7 @@ const CLASS_DEFINITIONS = {
         baseDamage: 6.0,
         baseStats: { strength: 10.0, agility: 12.0, intelligence: 10.0, constitution: 8.0 }, // Corrected base STR/INT/CON
         growthPerLevel: { strength: 1.0, agility: 2.0, intelligence: 1.0, constitution: 1.0 },
-        baseHp: 100.0,
+        baseHp: 60.0,
         hpGrowth: 8.0,
         baseMana: 40.0,
         manaGrowth: 3.0
@@ -46,7 +46,7 @@ const CLASS_DEFINITIONS = {
         baseDamage: 5.0,
         baseStats: { strength: 10.0, agility: 10.0, intelligence: 10.0, constitution: 10.0 }, // Corrected base STR/AGI/INT/CON
         growthPerLevel: { strength: 1.5, agility: 1.0, intelligence: 1.5, constitution: 1.0 },
-        baseHp: 100.0,
+        baseHp: 50.0,
         hpGrowth: 8.0,
         baseMana: 80.0,
         manaGrowth: 6.0
@@ -57,7 +57,7 @@ const CLASS_DEFINITIONS = {
         baseDamage: 6.0,
         baseStats: { strength: 10.0, agility: 12.0, intelligence: 10.0, constitution: 8.0 }, // Corrected base STR/INT/CON
         growthPerLevel: { strength: 1.0, agility: 2.0, intelligence: 1.5, constitution: 0.5 },
-        baseHp: 100.0,
+        baseHp: 60.0,
         hpGrowth: 8.0,
         baseMana: 45.0,
         manaGrowth: 3.0
@@ -68,7 +68,7 @@ const CLASS_DEFINITIONS = {
         baseDamage: 5.0,
         baseStats: { strength: 10.0, agility: 10.0, intelligence: 10.0, constitution: 10.0 }, // Corrected base STR/AGI/INT/CON
         growthPerLevel: { strength: 1.0, agility: 1.5, intelligence: 2.0, constitution: 0.5 },
-        baseHp: 100.0,
+        baseHp: 50.0,
         hpGrowth: 8.0,
         baseMana: 70.0,
         manaGrowth: 5.0
@@ -80,7 +80,7 @@ const CLASS_DEFINITIONS = {
         baseDamage: 5.0,
         baseStats: { strength: 5.0, agility: 5.0, intelligence: 5.0, constitution: 5.0 },
         growthPerLevel: { strength: 0.5, agility: 0.5, intelligence: 0.5, constitution: 0.5 },
-        baseHp: 100.0,
+        baseHp: 75.0,
         hpGrowth: 10.0,
         baseMana: 20.0,
         manaGrowth: 1.0
@@ -254,7 +254,7 @@ class CharacterManager {
 
         // Max Health = Base + Growth Per Level + CON Scaling + Equipment Bonus
         character.maxHealth = Math.floor(
-            (character._baseHp || 100)
+            (character._baseHp || 40)
              + ((character._hpGrowth || 0) * (currentLevel - 1)) // Growth applies starting level 2
              + (currentConstitution * CON_HP_SCALE)
              + bonusMaxHealth
@@ -312,4 +312,10 @@ class CharacterManager {
 }
 
 export default CharacterManager;
-export { CLASS_DEFINITIONS }; 
+export {
+    CLASS_DEFINITIONS,
+    CON_HP_SCALE,
+    INT_MAGIC_ATTACK_SCALE,
+    STR_ATTACK_SCALE,
+    AGI_ATTACK_SCALE
+}; 

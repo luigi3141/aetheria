@@ -7,7 +7,13 @@ import gameState from '../gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import { ASSET_PATHS, AssetHelper } from '../config/AssetConfig.js';
 // --- Import CLASS_DEFINITIONS directly ---
-import CharacterManager, { CLASS_DEFINITIONS } from '../utils/CharacterManager.js';
+import CharacterManager, {
+    CLASS_DEFINITIONS,
+    CON_HP_SCALE,
+    INT_MAGIC_ATTACK_SCALE,
+    STR_ATTACK_SCALE,
+    AGI_ATTACK_SCALE
+} from '../utils/CharacterManager.js';
 
 class CharacterSelectScene extends Phaser.Scene {
     constructor() {
@@ -403,13 +409,54 @@ class CharacterSelectScene extends Phaser.Scene {
         const classDef = CLASS_DEFINITIONS[playerClass];
 
         if (classDef) {
-            this.hpValueText.setText(classDef.baseHp?.toFixed(0) || '?');
-            this.manaValueText.setText(classDef.baseMana?.toFixed(0) || '?'); // Use baseMana
-            this.baseDmgValueText.setText(classDef.baseDamage?.toFixed(0) || '?');
-            this.strValueText.setText(classDef.baseStats?.strength.toFixed(0) || '?');
-            this.agiValueText.setText(classDef.baseStats?.agility.toFixed(0) || '?');
-            this.intValueText.setText(classDef.baseStats?.intelligence.toFixed(0) || '?');
-            this.conValueText.setText(classDef.baseStats?.constitution.toFixed(0) || '?');
+            // --- Calculate Level 1 Derived Stats for Preview ---
+            // Base Primary Stats
+            const baseStr = classDef.baseStats?.strength || 10;
+            const baseAgi = classDef.baseStats?.agility || 10;
+            const baseInt = classDef.baseStats?.intelligence || 10;
+            const baseCon = classDef.baseStats?.constitution || 10;
+
+            // Calculate HP (Level 1 formula from recalculatePlayerStats)
+            // HP = Base + (Growth * (Lvl-1)) + (CON * Scale) + EquipBonus
+            // At level 1, Growth term is 0. No equipment bonus.
+            const calculatedLvl1Hp = Math.floor(
+                (classDef.baseHp || 40) // Use the adjusted internal base
+                + (baseCon * CON_HP_SCALE)
+            );
+
+            // Calculate Mana (Level 1 formula)
+            // Mana = Base + (Growth * (Lvl-1)) + (INT * Scale) + EquipBonus
+            const calculatedLvl1Mana = Math.floor(
+                (classDef.baseMana || 50)
+                 + (baseInt * (INT_MAGIC_ATTACK_SCALE / 2)) // Example scaling - match CharacterManager!
+            );
+
+            // Calculate Base Damage contribution (without equipment)
+            // This shows the *starting* damage potential based on class base damage and primary stat
+            const physicalStatContribution = Math.floor(baseStr * STR_ATTACK_SCALE) + Math.floor(baseAgi * AGI_ATTACK_SCALE);
+            const magicalStatContribution = Math.floor(baseInt * INT_MAGIC_ATTACK_SCALE);
+            let baseAttackPreview = physicalStatContribution;
+            let baseMagicAttackPreview = magicalStatContribution;
+            const classBaseDamage = classDef.baseDamage || 0;
+            const primaryAttr = classDef.primaryAttribute;
+            if (primaryAttr === 'strength' || primaryAttr === 'agility') {
+                baseAttackPreview += classBaseDamage;
+            } else if (primaryAttr === 'intelligence') {
+                baseMagicAttackPreview += classBaseDamage;
+            }
+            // Decide what to show for "Base Damage" - maybe the primary attack type's value?
+            const displayedBaseDamage = (primaryAttr === 'strength' || primaryAttr === 'agility') ? baseAttackPreview : baseMagicAttackPreview;
+            // --- End Calculations ---
+
+
+            // --- Update Text Objects ---
+            this.hpValueText.setText(calculatedLvl1Hp.toFixed(0)); // Show calculated 100 (or close)
+            this.manaValueText.setText(calculatedLvl1Mana.toFixed(0)); // Show calculated Lvl 1 Mana
+            this.baseDmgValueText.setText(displayedBaseDamage.toFixed(0)); // Show calculated Lvl 1 primary damage
+            this.strValueText.setText(baseStr.toFixed(0));
+            this.agiValueText.setText(baseAgi.toFixed(0));
+            this.intValueText.setText(baseInt.toFixed(0));
+            this.conValueText.setText(baseCon.toFixed(0));
         } else {
             console.warn(`No class definition found for: ${playerClass}`);
             // Reset all stat values to '?'
