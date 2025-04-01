@@ -7,7 +7,6 @@ import gameState from '../utils/gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
 import { saveGame } from '../utils/SaveLoadManager.js';
-// --- Import CLASS_DEFINITIONS directly ---
 import CharacterManager, {
     CLASS_DEFINITIONS,
     CON_HP_SCALE,
@@ -15,8 +14,9 @@ import CharacterManager, {
     STR_ATTACK_SCALE,
     AGI_ATTACK_SCALE
 } from '../utils/CharacterManager.js';
+import BaseScene from './BaseScene.js';
 
-class CharacterSelectScene extends Phaser.Scene {
+class CharacterSelectScene extends BaseScene {
     constructor() {
         super({ key: 'CharacterSelectScene' });
         // References for stat text objects
@@ -27,25 +27,50 @@ class CharacterSelectScene extends Phaser.Scene {
         this.classGrid = null; // Initialize classGrid reference
         this.nameInput = null; // Initialize nameInput reference
         this.characterPreview = null; // Initialize preview reference
+        this.portraitKeys = {};
+        this.texturesLoaded = false;
+        this.portraitSize = null; // Store portrait size
     }
 
     preload() {
-        // Load background - Use a specific key
-        if (!this.textures.exists('char_select_bg')) { // Use a unique key
+        // Load background
+        if (!this.textures.exists('char_select_bg')) {
             this.load.image('char_select_bg', ASSET_PATHS.BACKGROUNDS.CHARACTER);
         }
 
-        // Load character PORTRAITS (used in preview) - Ensure keys match ASSET_PATHS
+        // Load character portraits with explicit keys
         const classes = ['warrior', 'mage', 'rogue', 'cleric', 'ranger', 'bard'];
+        
         classes.forEach(className => {
             const upperClass = className.toUpperCase();
-            const portraitPath = ASSET_PATHS.PORTRAITS[upperClass] || ASSET_PATHS.PORTRAITS.DEFAULT;
-            // Use lowercase class name as the texture key to match updateCharacterPreview
-            if (!this.textures.exists(className)) {
-                this.load.image(className, portraitPath);
+            const portraitPath = ASSET_PATHS.PORTRAITS[upperClass];
+            const textureKey = `portrait_${className}`;
+            
+            if (portraitPath) {
+                this.load.image(textureKey, portraitPath);
+                this.portraitKeys[className] = textureKey;
+            } else {
+                console.error(`No portrait path found for ${className}`);
+                this.load.image(textureKey, ASSET_PATHS.PORTRAITS.DEFAULT);
+                this.portraitKeys[className] = textureKey;
+            }
+
+            // Add load complete handler for each texture
+            this.load.on(`filecomplete-image-${textureKey}`, () => {
+                const frame = this.textures.get(textureKey).frames.__BASE;
+                console.log(`Loaded ${textureKey}: ${frame.width}x${frame.height}`);
+            });
+        });
+
+        // Set up load complete callback
+        this.load.on('complete', () => {
+            this.texturesLoaded = true;
+            if (this.characterPortrait && this.classGrid) {
+                this.updateCharacterPreview();
             }
         });
     }
+
     init(data) { // <<< Add init method
         console.log("CharacterSelectScene init data:", data);
         if (data?.portalUsername) {
@@ -55,8 +80,10 @@ class CharacterSelectScene extends Phaser.Scene {
             this.defaultName = 'Adventurer'; // Reset to default otherwise
         }
     }
+
     create() {
         console.log("CharacterSelectScene Create Start");
+        this.initializeScene();
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
@@ -66,7 +93,7 @@ class CharacterSelectScene extends Phaser.Scene {
         // this.ui = new UIManager(this);
         // If extending BaseScene, call initializeScene (assuming it creates this.ui)
          if (typeof this.initializeScene === 'function') {
-             this.initializeScene();
+             //this.initializeScene();
          } else {
              // Fallback if not extending BaseScene properly
              this.ui = new UIManager(this);
@@ -139,35 +166,52 @@ class CharacterSelectScene extends Phaser.Scene {
     }
 
     createCharacterPreviewSection(x, y, panelWidth, panelHeight) {
-         // --- Create Panel Manually ---
+        // Create Panel
         const previewPanel = this.ui.createPanel(x, y, panelWidth, panelHeight, {
-             fillColor: 0x222233, fillAlpha: 0.8, borderColor: 0x9999aa, borderThickness: 2, depth: 1
+            fillColor: 0x222233, fillAlpha: 0.8, borderColor: 0x9999aa, borderThickness: 2, depth: 1
         });
 
         // Add Portrait Inside Panel
-        const playerClass = this.classGrid ? this.classGrid.getSelectedItem().toLowerCase() : 'warrior'; // Get initial class
-        const portraitY = y - panelHeight * 0.1; // Position portrait slightly higher within panel
-        const portraitSize = Math.min(panelWidth * 0.7, panelHeight * 0.5); // Size relative to panel
+        const playerClass = this.classGrid ? this.classGrid.getSelectedItem().toLowerCase() : 'warrior';
+        const portraitY = y - panelHeight * 0.1;
+        this.portraitSize = Math.min(panelWidth * 0.7, panelHeight * 0.5);
 
-        // Use this.add.image directly and store reference
-        this.characterPortrait = this.add.image(x, portraitY, playerClass) // Use lowercase key matching preload
-             .setDisplaySize(portraitSize, portraitSize)
-             .setOrigin(0.5)
-             .setDepth(2); // Above panel bg
+        // Use the portrait key system with texture check
+        const portraitKey = this.portraitKeys[playerClass];
+        
+        if (this.characterPortrait) {
+            this.characterPortrait.destroy();
+        }
 
-        // Add Name Text Inside Panel
-        this.characterNameText = this.add.text(x, y + panelHeight * 0.25, // Position name lower
+        if (this.texturesLoaded && this.textures.exists(portraitKey)) {
+            this.characterPortrait = this.add.image(x, portraitY, portraitKey)
+                .setDisplaySize(this.portraitSize, this.portraitSize)
+                .setOrigin(0.5)
+                .setDepth(2)
+                .setAlpha(1);
+        } else {
+            this.characterPortrait = this.add.image(x, portraitY, '__MISSING')
+                .setDisplaySize(this.portraitSize, this.portraitSize)
+                .setOrigin(0.5)
+                .setDepth(2)
+                .setAlpha(1);
+        }
+
+        // Add Name Text
+        if (this.characterNameText) {
+            this.characterNameText.destroy();
+        }
+        
+        const nameY = y + panelHeight * 0.25;
+        this.characterNameText = this.add.text(x, nameY,
             playerClass.charAt(0).toUpperCase() + playerClass.slice(1), {
-            fontFamily: "'Press Start 2P'", fontSize: this.ui.fontSize.sm + 'px', fill: '#ffffff', align: 'center'
+            fontFamily: "'Press Start 2P'",
+            fontSize: this.ui.fontSize.sm + 'px',
+            fill: '#ffffff',
+            align: 'center'
         }).setOrigin(0.5).setDepth(2);
 
-        // Store panel reference if needed later
         this.characterPreviewPanel = previewPanel;
-
-        // --- Remove the call to ui.createCharacterPreview ---
-        /*
-        this.characterPreview = this.ui.createCharacterPreview( ... );
-        */
     }
 
     createStatsPreviewSection(x, y, panelWidth, panelHeight) {
@@ -238,7 +282,12 @@ class CharacterSelectScene extends Phaser.Scene {
 
         const titleHeight = 30;
         const titleY = -panelHeight * 0.5 + titleHeight;
-        const panelTitle = this.add.text(0, titleY, 'Select Class', { /* ... styles ... */ }).setOrigin(0.5);
+        const panelTitle = this.add.text(0, titleY, 'Select Class', {
+            fontFamily: "'Press Start 2P'",
+            fontSize: this.ui.fontSize.sm + 'px',
+            fill: '#ffffff',
+            align: 'center'
+        }).setOrigin(0.5);
         classPanel.add(panelTitle);
 
         // Adjust Selection Grid Positioning
@@ -257,7 +306,7 @@ class CharacterSelectScene extends Phaser.Scene {
             0, // X relative to panel center
             gridStartY, // Use calculated start Y relative to panel center
             classes,
-            (className, index) => { /* ... onSelect ... */ this.updateCharacterPreview(); },
+            (className, index) => { this.updateCharacterPreview(); },
             gridOptions
         );
 
@@ -398,86 +447,90 @@ class CharacterSelectScene extends Phaser.Scene {
 
 
     updateCharacterPreview() {
-        // --- Ensure text objects are created before updating ---
         if (!this.classGrid || !this.ui || !this.characterPortrait || !this.characterNameText ||
             !this.hpValueText || !this.manaValueText || !this.baseDmgValueText || !this.strValueText ||
-            !this.agiValueText || !this.intValueText || !this.conValueText)
+            !this.agiValueText || !this.intValueText || !this.conValueText || !this.portraitSize)
         {
-            // console.warn("UI elements not ready yet in updateCharacterPreview");
-            return; // Don't try to update if things aren't ready
+            return;
         }
-        // --- End Check ---
 
         const playerClass = this.classGrid.getSelectedItem().toLowerCase();
+        const portraitKey = this.portraitKeys[playerClass];
 
-        // Update Portrait & Name Text
-        if (this.textures.exists(playerClass)) {
-            this.characterPortrait.setTexture(playerClass);
-        } else { /* Warn, set default */ }
-        this.characterNameText.setText(playerClass.charAt(0).toUpperCase() + playerClass.slice(1));
+        if (portraitKey && this.textures.exists(portraitKey)) {
+            const x = this.characterPortrait.x;
+            const y = this.characterPortrait.y;
+            
+            this.characterPortrait.destroy();
+            
+            this.characterPortrait = this.add.image(x, y, portraitKey)
+                .setDisplaySize(this.portraitSize, this.portraitSize)
+                .setOrigin(0.5)
+                .setDepth(2)
+                .setAlpha(1);
+        } else {
+            console.error(`Portrait texture ${portraitKey} not found!`);
+        }
+
+        // Update character name text
+        const displayName = playerClass.charAt(0).toUpperCase() + playerClass.slice(1);
+        this.characterNameText.setText(displayName);
 
         // Update Stats Display
         const classDef = CLASS_DEFINITIONS[playerClass];
-
         if (classDef) {
-            // --- Calculate Level 1 Derived Stats for Preview ---
             // Base Primary Stats
             const baseStr = classDef.baseStats?.strength || 10;
             const baseAgi = classDef.baseStats?.agility || 10;
             const baseInt = classDef.baseStats?.intelligence || 10;
             const baseCon = classDef.baseStats?.constitution || 10;
 
-            // Calculate HP (Level 1 formula from recalculatePlayerStats)
-            // HP = Base + (Growth * (Lvl-1)) + (CON * Scale) + EquipBonus
-            // At level 1, Growth term is 0. No equipment bonus.
+            // Calculate HP
             const calculatedLvl1Hp = Math.floor(
                 (classDef.baseHp || 40)
-                + (baseCon * CON_HP_SCALE) // Uses imported CON_HP_SCALE
+                + (baseCon * CON_HP_SCALE)
             );
 
-            // Mana (Uses INT_MAGIC_ATTACK_SCALE)
+            // Calculate Mana
             const calculatedLvl1Mana = Math.floor(
                 (classDef.baseMana || 50)
-                 // Make sure the formula here matches CharacterManager if mana depends on INT
-                 + (baseInt * (INT_MAGIC_ATTACK_SCALE / 2)) // Uses imported INT_MAGIC_ATTACK_SCALE
+                + (baseInt * (INT_MAGIC_ATTACK_SCALE / 2))
             );
 
-            // --- >>> CORRECTED Base Damage Calculation for PREVIEW <<< ---
-            // Calculate contributions from STATS ONLY, using imported SCALES
+            // Calculate Base Damage
             const physicalStatContribution = Math.floor(baseStr * STR_ATTACK_SCALE) + Math.floor(baseAgi * AGI_ATTACK_SCALE);
             const magicalStatContribution = Math.floor(baseInt * INT_MAGIC_ATTACK_SCALE);
 
-            // Determine which stat contribution represents the primary damage type for display
             const primaryAttr = classDef.primaryAttribute;
             let displayedBaseDamage = 0;
 
             if (primaryAttr === 'strength' || primaryAttr === 'agility') {
-                displayedBaseDamage = physicalStatContribution; // Show the scaled physical contribution
+                displayedBaseDamage = physicalStatContribution;
             } else if (primaryAttr === 'intelligence') {
-                displayedBaseDamage = magicalStatContribution; // Show the scaled magical contribution
+                displayedBaseDamage = magicalStatContribution;
             } else {
-                // Fallback if primary attribute isn't defined? Show physical?
                 displayedBaseDamage = physicalStatContribution;
             }
 
-            // --- Update Text Objects ---
+            // Update Text Objects
             this.hpValueText.setText(calculatedLvl1Hp.toFixed(0));
             this.manaValueText.setText(calculatedLvl1Mana.toFixed(0));
-            // --- Use the CORRECTLY calculated damage for display ---
-            this.baseDmgValueText.setText(Math.max(0, displayedBaseDamage).toFixed(0)); // Ensure non-negative
-            // --- Update primary stats ---
+            this.baseDmgValueText.setText(Math.max(0, displayedBaseDamage).toFixed(0));
             this.strValueText.setText(baseStr.toFixed(0));
             this.agiValueText.setText(baseAgi.toFixed(0));
             this.intValueText.setText(baseInt.toFixed(0));
             this.conValueText.setText(baseCon.toFixed(0));
         } else {
-            console.warn(`No class definition found for: ${playerClass}`);
-            // Reset all stat values to '?'
-            this.hpValueText.setText('?'); this.manaValueText.setText('?'); this.baseDmgValueText.setText('?');
-            this.strValueText.setText('?'); this.agiValueText.setText('?'); this.intValueText.setText('?'); this.conValueText.setText('?');
+            console.error(`No class definition found for: ${playerClass}`);
+            this.hpValueText.setText('?');
+            this.manaValueText.setText('?');
+            this.baseDmgValueText.setText('?');
+            this.strValueText.setText('?');
+            this.agiValueText.setText('?');
+            this.intValueText.setText('?');
+            this.conValueText.setText('?');
         }
     }
 }
-
 
 export default CharacterSelectScene;
