@@ -3,9 +3,10 @@
 import UIManager from '../ui/UIManager.js';
 import Button from '../ui/components/Button.js';
 import SelectionGrid from '../ui/components/SelectionGrid.js';
-import gameState from '../gameState.js';
+import gameState from '../utils/gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
-import { ASSET_PATHS, AssetHelper } from '../config/AssetConfig.js';
+import { ASSET_PATHS } from '../config/AssetConfig.js';
+import { saveGame } from '../utils/SaveLoadManager.js';
 // --- Import CLASS_DEFINITIONS directly ---
 import CharacterManager, {
     CLASS_DEFINITIONS,
@@ -45,7 +46,15 @@ class CharacterSelectScene extends Phaser.Scene {
             }
         });
     }
-
+    init(data) { // <<< Add init method
+        console.log("CharacterSelectScene init data:", data);
+        if (data?.portalUsername) {
+            this.defaultName = data.portalUsername; // Use portal username if provided
+            console.log(`Using portal username as default: ${this.defaultName}`);
+        } else {
+            this.defaultName = 'Adventurer'; // Reset to default otherwise
+        }
+    }
     create() {
         console.log("CharacterSelectScene Create Start");
         const width = this.cameras.main.width;
@@ -64,6 +73,7 @@ class CharacterSelectScene extends Phaser.Scene {
              console.warn("CharacterSelectScene is not extending BaseScene or initializeScene is missing. Manually created UIManager.");
          }
 
+         this.createMainLayout(); 
 
         // --- Add Background ---
         // Use the specific key loaded in preload and set depth to be behind everything
@@ -276,8 +286,8 @@ class CharacterSelectScene extends Phaser.Scene {
 
         // --- Use createTitle for the Label for better visibility ---
         this.nameLabel = this.ui.createTitle(
-             labelX, y, 'Set Name:',
-             {
+            inputX, y, this.defaultName, // <<< Use the stored default name
+            {
                  fontSize: this.ui.fontSize.sm, // Smaller font
                  padding: { x: 8, y: 4 }, // Smaller padding
                  // No need to set depth here, createTitle handles it if necessary
@@ -376,6 +386,7 @@ class CharacterSelectScene extends Phaser.Scene {
                     gameState.player.sprite = ASSET_PATHS.PLAYERS[playerClassUpper] || ASSET_PATHS.PLAYERS.DEFAULT;
                     gameState.player.portrait = ASSET_PATHS.PORTRAITS[playerClassUpper] || ASSET_PATHS.PORTRAITS.DEFAULT;
                     console.log('Character created via Manager:', gameState.player);
+                    saveGame(); // <<< SAVE GAME HERE <<<
                     navigationManager.navigateTo(this, 'OverworldScene');
                 } else { /* Handle error */ }
             },

@@ -1,5 +1,5 @@
 import { LAYOUT } from '../ui/layout/LayoutHelper.js';
-import gameState from '../gameState.js';
+import gameState from '../utils/gameState.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
 
 export default class CombatUI {

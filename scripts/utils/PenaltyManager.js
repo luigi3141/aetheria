@@ -1,6 +1,6 @@
 // ---- File: utils/PenaltyManager.js ----
 
-import gameState from '../gameState.js';
+import gameState from './gameState.js';
 import items from '../data/items.js'; // Use the default export
 
 const { getItemData } = items; // Destructure needed function

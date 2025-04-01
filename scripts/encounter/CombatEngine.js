@@ -1,6 +1,6 @@
 // CombatEngine.js
 
-import gameState from '../gameState.js';
+import gameState from '../utils/gameState.js';
 // We don't strictly need getAbilityData here anymore unless implementing enemy abilities
 // import { getAbilityData } from '../data/enemies.js';
 import HealthManager from '../utils/HealthManager.js';

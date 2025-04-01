@@ -333,17 +333,31 @@ class Button {
      * @returns {Button} This button for chaining
      */
     disable() {
-        if (!this.bg || !this.scene || !this.scene.sys?.isActive()) return this; // Add scene active check
+        // --- Safety Check ---
+        if (!this.bg || !this.scene || !this.scene.sys?.isActive()) {
+             console.warn(`[Button ${this.text}] Cannot disable: Scene or button background invalid/inactive.`);
+             return this;
+        }
+        // --- End Safety Check ---
+    
         this.disabled = true;
         // Set disabled visual state
-        this.bg.setFillStyle(0x666666);
+        this.bg.setFillStyle(0x666666); // Use a standard disabled color
         if(this.textObj) this.textObj.setAlpha(0.5);
+    
         // --- Disable Input ---
-        // Directly disable if input exists
+        // Directly disable if input exists and is enabled
         if (this.bg.input?.enabled) {
              this.bg.input.enabled = false;
+             // console.log(`[Button ${this.text}] Input component disabled.`);
+        } else if (this.bg.input && !this.bg.input.enabled) {
+             // console.log(`[Button ${this.text}] Input component already disabled.`);
+        } else {
+             // console.warn(`[Button ${this.text}] Input component missing on disable. Cannot disable interaction.`);
+             // If input doesn't exist, it can't be clicked anyway, but log a warning.
         }
-         // console.log(`[Button ${this.text}] Disabled.`);
+        // --- End Disable Input ---
+    
         return this;
     }
     

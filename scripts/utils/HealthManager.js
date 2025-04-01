@@ -1,4 +1,4 @@
-import gameState from '../gameState.js';
+import gameState from './gameState.js';
 
 /**
  * HealthManager - Utility for managing player health and mana consistently across scenes

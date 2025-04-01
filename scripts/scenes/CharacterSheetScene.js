@@ -1,4 +1,4 @@
-import gameState from '../gameState.js';
+import gameState from '../utils/gameState.js';
 import BaseScene from './BaseScene.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
 import { LAYOUT } from '../ui/layout/LayoutHelper.js'; 

@@ -8,7 +8,7 @@ import SpriteManager from '../encounter/SpriteManager.js';
 import { generateCombatEncounter } from '../encounter/EnemyGenerator.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
 import { calculateDifficulty } from '../utils/DifficultyManager.js';
-import gameState from '../gameState.js';
+import gameState from '../utils/gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import { generateLoot } from '../data/enemies.js';
 import { processItemLoss } from '../utils/PenaltyManager.js';

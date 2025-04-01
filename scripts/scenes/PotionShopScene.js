@@ -6,7 +6,7 @@ import Button from '../ui/components/Button.js';
 // Remove ScrollableContainer import if no longer used elsewhere in this scene
 // import ScrollableContainer from '../ui/components/ScrollableContainer.js';
 import navigationManager from '../navigation/NavigationManager.js';
-import gameState from '../gameState.js';
+import gameState from '../utils/gameState.js';
 import items from '../data/items.js'; // For item data
 import { ASSET_PATHS } from '../config/AssetConfig.js';
 

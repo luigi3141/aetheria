@@ -5,7 +5,7 @@ import Button from '../ui/components/Button.js';
 import Panel from '../ui/components/Panel.js';
 import StatusBar from '../ui/components/StatusBar.js';
 import ScrollableContainer from '../ui/components/ScrollableContainer.js';
-import gameState from '../gameState.js';
+import gameState from '../utils/gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
 import items from '../data/items.js';

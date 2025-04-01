@@ -3,7 +3,7 @@
 // --- Imports ---
 import UIManager from '../ui/UIManager.js'; // Keep this, BaseScene uses it
 import Button from '../ui/components/Button.js';
-import gameState from '../gameState.js';
+import gameState from '../utils/gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import HealthManager from '../utils/HealthManager.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
@@ -204,12 +204,38 @@ class OverworldScene extends BaseScene {
         }, buttonOptions);
 
         // --- Row 3 ---
-        // Character button (Centered below)
-        this.ui.createButton(centerX, row3Y, 'CHARACTER', () => {
-            this.safePlaySound('button-click');
-            gameState.previousScene = 'OverworldScene';
+    // Character button (Left)
+    this.ui.createButton(col1X, row3Y, 'CHARACTER', () => {
+        this.safePlaySound('button-click');
+        gameState.previousScene = 'OverworldScene';
+         if (this.transitions) {
+            this.transitions.fade(() => {
+                navigationManager.navigateTo(this, 'CharacterSheetScene');
+            });
+        } else {
             navigationManager.navigateTo(this, 'CharacterSheetScene');
-        }, buttonOptions);
+        }
+    }, buttonOptions);
+
+    // Main Menu Button (Right)
+    this.ui.createButton(col2X, row3Y, 'MAIN MENU', () => {
+        this.safePlaySound('button-click');
+         // Optional: Add confirmation if desired
+         // const confirmed = confirm("Return to Main Menu?");
+         // if (confirmed) {
+             if (this.transitions) {
+                this.transitions.fade(() => {
+                    navigationManager.navigateTo(this, 'StartScene');
+                });
+             } else {
+                navigationManager.navigateTo(this, 'StartScene');
+             }
+         // }
+    }, {
+        ...buttonOptions,
+        fillColor: 0x555555, // Neutral color
+        hoverColor: 0x777777
+    });
     }
 }
 

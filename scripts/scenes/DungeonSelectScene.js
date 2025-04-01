@@ -1,11 +1,12 @@
 import UIManager from '../ui/UIManager.js';
 import Button from '../ui/components/Button.js';
-import gameState from '../gameState.js';
+import gameState from '../utils/gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import TransitionManager from '../ui/TransitionManager.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
 import { getAllDungeons, canAccessDungeon, getDungeonData } from '../data/DungeonConfig.js';
 import BaseScene from './BaseScene.js';
+
 
 /**
  * DungeonSelectScene - Scene for selecting which dungeon to explore
@@ -173,31 +174,22 @@ class DungeonSelectScene extends BaseScene {
                         // Add any other relevant dungeon properties from config
                     };
                     console.log('Set gameState.currentDungeon to:', gameState.currentDungeon);
-                    
-                    // Create a clean fade transition instead of using TransitionManager
-                    const overlay = this.add.rectangle(0, 0, 
-                        this.cameras.main.width, 
-                        this.cameras.main.height, 
-                        0x000000, 0)
-                        .setOrigin(0)
-                        .setDepth(1000)
-                        .setInteractive();
-                    
-                    // Disable input for this scene to prevent multiple clicks
-                    this.input.enabled = false;
-                    
-                    // Fade in the overlay
-                    console.log('Starting fade transition to DungeonScene');
-                    this.tweens.add({
-                        targets: overlay,
-                        alpha: 1,
-                        duration: 400, // Longer fade for smoother experience
-                        ease: 'Power2',
-                        onComplete: () => {
-                            // Navigate to dungeon scene after fade completes
-                            this.scene.start('DungeonScene');
-                        }
-                    });
+
+                    // --- >>> USE TRANSITION MANAGER VIA navigationManager <<< ---
+                    console.log('Using navigationManager to transition to DungeonScene');
+                    // navigationManager handles storing previousScene and calling start
+                    // BaseScene's initializeScene should ensure this.transitions exists
+                    if (this.transitions) {
+                        this.transitions.fade(() => {
+                            // The callback now just tells navigationManager where to go
+                            navigationManager.navigateTo(this, 'DungeonScene');
+                            // NOTE: We pass 'this' (DungeonSelectScene) to navigateTo,
+                            // it will internally call this.scene.start('DungeonScene')
+                        });
+                    } else {
+                         console.warn("TransitionManager not found! Starting DungeonScene directly.");
+                         navigationManager.navigateTo(this, 'DungeonScene'); // Fallback without fade
+                    }
                 },
                 {
                     width: 100,
