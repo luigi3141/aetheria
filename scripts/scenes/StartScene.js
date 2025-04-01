@@ -155,7 +155,7 @@ class StartScene extends BaseScene {
             () => {
                 console.log('Settings clicked');
                 this.safePlaySound('button-click');
-                /* Implement settings functionality */
+                navigationManager.navigateTo(this, 'SettingsScene');
             },
             { width: 200, height: 50 }
         );

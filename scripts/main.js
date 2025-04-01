@@ -13,6 +13,7 @@ import CraftingScene from './scenes/CraftingScene.js';
 import CharacterSheetScene from './scenes/CharacterSheetScene.js';
 import DefeatScene from './scenes/DefeatScene.js';
 import PotionShopScene from './scenes/PotionShopScene.js';
+import SettingsScene from './scenes/SettingsScene.js';
 
 // Initialize Phaser game instance
 window.addEventListener('load', function() {
@@ -44,6 +45,7 @@ window.addEventListener('load', function() {
         CharacterSheetScene: checkModule('CharacterSheetScene', CharacterSheetScene),
         DefeatScene: checkModule('DefeatScene', DefeatScene),
         PotionShopScene: checkModule('PotionShopScene', PotionShopScene),
+        SettingsScene: checkModule('SettingsScene', SettingsScene),
     };
     
     try {
@@ -67,6 +69,7 @@ window.addEventListener('load', function() {
                 modules.DefeatScene,
                 modules.PotionShopScene,
                 modules.PreloadScene,
+                modules.SettingsScene,
             ],
             backgroundColor: '#000000',
             pixelArt: true,
