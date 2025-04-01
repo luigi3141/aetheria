@@ -54,9 +54,9 @@ class DefeatScene extends BaseScene {
       // --- Explanation Text ---
       let explanation = '';
       if (this.outcome === 'retreat') {
-          explanation = "You managed to escape the battle, returning to the safety of town.\nHowever, in your haste, some items may have been left behind...";
+          explanation = "You managed to escape the battle, returning to the safety of the overworld.\n\nHowever, in your haste, some items may have been left behind...";
       } else { // Defeat
-          explanation = "Overcome by your foe, you collapse.\nKind souls brought you back to town to recover.\nUnfortunately, some belongings were lost in the ordeal...";
+          explanation = "Overcome by your foe, you collapse.\n\nKind souls brought you back to the overworld to recover.\n\nUnfortunately, some belongings were lost in the ordeal...";
       }
 
       // Add a dark rectangle behind the text
