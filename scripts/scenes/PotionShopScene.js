@@ -1,10 +1,6 @@
 // ---- File: PotionShopScene.js ----
 
 import BaseScene from './BaseScene.js';
-import UIManager from '../ui/UIManager.js';
-import Button from '../ui/components/Button.js';
-// Remove ScrollableContainer import if no longer used elsewhere in this scene
-// import ScrollableContainer from '../ui/components/ScrollableContainer.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import gameState from '../utils/gameState.js';
 import items from '../data/items.js'; // For item data
@@ -38,8 +34,6 @@ class PotionShopScene extends BaseScene {
         this.goldText = null;
         this.buyButtons = {}; // To store references for enabling/disabling
 
-        // --- Remove ScrollableContainer reference ---
-        // this.sellListContainer = null;
         this.sellListPanel = null; // Reference to the background panel
         this.sellListItemsGroup = null; // Group to hold items on the current page for easy clearing
 
@@ -108,13 +102,13 @@ class PotionShopScene extends BaseScene {
         }
 
         // Title
-        this.ui.createTitle(width / 2, height * 0.08, "Potion & Equipment Shop", { fontSize: this.ui.fontSize.lg }).setDepth(1);
-
-        // Gold Display
-        this.createGoldDisplay();
+        this.ui.createTitle(width / 2, height * 0.08, "Potion Shop", { fontSize: this.ui.fontSize.lg }).setDepth(1);
 
         // Potions Area
         this.createPotionsArea();
+
+        // Gold Display
+        this.createGoldDisplay();
 
         // Selling Area - Now uses pagination
         this.createSellingArea();
@@ -122,9 +116,17 @@ class PotionShopScene extends BaseScene {
         // Exit Button
         this.createExitButton();
 
-        // Initial UI updates
+        // Initial UI updates (delay slightly to ensure buttons are ready)
         this.updateGoldDisplay();
-        this.updateBuyButtonStates();
+
+        // Delay button state updates slightly
+        this.time.delayedCall(50, () => {
+             console.log("Updating buy button states after delay.");
+             this.updateBuyButtonStates(); 
+             // Note: Pagination button updates happen within displayCurrentPage, 
+             // which might already be slightly delayed or implicitly handled correctly.
+             // If pagination buttons still show errors, we might need to delay displayCurrentPage too.
+        });
 
         // Fade In - Delay slightly
         this.time.delayedCall(50, () => {
@@ -136,85 +138,111 @@ class PotionShopScene extends BaseScene {
 
     createGoldDisplay() {
         const width = this.cameras.main.width;
-        // Use UIManager spacing if available
-        const margin = this.ui?.spacing?.md || 20;
-        const topMargin = this.ui?.spacing?.lg || 30;
-        const displayX = width - margin;
-        const displayY = topMargin + 10;
+        const height = this.cameras.main.height;
+        const padding = this.ui?.spacing?.md || 15; // Padding inside the panel
         const iconSize = 24;
-        const textOffsetX = 60; // Space for icon + padding
+
+        // --- Match Potion Area Layout --- 
+        const potionAreaStartX = width * 0.27;
+        const potionCardWidth = width * 0.4;
+        const potionCardHeight = height * 0.18; 
+        const potionSpacingY = potionCardHeight + 30;
+        const potionStartY = height * 0.25;
+        const numPotions = POTIONS_FOR_SALE.length;
+
+        // --- Calculate Gold Panel Position & Size --- 
+        const panelWidth = potionCardWidth; // Match potion card width
+        const panelHeight = 50; // Keep height reasonable
+        const panelX = potionAreaStartX; // Align X with potion cards
+        // Calculate Y position below the last potion card
+        const lastPotionBottomY = potionStartY + (numPotions -1) * potionSpacingY + (potionCardHeight / 2);
+        const panelY = lastPotionBottomY + (panelHeight / 2) + padding * 5; // Position below last potion + padding
+
+        // Create the panel for the gold display
+        const goldPanel = this.ui.createPanel(panelX, panelY, panelWidth, panelHeight, {
+            fillColor: 0x2a1a3f, 
+            borderColor: 0xaa8fbf, 
+            depth: 10
+        });
+
+        // --- Elements are positioned relative to the panel's center (0,0) ---
+        const iconX = -panelWidth / 2 + padding + iconSize / 2; // Icon on the far left
+        const iconY = 0;
+        const textX = iconX + iconSize / 2 + padding; // Text next to icon
+        const textY = 0;
 
         // Gold Icon
-         if (this.textures.exists('GOLD')) {
-            this.add.image(displayX - textOffsetX + (iconSize/2) , displayY, 'GOLD')
+        if (this.textures.exists('GOLD')) {
+            const goldIcon = this.add.image(iconX, iconY, 'GOLD')
                 .setDisplaySize(iconSize, iconSize)
-                .setOrigin(1, 0.5) // Align right edge of icon
-                .setDepth(10);
-         }
+                .setOrigin(0.5); 
+            goldPanel.add(goldIcon); 
+        }
 
         // Gold Text
-        this.goldText = this.add.text(displayX, displayY, `Gold: ${gameState.player.gold || 0}`, {
+        this.goldText = this.add.text(textX, textY, `Gold: ${gameState.player.gold || 0}`, {
             fontFamily: "'VT323'",
-            fontSize: (this.ui?.fontSize?.md || 16) + 'px', // Use UI Manager size or default
+            fontSize: (this.ui?.fontSize?.md || 16) + 'px',
             fill: '#FFD700',
-            align: 'right'
-        }).setOrigin(1, 0.5) // Align right edge of text
-          .setDepth(10);
+            align: 'left' 
+        }).setOrigin(0, 0.5); 
+
+        goldPanel.add(this.goldText); 
     }
 
     createPotionsArea() {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         const startX = width * 0.27; // Position left column center
-        const startY = height * 0.25;
+        const startY = height * 0.34;
         const cardWidth = width * 0.4;
         const cardHeight = height * 0.18; // Increase height slightly
         const spacingY = cardHeight + 30;
         const iconSize = 40;
         const padding = this.ui?.spacing?.sm || 10; // Use UIManager spacing or a default
 
+         POTIONS_FOR_SALE.forEach((potion, index) => {
+             const cardY = startY + index * spacingY;
 
-        POTIONS_FOR_SALE.forEach((potion, index) => {
-            const cardY = startY + index * spacingY;
-            const panel = this.ui.createPanel(startX, cardY, cardWidth, cardHeight, {
-                fillColor: 0x3a2a4f, borderColor: 0x8a6f9f, depth: 1
-            });
+             const panel = this.ui.createPanel(startX, cardY, cardWidth, cardHeight, {
+                 fillColor: 0x3a2a4f, borderColor: 0x8a6f9f, depth: 1
+             });
 
-            // Icon - Position relative to panel center (0,0)
-            const iconX = -cardWidth * 0.5 + padding + (iconSize / 2);
-            if (this.textures.exists(potion.iconKey)) {
-                const icon = this.add.image(iconX, 0, potion.iconKey)
-                    .setDisplaySize(iconSize, iconSize)
-                    .setOrigin(0.5); // Center the icon itself
-                panel.add(icon);
-            }
+             // Icon - Position relative to panel center (0,0)
+             const iconRelX = -cardWidth * 0.5 + padding + (iconSize / 2);
+             if (this.textures.exists(potion.iconKey)) {
+                 const icon = this.add.image(iconRelX, 0, potion.iconKey)
+                     .setDisplaySize(iconSize, iconSize)
+                     .setOrigin(0.5); // Center the icon itself
+                 panel.add(icon);
+             }
 
-            // Details Text (Name, Desc, Price) - Relative positioning
-            const textX = iconX + iconSize / 2 + 15; // Start text right of icon
-            const nameText = this.add.text(textX, -cardHeight * 0.25, potion.name, {
-                fontFamily: "'Press Start 2P'", fontSize: (this.ui?.fontSize?.sm || 12) + 'px', fill: '#ffffff'
-            }).setOrigin(0, 0.5); // Align left-middle
+             // Details Text (Name, Desc, Price) - Relative positioning
+             const textRelX = iconRelX + iconSize / 2 + 15; // Start text right of icon
+             const nameText = this.add.text(textRelX, -cardHeight * 0.25, potion.name, {
+                 fontFamily: "'Press Start 2P'", fontSize: (this.ui?.fontSize?.sm || 12) + 'px', fill: '#ffffff'
+             }).setOrigin(0, 0.5); // Align left-middle
 
-            const descText = this.add.text(textX, 0, potion.description, {
-                fontFamily: "'VT323'", fontSize: (this.ui?.fontSize?.xs || 10) + 'px', fill: '#cccccc'
-            }).setOrigin(0, 0.5); // Align left-middle
+             const descText = this.add.text(textRelX, 0, potion.description, {
+                 fontFamily: "'VT323'", fontSize: (this.ui?.fontSize?.xs || 10) + 'px', fill: '#cccccc'
+             }).setOrigin(0, 0.5); // Align left-middle
 
-            const priceText = this.add.text(textX, cardHeight * 0.25, `${potion.cost} Gold`, {
-                fontFamily: "'VT323'", fontSize: (this.ui?.fontSize?.sm || 12) + 'px', fill: '#FFD700'
-            }).setOrigin(0, 0.5); // Align left-middle
+             const priceText = this.add.text(textRelX, cardHeight * 0.25, `${potion.cost} Gold`, {
+                 fontFamily: "'VT323'", fontSize: (this.ui?.fontSize?.sm || 12) + 'px', fill: '#FFD700'
+             }).setOrigin(0, 0.5); // Align left-middle
 
-            panel.add([nameText, descText, priceText]);
+             panel.add([nameText, descText, priceText]);
 
-            // Buy Button - Position relative to panel center
-            const buttonX = cardWidth * 0.5 - 50; // Position button near right edge
-            const buyButton = this.ui.createButton(buttonX, 0, 'Buy', // Create relative to panel center
-                () => { this.buyPotion(potion); },
-                { width: 80, height: 35, fontSize: this.ui?.fontSize?.xs || 10 }
-            );
-            panel.add(buyButton.container); // Add button's container to panel
+             // Buy Button - Position relative to panel center
+             const buttonRelX = cardWidth * 0.5 - 50; // Position button near right edge
+             const buyButton = this.ui.createButton(buttonRelX, 20, 'Buy', // Create relative to panel center
+                 () => { this.buyPotion(potion); },
+                 { width: 80, height: 35, fontSize: this.ui?.fontSize?.xs || 10 }
+             );
+             panel.add(buyButton.container); // Add button's container to panel
 
-            this.buyButtons[potion.id] = buyButton;
-        });
+             this.buyButtons[potion.id] = buyButton;
+         });
     }
 
     createSellingArea() {
@@ -223,36 +251,49 @@ class PotionShopScene extends BaseScene {
         const panelWidth = width * 0.45;
         const panelHeight = height * 0.55; // Match height of other panels
         const panelX = width * 0.73; // Position right
-        const panelTopY = height * 0.18; // Align top with other panels
+        const panelTopY = height * 0.25; // Align top with other panels
         const panelCenterY = panelTopY + panelHeight / 2;
 
         // Selling Area Title
-        this.ui.createTitle(panelX, panelTopY - 25, "Sell Equipment", { // Position above panel
-            fontSize: this.ui.fontSize.md, padding: { x: 10, y: 5 }
-        }).setDepth(1);
+        const sellTitle = this.ui.createTitle(panelX, panelTopY - 25, "Sell Equipment", { // Position above panel
+             fontSize: this.ui.fontSize.md, padding: { x: 10, y: 5 }
+         }).setDepth(1);
 
-        // Create the background Panel
-        this.sellListPanel = this.ui.createPanel(
-            panelX, panelCenterY, panelWidth, panelHeight,
-            { padding: 10, backgroundColor: 0x4f3a2a, borderColor: 0x9f8a6f, depth: 1 }
-        );
+         // Add background rectangle for the title
+         const titleBounds = sellTitle.getBounds();
+         const titleBgPadding = 15;
+         const titleBg = this.add.rectangle(
+             sellTitle.x, 
+             sellTitle.y, 
+             titleBounds.width + titleBgPadding * 2, 
+             titleBounds.height + titleBgPadding,
+             0x000000, // Black background
+             0.6 // Semi-transparent
+         );
+         titleBg.setOrigin(sellTitle.originX, sellTitle.originY).setDepth(0.9); // Place behind title
 
-        // Create a Group to hold items currently displayed
-        this.sellListItemsGroup = this.add.group();
+         // Create the background Panel
+         this.sellListPanel = this.ui.createPanel(
+             panelX, panelCenterY, panelWidth, panelHeight,
+             { padding: 10, backgroundColor: 0x4f3a2a, borderColor: 0x9f8a6f, depth: 1 }
+         );
 
-        // Calculate Items Per Page based on panel height and desired item display height
-        const itemDisplayHeight = 55 + 5; // item row height + padding
-        const availableHeight = panelHeight - (this.sellListPanel.options?.padding || 10) * 2; // Inner height
-        this.itemsPerPage = Math.max(1, Math.floor(availableHeight / itemDisplayHeight));
-        console.log(`Calculated itemsPerPage: ${this.itemsPerPage}`);
+         // Create a Group to hold items currently displayed
+         this.sellListItemsGroup = this.add.group();
 
-        // Create Pagination Controls below the panel
-        const paginationY = panelCenterY + panelHeight * 0.5 + 25;
-        this.createPaginationButtons(panelX, paginationY);
+         // Calculate Items Per Page based on panel height and desired item display height
+         const itemDisplayHeight = 55 + 5; // item row height + padding
+         const availableHeight = panelHeight - (this.sellListPanel.options?.padding || 10) * 2; // Inner height
+         this.itemsPerPage = Math.max(1, Math.floor(availableHeight / itemDisplayHeight));
+         console.log(`Calculated itemsPerPage: ${this.itemsPerPage}`);
 
-        // Initial Population
-        this.filterAndCacheEquipment(); // Filter equipment once
-        this.displayCurrentPage(); // Display the first page
+         // Create Pagination Controls below the panel
+         const paginationY = panelCenterY + panelHeight * 0.5 + 25;
+         this.createPaginationButtons(panelX, paginationY);
+
+         // Initial Population
+         this.filterAndCacheEquipment(); // Filter equipment once
+         this.displayCurrentPage(); // Display the first page
     }
 
     createPaginationButtons(centerX, y) {
@@ -296,7 +337,7 @@ class PotionShopScene extends BaseScene {
         // Desired top-left corner would be: (sceneWidth - paddingX - buttonWidth, sceneHeight - paddingY - buttonHeight)
         // Center X = desired top-left X + half width
         // Center Y = desired top-left Y + half height
-        const buttonCenterX = sceneWidth - paddingX - buttonWidth / 2;
+        const buttonCenterX = sceneWidth / 2; // Center horizontally
         const buttonCenterY = sceneHeight - paddingY - buttonHeight / 2;
         // --- End Calculation ---
 
@@ -306,7 +347,7 @@ class PotionShopScene extends BaseScene {
         const exitButton = this.ui.createButton(
             buttonCenterX,
             buttonCenterY,
-            'Back to Town', // Or 'Exit Shop'
+            'Exit', // Or 'Exit Shop'
             () => { // --- Callback Logic ---
                 console.log("Exit Button Clicked. Returning to:", this.previousSceneKey); // Log destination
                 this.safePlaySound('button-click'); // Assuming safePlaySound and sound key are correct
@@ -604,7 +645,7 @@ class PotionShopScene extends BaseScene {
          if (!this.ui || !this.cameras?.main) return;
          const width = this.cameras.main.width;
          const height = this.cameras.main.height;
-         const feedbackText = this.add.text(width / 2, height - 40, message, {
+         const feedbackText = this.add.text(width / 2, height / 2, message, {
              fontFamily: "'VT323'",
              fontSize: (this.ui?.fontSize?.sm || 12) + 'px',
              fill: color,
