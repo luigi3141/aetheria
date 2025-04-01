@@ -23,6 +23,7 @@ class InventoryScene extends BaseScene {
         // Stores UI elements for each equipment slot { container, iconDisplay, border, label }
         this.equipmentSlots = {};
         this.returnSceneKey = 'OverworldScene';
+        this.dungeonData = null; // Added property
 
         // Dynamic content containers (destroyed on tab switch)
         this.equipmentListContainer = null;
@@ -49,12 +50,18 @@ class InventoryScene extends BaseScene {
     }
 
     init(data) {
-        this.returnSceneKey = data?.returnSceneKey || gameState.previousScene || 'OverworldScene';
-        console.log(`InventoryScene init - Will return/wake to ${this.returnSceneKey}`);
+        // Store the return scene key and dungeon data BEFORE loading game state
+        const returnTo = data?.returnSceneKey || gameState.previousScene || 'OverworldScene';
+        const dungeonData = data?.dungeonData;
+        console.log(`InventoryScene init - Will return/wake to ${returnTo}`);
         console.log("[Inv Init] gameState inventory BEFORE load:", JSON.parse(JSON.stringify(gameState.player?.inventory?.items || 'No Inventory')));
 
         // Load saved state using SaveLoadManager
         loadGame();
+
+        // Set the return scene key and dungeon data AFTER loading game state
+        this.returnSceneKey = returnTo;
+        this.dungeonData = dungeonData;
 
         // Ensure player and inventory exist even if no save data
         if (!gameState.player) gameState.player = { name: 'Hero', class: 'Warrior', level: 1 /* ... other defaults ... */ };
@@ -198,52 +205,26 @@ class InventoryScene extends BaseScene {
         const buttonX = width / 2;
         const buttonY = height * 0.92;
 
-        // --- >>> LOGS <<< ---
-        console.log(`[createReturnButton] Camera dimensions: width=${width}, height=${height}`);
-        console.log(`[createReturnButton] Calculated button position: x=${buttonX.toFixed(0)}, y=${buttonY.toFixed(0)}`);
-        // --- >>> END LOGS <<< ---
-
-        if (width === 0 || height === 0) {
-             console.error("[createReturnButton] CRITICAL: Camera dimensions are zero! Button position will be incorrect.");
-        }
-
-        const button = this.ui.createButton( buttonX, buttonY, 'Return',
+        // Create return button with the correct return scene
+        return this.ui.createButton(
+            buttonX,
+            buttonY,
+            'BACK',
             () => {
-                 // --- >>> CLICK LOG <<< ---
-                 console.log('[InventoryScene] Return button CLICKED!');
-                 // --- >>> END CLICK LOG <<< ---
-                 this.safePlaySound('menu-close');
-                 // const dataToReturn = { fromInventory: true }; // Data for wake/start, not switch
-
-                 // --- >>> USE scene.switch() <<< ---
-                 console.log(`[InventoryScene] Switching to scene: ${this.returnSceneKey}`);
-                 try {
-                     // scene.switch(key) stops the current scene and starts the target one.
-                     // If the target scene was previously slept, start will resume it.
-                     this.scene.switch(this.returnSceneKey);
-
-                 } catch (e) {
-                     console.error(`Error during scene switch to ${this.returnSceneKey}:`, e);
-                      try {
-                          console.log("Attempting fallback navigation to OverworldScene via start.");
-                          this.scene.start('OverworldScene');
-                      } catch (e2) {
-                          console.error("Fallback navigation failed:", e2);
-                      }
-                 }
-                 // --- >>> END scene.switch() <<< ---
+                if (this.transitions) {
+                    this.transitions.fade(() => {
+                        navigationManager.navigateTo(this, this.returnSceneKey, {
+                            currentDungeon: this.dungeonData // Pass dungeon data back
+                        });
+                    });
+                } else {
+                    navigationManager.navigateTo(this, this.returnSceneKey, {
+                        currentDungeon: this.dungeonData // Pass dungeon data back
+                    });
+                }
             },
-            { width: 180, height: 50 } // Options for the button
+            { width: 160, height: 50 }
         );
-
-        console.log("[createReturnButton] Button instance created:", button);
-        if (!button || !button.container) {
-            console.error("[createReturnButton] CRITICAL: UIManager failed to create button or its container!");
-        } else {
-            console.log(`[createReturnButton] Button container position after creation: x=${button.container.x.toFixed(0)}, y=${button.container.y.toFixed(0)}`);
-        }
-
-        return button; // <<< Return the instance
     }
     // --- Tab Management ---
     createTabs() {

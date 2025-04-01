@@ -134,11 +134,11 @@ export const LAYOUT = {
     PANEL: {
         LEFT: {
             X: 0.25,
-            Y: 0.35
+            Y: 0.5
         },
         RIGHT: {
             X: 0.75,
-            Y: 0.35
+            Y: 0.5
         },
         CENTER: {
             X: 0.5, 

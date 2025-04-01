@@ -237,7 +237,6 @@ class DungeonScene extends BaseScene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
         const buttonY = height * 0.9;
-       // const buttonSpacing = width * 0.2;
 
         new Button(
             this,
@@ -245,17 +244,18 @@ class DungeonScene extends BaseScene {
             buttonY,
             'INVENTORY',
             () => {
+                // Store the current dungeon data in a temporary variable
+                const dungeonData = { ...gameState.currentDungeon };
+                
                 gameState.previousScene = 'DungeonScene';
                 this.transitions.fade(() => {
-                    navigationManager.navigateTo(this, 'InventoryScene');
+                    navigationManager.navigateTo(this, 'InventoryScene', {
+                        returnSceneKey: 'DungeonScene',
+                        dungeonData: dungeonData // Pass dungeon data to InventoryScene
+                    });
                 });
             },
-            {
-                width: 160,
-                height: 50,
-                fillColor: 0x999999,
-                hoverColor: 0x777777
-            }
+            { width: 160, height: 50 }
         );
     }
 }

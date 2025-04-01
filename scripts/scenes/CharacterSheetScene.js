@@ -108,8 +108,8 @@ class CharacterSheetScene extends BaseScene {
         this.ui.createPanel(
             panelPos.x, // Now panelPos is defined
             panelPos.y, // Now panelPos is defined
-            width * 0.4,
-            height * 0.5,
+            width * 0.35,
+            height * 0.6,
             {
                 fillColor: 0x222233,
                 fillAlpha: 0.7,
@@ -129,7 +129,7 @@ class CharacterSheetScene extends BaseScene {
             panelPos.x, // Center X of panel
             panelPos.y - height * 0.1, // Position above panel center
             playerClass, // Key should match preloaded texture
-            { scale: 1.5, origin: 0.5 } // Example scale/origin
+            { scale: 1, origin: 0.5 } // Example scale/origin
         );
 
         // Add character name (using defined panelPos)
@@ -137,17 +137,17 @@ class CharacterSheetScene extends BaseScene {
             fontFamily: "'Press Start 2P'",
             fontSize: this.ui.fontSize.md + 'px',
             fill: '#ffffff',
-            align: 'center'
+            align: 'center',
         }).setOrigin(0.5);
 
         // Add character class and level (using defined panelPos)
-        this.add.text(panelPos.x, panelPos.y + height * 0.1, `Level ${playerLevel} ${playerClass}`, {
+        this.add.text(panelPos.x, panelPos.y + height * 0.1, `Level ${playerLevel} ${playerClass.charAt(0).toUpperCase() + playerClass.slice(1).toLowerCase()}`, {
             fontFamily: "'VT323'",
             fontSize: this.ui.fontSize.md + 'px',
             fill: '#aaaaff',
             align: 'center'
         }).setOrigin(0.5);
-
+/*
         // Add gold display (using defined panelPos)
         const gold = player.gold || 0;
         this.add.text(panelPos.x, panelPos.y + height * 0.15, `Gold: ${gold}`, {
@@ -156,6 +156,7 @@ class CharacterSheetScene extends BaseScene {
             fill: '#ffff00',
             align: 'center'
         }).setOrigin(0.5);
+*/
     }
     
     /**
@@ -172,8 +173,8 @@ class CharacterSheetScene extends BaseScene {
         const statsPanel = this.ui.createPanel(
             panelPos.x,
             panelPos.y,
-            width * 0.4,
-            height * 0.5,
+            width * 0.35,
+            height * 0.6,
              { /* panel styles */ }
         );
 

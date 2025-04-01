@@ -117,7 +117,7 @@ class CraftingScene extends BaseScene {
 
     createNavigationButtons() {
         const width = this.cameras.main.width; const height = this.cameras.main.height;
-        this.backButtonInstance = this.ui.createButton( width * 0.15, height * 0.92, 'Back', () => { this.safePlaySound('button-click'); if (this.currentState === 'INPUT' || this.currentState === 'RESULT') { this.clearInputState(); this.clearResultState(); this.displayCategorySelection(); } else { navigationManager.navigateTo(this, 'OverworldScene'); } }, { width: 120, height: 45, fontSize: this.ui.fontSize.sm, depth: 10 } );
+        this.backButtonInstance = this.ui.createButton( width * 0.15, height * 0.92, 'Back', () => { this.safePlaySound('button-click'); if (this.currentState === 'INPUT' || this.currentState === 'RESULT') { this.clearInputState(); this.clearResultState(); this.displayCategorySelection(); } else { navigationManager.navigateTo(this, 'OverworldScene'); } }, { width: 160, height: 45, fontSize: this.ui.fontSize.sm, depth: 10 } );
     }
 
     giveDebugMaterials() {
