@@ -40,6 +40,28 @@ class CombatResultScene extends BaseScene {
             console.error("No combat result data in init!");
             this.combatResult = null;
         }
+
+        // Store the dungeon data from the combat result
+        this.dungeonData = this.combatResult.dungeon;
+        if (!this.dungeonData) {
+            console.error("No dungeon data found in combat result!");
+            navigationManager.navigateTo(this, 'OverworldScene');
+            return;
+        }
+
+        // Ensure we have the dungeon ID
+        if (!this.dungeonData.id) {
+            const dungeonConfig = getDungeonData(gameState.currentDungeon?.id);
+            if (dungeonConfig) {
+                this.dungeonData.id = dungeonConfig.id;
+            } else {
+                console.error("Could not find dungeon configuration!");
+                navigationManager.navigateTo(this, 'OverworldScene');
+                return;
+            }
+        }
+
+        console.log("CombatResultScene init - Dungeon data:", this.dungeonData);
     }
 
     preload() {
@@ -152,8 +174,11 @@ class CombatResultScene extends BaseScene {
     continueExploring() {
         console.log("CombatResultScene: Continue Exploring selected.");
 
-        // Store current dungeon data
-        const currentDungeonData = { ...gameState.currentDungeon };
+        // Store current dungeon data, ensuring we have the ID
+        const currentDungeonData = { 
+            ...gameState.currentDungeon,
+            id: this.dungeonData.id // Ensure we preserve the dungeon ID
+        };
 
         // --- >>> INCREMENT DUNGEON LEVEL ON VICTORY <<< ---
         if (this.combatResult?.outcome === 'victory' && currentDungeonData) {

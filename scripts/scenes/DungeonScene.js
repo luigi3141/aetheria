@@ -48,10 +48,20 @@ class DungeonScene extends BaseScene {
         // Load saved state
         loadGame();
 
-        // Restore dungeon data after loading saved state
+        // Merge dungeon configuration with current dungeon state
         if (currentDungeonData) {
-            gameState.currentDungeon = currentDungeonData;
-            this.currentDungeon = currentDungeonData;
+            const dungeonConfig = getDungeonData(currentDungeonData.id);
+            if (dungeonConfig) {
+                // Merge config data with current state, preserving the level
+                gameState.currentDungeon = {
+                    ...dungeonConfig,
+                    ...currentDungeonData,
+                    name: dungeonConfig.name // Ensure we get the name from config
+                };
+                this.currentDungeon = gameState.currentDungeon;
+            } else {
+                console.error(`No dungeon configuration found for id: ${currentDungeonData.id}`);
+            }
         }
 
         console.log("DungeonScene init - Inventory state:", {
