@@ -152,7 +152,7 @@ class CharacterSelectScene extends BaseScene {
         const statsX = previewX + previewPanelWidth / 2 + spacing + statsPanelWidth / 2;
         const classSelectX = statsX + statsPanelWidth / 2 + spacing + classSelectWidth / 2;
 
-        const nameInputY = commonTopY + commonPanelHeight + 40; // Position name input below panels
+        const nameInputY = commonTopY + commonPanelHeight + 30; // Position name input below panels
 
         console.log(`Layout X Positions: Preview=${previewX.toFixed(0)}, Stats=${statsX.toFixed(0)}, ClassSelect=${classSelectX.toFixed(0)}`);
         console.log(`Layout Common Center Y: ${commonCenterY.toFixed(0)}`);
@@ -380,21 +380,6 @@ class CharacterSelectScene extends BaseScene {
             }
 
         } else { /* Warn */ }
-
-        // --- REMOVE STRAY ANIMATION ---
-        // Carefully search this function and createMainLayout for any other
-        // this.add.rectangle or this.tweens.add that targets a rectangle
-        // that isn't part of a panel, the name input, or the highlight.
-        // For example, the old highlight code might still be lingering:
-        /*
-        // DELETE THIS if it still exists:
-        const highlightWidth_OLD = 40;
-        const highlightHeight_OLD = this.nameInput.height; // Might error if nameInput is null
-        const startX_OLD = this.nameInput.container.x - this.nameInput.width/2 + highlightWidth_OLD/2;
-        const endX_OLD = this.nameInput.container.x + this.nameInput.width/2 - highlightWidth_OLD/2;
-        const highlight_OLD = this.add.rectangle( startX_OLD, this.nameInput.container.y, highlightWidth_OLD, highlightHeight_OLD, 0xffffff, 0.1);
-        this.tweens.add({ targets: highlight_OLD, x: endX_OLD, duration: 2000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-        */
     }
 
 
