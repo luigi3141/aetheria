@@ -114,7 +114,7 @@ class SettingsScene extends BaseScene {
 
             // Send to Google Apps Script
             console.log('Sending request to server...');
-            const response = await fetch("https://script.google.com/macros/s/AKfycbxnWI6G66dhJtn0DcFazz848HM5pyGJ5zYf68FdalXAdgATywO_GHI8fNMikkA2RA/exec", {
+            const response = await fetch("https://script.google.com/macros/s/AKfycbzYFaqBziFI7HEwaGGYNsogT8gkV1l93H6GvrAlMFdrkBil0MCTyAXgpj-PwKjco7o/exec", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
