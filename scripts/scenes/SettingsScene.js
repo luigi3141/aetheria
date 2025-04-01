@@ -130,11 +130,15 @@ class SettingsScene extends BaseScene {
             console.log('Server response:', result);
             
             if (result === "Success") {
-                this.giveGoldToPlayer();
-            } else if (result === "Already claimed") {
-                // If already claimed, still mark as verified but don't give gold again
+                // Mark wallet as verified and give gold if in a game
                 gameState.walletVerified = true;
-                alert("You've already claimed your reward!");
+                
+                if (gameState.player) {
+                    gameState.player.gold = (gameState.player.gold || 0) + 1000;
+                    alert("Congratulations! You received 1000 gold!");
+                } else {
+                    alert("Wallet verified! You'll receive 1000 gold when you start a new game.");
+                }
             } else {
                 console.error('Unexpected server response:', result);
                 alert('Something went wrong. Please try again.');
@@ -147,9 +151,6 @@ class SettingsScene extends BaseScene {
 
     giveGoldToPlayer() {
         const rewardAmount = 1000;
-        gameState.walletVerified = true;
-        
-        // Only give gold if game is already started
         if (gameState.player) {
             gameState.player.gold = (gameState.player.gold || 0) + rewardAmount;
             alert(`Congratulations! You received ${rewardAmount} gold!`);
