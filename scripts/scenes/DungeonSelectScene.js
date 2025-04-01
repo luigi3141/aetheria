@@ -161,34 +161,27 @@ class DungeonSelectScene extends BaseScene {
                     
                     // Set current dungeon in game state with complete data
                     const initialDungeonData = {
-                        id: dungeonData.id,
-                        name: dungeonData.name,
-                        level: 1, // <<< START AT LEVEL 1
-                        minRooms: dungeonData.minRooms,
-                        maxRooms: dungeonData.maxRooms,
-                        backgroundKey: dungeonData.backgroundKey,
-                        minLevel: dungeonData.minLevel,
-                        maxLevel: dungeonData.maxLevel,
-                        enemyTypes: dungeonData.enemyTypes,
-                        bossTypes: dungeonData.bossTypes,
+                        ...dungeonData,
+                        level: 1, // Always start at level 1 when entering from overworld
                     };
                     
                     // Store in gameState
                     gameState.currentDungeon = initialDungeonData;
-                    console.log('Set gameState.currentDungeon to:', gameState.currentDungeon);
+                    console.log('Set initial dungeon data:', gameState.currentDungeon);
 
                     // Use navigationManager with explicit dungeon data
-                    console.log('Using navigationManager to transition to DungeonScene');
                     if (this.transitions) {
                         this.transitions.fade(() => {
                             navigationManager.navigateTo(this, 'DungeonScene', {
-                                currentDungeon: initialDungeonData // Pass dungeon data explicitly
+                                currentDungeon: initialDungeonData,
+                                fromOverworld: true // Flag that we're coming from overworld
                             });
                         });
                     } else {
                         console.warn("TransitionManager not found!");
                         navigationManager.navigateTo(this, 'DungeonScene', {
-                            currentDungeon: initialDungeonData // Pass dungeon data explicitly
+                            currentDungeon: initialDungeonData,
+                            fromOverworld: true
                         });
                     }
                 },

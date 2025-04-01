@@ -35,10 +35,10 @@ class CombatResultScene extends BaseScene {
             return;
         }
 
-        // Store the dungeon data from the combat result
-        this.dungeonData = this.combatResult.dungeon;
-        if (!this.dungeonData) {
-            console.error("No dungeon data found in combat result!");
+        // Store the dungeon data
+        this.dungeonData = this.combatResult.dungeon || gameState.currentDungeon;
+        if (!this.dungeonData?.id) {
+            console.error("No dungeon ID found in combat result or gameState!");
             navigationManager.navigateTo(this, 'OverworldScene');
             return;
         }
@@ -157,19 +157,31 @@ class CombatResultScene extends BaseScene {
     continueExploring() {
         console.log("CombatResultScene: Continue Exploring selected.");
 
-        // Store current dungeon data
-        const currentDungeonData = { ...gameState.currentDungeon };
+        // Get the current dungeon data with full configuration
+        const dungeonConfig = getDungeonData(this.dungeonData.id);
+        if (!dungeonConfig) {
+            console.error(`No dungeon configuration found for id: ${this.dungeonData.id}`);
+            navigationManager.navigateTo(this, 'OverworldScene');
+            return;
+        }
 
-        // --- >>> INCREMENT DUNGEON LEVEL ON VICTORY <<< ---
-        if (this.combatResult?.outcome === 'victory' && currentDungeonData) {
-            currentDungeonData.level = (currentDungeonData.level || 1) + 1;
-            console.log(`Advanced to Dungeon Level: ${currentDungeonData.level}`);
-            
-            // Optional: Check if max level reached
-            const dungeonConfig = getDungeonData(currentDungeonData.id);
-            if (dungeonConfig && currentDungeonData.level > dungeonConfig.maxLevel) {
-                console.log("Max dungeon level reached!");
-            }
+        // Only increment level on victory
+        const currentLevel = this.dungeonData.level || 1;
+        const newLevel = this.combatResult?.outcome === 'victory' ? currentLevel + 1 : currentLevel;
+
+        // Create updated dungeon data
+        const currentDungeonData = {
+            ...dungeonConfig, // Start with full config
+            level: newLevel, // Set new level
+            id: dungeonConfig.id, // Ensure ID is preserved
+            name: dungeonConfig.name // Ensure name is preserved
+        };
+
+        console.log(`Dungeon Level: ${currentLevel} -> ${newLevel} (${dungeonConfig.name})`);
+        
+        // Optional: Check if max level reached
+        if (newLevel > dungeonConfig.maxLevel) {
+            console.log(`Max dungeon level reached (${dungeonConfig.maxLevel})!`);
         }
         
         // Save game state with updated dungeon data

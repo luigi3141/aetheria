@@ -44,10 +44,17 @@ class DungeonScene extends BaseScene {
 
         // Store current dungeon data before loading saved state
         const currentDungeonData = data?.currentDungeon || gameState.currentDungeon;
-        console.log("DungeonScene init - Received dungeon data:", currentDungeonData);
+        const fromOverworld = data?.fromOverworld || false;
+        console.log("DungeonScene init - Received dungeon data:", currentDungeonData, "fromOverworld:", fromOverworld);
 
         // Load saved state
         loadGame();
+
+        // If coming from overworld, always start at level 1
+        if (fromOverworld) {
+            console.log("Coming from overworld - resetting dungeon level to 1");
+            currentDungeonData.level = 1;
+        }
 
         // Merge dungeon configuration with current dungeon state
         if (currentDungeonData) {
@@ -62,10 +69,11 @@ class DungeonScene extends BaseScene {
                 };
                 this.currentDungeon = gameState.currentDungeon;
                 
-                console.log("DungeonScene init - Merged dungeon data:", {
+                console.log("DungeonScene init - Final dungeon data:", {
                     id: gameState.currentDungeon.id,
                     name: gameState.currentDungeon.name,
-                    level: gameState.currentDungeon.level
+                    level: gameState.currentDungeon.level,
+                    fromOverworld
                 });
             } else {
                 console.error(`No dungeon configuration found for id: ${currentDungeonData.id}`);
