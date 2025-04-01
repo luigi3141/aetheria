@@ -12,6 +12,7 @@ import gameState from '../utils/gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import { generateLoot } from '../data/enemies.js';
 import { processItemLoss } from '../utils/PenaltyManager.js';
+import { getDungeonData } from '../data/DungeonConfig.js'; // Import getDungeonData
 
 import items from '../data/items.js'; // Import the entire default export object
 const { getItemData } = items; // Destructure getItemData from the imported object
@@ -295,36 +296,92 @@ export default class EncounterScene extends BaseScene {
              }
         });
 
-        // Set combat result in gameState BEFORE navigating
+        // Get dungeon data from combatData where it was originally passed
+        const dungeonData = gameState.combatData?.dungeon;
+        if (!dungeonData) {
+            console.error("No dungeon data found in combatData!");
+            return;
+        }
+
+        // Get full dungeon config data and merge with current state
+        const dungeonConfig = getDungeonData(dungeonData.id);
+        if (!dungeonConfig) {
+            console.error("Failed to get dungeon config data for:", dungeonData.id);
+            return;
+        }
+
+        // Merge current dungeon state with config data
+        const mergedDungeonData = {
+            ...dungeonConfig,
+            level: dungeonData.level, // Keep current level
+            id: dungeonData.id,
+        };
+
+        // Store combat result in gameState
         gameState.combatResult = {
             outcome: 'victory',
             enemyName: enemy?.name || 'Enemy', // Handle potential undefined enemy
             experienceGained: experienceReward,
             goldGained: goldReward,
-            loot: lootItems // Pass the array of item IDs
+            loot: lootItems,
+            dungeon: mergedDungeonData
         };
+
+        // Update currentDungeon in gameState
+        gameState.currentDungeon = mergedDungeonData;
 
         // Navigate to CombatResultScene
         this.time.delayedCall(1000, () => {
              // Check scene validity before starting next one
              if (this.scene.isActive()) {
-                 navigationManager.navigateTo(this, 'CombatResultScene');
+                 navigationManager.navigateTo(this, 'CombatResultScene', {
+                     currentDungeon: mergedDungeonData
+                 });
              }
         });
     }
 
     processDefeat() {
+        // Get dungeon data from combatData where it was originally passed
+        const dungeonData = gameState.combatData?.dungeon;
+        if (!dungeonData) {
+            console.error("No dungeon data found in combatData!");
+            return;
+        }
+
+        // Get full dungeon config data and merge with current state
+        const dungeonConfig = getDungeonData(dungeonData.id);
+        if (!dungeonConfig) {
+            console.error("Failed to get dungeon config data for:", dungeonData.id);
+            return;
+        }
+
+        // Merge current dungeon state with config data
+        const mergedDungeonData = {
+            ...dungeonConfig,
+            level: dungeonData.level, // Keep current level
+            id: dungeonData.id,
+        };
+
         // Set combat result in gameState
-        gameState.combatResult = { outcome: 'defeat' };
+        gameState.combatResult = { 
+            outcome: 'defeat',
+            dungeon: mergedDungeonData
+        };
+        
+        // Update currentDungeon in gameState
+        gameState.currentDungeon = mergedDungeonData;
+        
         // Navigate to DefeatScene
-         this.time.delayedCall(1000, () => {
+        this.time.delayedCall(1000, () => {
              if (this.scene.isActive()) {
-                 navigationManager.navigateTo(this, 'DefeatScene');
+                 navigationManager.navigateTo(this, 'DefeatScene', {
+                     currentDungeon: mergedDungeonData
+                 });
              }
         });
     }
 
-    // Modify handleRetreat - This function is likely called by the Retreat button's callback
     handleRetreat() {
         // --- Confirmation Dialog ---
         const confirmRetreat = confirm(
@@ -338,9 +395,33 @@ export default class EncounterScene extends BaseScene {
             // Disable actions immediately
             if (this.combatEngine) this.combatEngine.disablePlayerActions();
 
+            // Get dungeon data from combatData where it was originally passed
+            const dungeonData = gameState.combatData?.dungeon;
+            if (!dungeonData) {
+                console.error("No dungeon data found in combatData!");
+                return;
+            }
+
+            // Get full dungeon config data and merge with current state
+            const dungeonConfig = getDungeonData(dungeonData.id);
+            if (!dungeonConfig) {
+                console.error("Failed to get dungeon config data for:", dungeonData.id);
+                return;
+            }
+
+            // Merge current dungeon state with config data
+            const mergedDungeonData = {
+                ...dungeonConfig,
+                level: dungeonData.level, // Keep current level
+                id: dungeonData.id,
+            };
+
             // --- Process Item Loss on Retreat ---
             const lostItems = processItemLoss(0.40); // 40% chance
             // --- End Item Loss ---
+
+            // Update currentDungeon in gameState
+            gameState.currentDungeon = mergedDungeonData;
 
             // Short delay for effect before navigating
             this.time.delayedCall(750, () => {
@@ -349,7 +430,8 @@ export default class EncounterScene extends BaseScene {
                      console.log("[EncounterScene] Navigating to DefeatScene after retreat.");
                      navigationManager.navigateTo(this, 'DefeatScene', {
                           outcome: 'retreat',
-                          lostItems: lostItems // Pass the array of lost item data
+                          lostItems: lostItems,
+                          currentDungeon: mergedDungeonData
                      });
                      // --- End Navigation ---
                  }
@@ -357,8 +439,7 @@ export default class EncounterScene extends BaseScene {
 
         } else {
             console.log("[EncounterScene] Player cancelled retreat.");
-            // Optionally add a log message like "You decide to stand and fight!"
-             this.combatLog.addLogEntry('You decide to stand and fight!', false);
+            this.combatLog.addLogEntry('You decide to stand and fight!', false);
         }
     }
 
