@@ -152,20 +152,28 @@ class CombatResultScene extends BaseScene {
     continueExploring() {
         console.log("CombatResultScene: Continue Exploring selected.");
 
+        // Store current dungeon data
+        const currentDungeonData = { ...gameState.currentDungeon };
+
         // --- >>> INCREMENT DUNGEON LEVEL ON VICTORY <<< ---
-        if (this.combatResult?.outcome === 'victory' && gameState.currentDungeon) {
-            gameState.currentDungeon.level += 1;
-            console.log(`Advanced to Dungeon Level: ${gameState.currentDungeon.level}`);
+        if (this.combatResult?.outcome === 'victory' && currentDungeonData) {
+            currentDungeonData.level += 1;
+            console.log(`Advanced to Dungeon Level: ${currentDungeonData.level}`);
             // Optional: Check if max level reached, trigger boss, etc.
-            const dungeonConfig = getDungeonData(gameState.currentDungeon.id);
-            if (dungeonConfig && gameState.currentDungeon.level > dungeonConfig.maxLevel) {
+            const dungeonConfig = getDungeonData(currentDungeonData.id);
+            if (dungeonConfig && currentDungeonData.level > dungeonConfig.maxLevel) {
                 console.log("Max dungeon level reached!");
                 // Handle reaching the end - maybe force Overworld or trigger final boss?
                 // For now, let's just cap it or log it.
-                // gameState.currentDungeon.level = dungeonConfig.maxLevel;
+                // currentDungeonData.level = dungeonConfig.maxLevel;
             }
         }
         // --- <<< END LEVEL INCREMENT >>> ---
+        
+        // Save game state with updated dungeon data
+        gameState.currentDungeon = currentDungeonData;
+        saveGame();
+
         console.log("Calling this.transitions.fade..."); // Log before calling
         if (!this.transitions) { console.error("!!! this.transitions is missing !!!"); return; } // Add check
     
@@ -176,7 +184,10 @@ class CombatResultScene extends BaseScene {
             if (!navigationManager) { console.error("!!! navigationManager is missing !!!"); return; } // Add check
     
             console.log("Attempting navigation via navigationManager...");
-            navigationManager.navigateTo(this, 'DungeonScene', { fromCombat: true });
+            navigationManager.navigateTo(this, 'DungeonScene', { 
+                fromCombat: true,
+                currentDungeon: currentDungeonData // Pass dungeon data explicitly
+            });
             console.log("navigationManager.navigateTo called.");
         });
         console.log("this.transitions.fade call finished."); // Log after calling
@@ -505,65 +516,7 @@ class CombatResultScene extends BaseScene {
      */
     handleLevelUp() {
         console.log("handleLevelUp called - UI display responsibility moved.");
-/*
-        // NOTE: This assumes a simple level-up mechanic. Adjust as needed.
-        // Consider moving complex level-up logic to CharacterManager.js
-        if (!gameState.player) return;
 
-        let levelsGained = 0;
-        while (gameState.player.experience >= gameState.player.experienceToNextLevel) {
-            gameState.player.experience -= gameState.player.experienceToNextLevel;
-            gameState.player.level++;
-            levelsGained++;
-
-            // Example Stat Increases (customize based on class/game design)
-            gameState.player.maxHealth += 10;
-            gameState.player.health += 10;
-            gameState.player.maxMana += 5;
-            gameState.player.mana = gameState.player.maxMana; // Restore mana
-            gameState.player.strength = (gameState.player.strength || 10) + 1;
-            gameState.player.agility = (gameState.player.agility || 10) + 1;
-            gameState.player.intelligence = (gameState.player.intelligence || 10) + 1;
-            // gameState.player.constitution = (gameState.player.constitution || 10) + 1; // If using constitution
-
-            // Calculate new XP threshold (example: increases by 20%)
-            gameState.player.experienceToNextLevel = Math.floor(gameState.player.experienceToNextLevel * 1.2);
-        }
-
-        // If levels were gained, show level up message
-        if (levelsGained > 0) {
-            const width = this.cameras.main.width;
-            const height = this.cameras.main.height;
-
-            const levelText = this.ui.createTitle(width/2, height * 0.38, // Adjusted Y position
-                `LEVEL UP! You are now level ${gameState.player.level}`, {
-                fontSize: this.ui.fontSize.sm,
-                color: '#ffff00', // Bright Yellow
-            });
-
-            // Animate the level up text
-            this.tweens.add({
-                targets: levelText,
-                alpha: { from: 0, to: 1 },
-                y: height * 0.35, // Move slightly up
-                scale: { from: 0.5, to: 1.1 },
-                duration: 800,
-                ease: 'Bounce.easeOut', // Bouncy effect
-                onComplete: () => {
-                    // Hold and fade out
-                    this.tweens.add({
-                        targets: levelText,
-                        alpha: 0,
-                        delay: 1500,
-                        duration: 500,
-                        onComplete: () => { levelText.destroy(); }
-                    });
-                }
-            });
-            // Optionally play level up sound
-            // this.sound.play('level-up-sound');
-        }
-        */
     }
 
     /**
