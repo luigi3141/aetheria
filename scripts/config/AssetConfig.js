@@ -123,7 +123,8 @@ export const ASSET_PATHS = {
             victory: 'assets/audio/combat/victory.mp3',
             defeat: 'assets/audio/combat/defeat.mp3',
             levelUp: 'assets/audio/combat/level-up.mp3',
-            heal: 'assets/audio/combat/heal.mp3'
+            heal: 'assets/audio/combat/heal.mp3',
+            playerHit: 'assets/audio/combat/player-hit.mp3'
         },
         ui: {
             buttonClick: 'assets/audio/ui/button-click.mp3',

@@ -84,6 +84,9 @@ export default class CombatEngine {
         this.turnInProgress = true;
         this.disablePlayerActions();
 
+        // Play attack sound
+        this.scene.safePlaySound('attack');
+
         // --- Calculate Damage ---
         // 1. Determine Base Attack Power
         let baseAttackPower = 0;
@@ -159,6 +162,9 @@ export default class CombatEngine {
             this.scene.processEnemyAttack();
             return;
         }
+
+        // Play player hit sound
+        this.scene.safePlaySound('player-hit');
 
         // --- Calculate Damage ---
         // 1. Determine Base Attack Power
@@ -287,7 +293,7 @@ export default class CombatEngine {
         this.scene.combatLog.addLogEntry(this.scene.combatText.getItemMessage(itemData.inGameName, effectMessage), true); // Player action
 
         if (success) {
-            this.safePlaySound('heal'); // Use generic sound or item-specific sound
+            this.scene.safePlaySound('heal'); // Use generic sound or item-specific sound
             // Remove ONE item from inventory
             const itemIndex = player.inventory.items.findIndex(invItem => invItem.itemId === item.id);
             if (itemIndex > -1) {

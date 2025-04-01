@@ -7,6 +7,7 @@ import { ASSET_PATHS } from '../config/AssetConfig.js';
 import gameState from '../utils/gameState.js';
 import BaseScene from './BaseScene.js';
 import { hasSaveGame, loadGame, clearSaveGame } from '../utils/SaveLoadManager.js';
+import PreloadScene from './PreloadScene.js';
 
 class StartScene extends BaseScene {
     constructor() {
@@ -15,13 +16,22 @@ class StartScene extends BaseScene {
     }
 
     preload() {
+        // Load only what StartScene needs immediately
         this.load.image('title-bg', ASSET_PATHS.BACKGROUNDS.TITLE);
-        // Optionally load portal graphic
-        // this.load.image('portal-icon', 'assets/sprites/ui/portal-icon.png');
+        
+        // Preload shared assets in the background
+        PreloadScene.preloadSharedAssets(this);
+
+        // Resume audio context on first interaction
+        window.addEventListener('pointerdown', () => {
+            if (this.sound.context.state === 'suspended') {
+                this.sound.context.resume();
+            }
+        }, { once: true });
     }
 
     create() {
-         this.initializeScene(); // Initialize BaseScene components
+        this.initializeScene(); // Initialize BaseScene components
 
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
@@ -94,8 +104,22 @@ class StartScene extends BaseScene {
         this.hasSavedGame = hasSaveGame();
         console.log("Has saved game:", this.hasSavedGame);
         // ---
+        window.addEventListener('pointerdown', () => {
+            if (this.sound.context.state === 'suspended') {
+                this.sound.context.resume();
+            }
+        }, { once: true }); // Only need it once
+        
 
         this.createButtons();
+        if (!this.scene.isActive('PreloadScene')) {
+            this.scene.launch('PreloadScene', { headless: true });
+        }
+        
+        this.load.once('complete', () => {
+            console.log('✅ StartScene finished loading essentials');
+        });
+        this.load.start();
 
         // Fade In
         if (this.transitions) this.transitions.fadeIn();

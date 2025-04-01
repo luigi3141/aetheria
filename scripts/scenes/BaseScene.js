@@ -14,7 +14,7 @@ export default class BaseScene extends Phaser.Scene {
     
         super(config);
         console.log(`🧩 BaseScene constructor for ${config.key}`);
-      }
+    }
 
     /**
      * Initialize base scene components
@@ -49,26 +49,38 @@ export default class BaseScene extends Phaser.Scene {
                 console.warn(`⚠️ initializeSafeAssetHandling failed in ${this.scene.key}:`, e);
             }
         }
-    }
-    
-    /**
-     * Safely play a sound with error handling
-     * @param {string} key - Sound key
-     * @param {object} config - Sound configuration
-     */
-    safePlaySound(key, config = { volume: 0.5 }) {
-        try {
-            // Check if the sound exists in the cache
-            if (this.sound.get(key)) {
-                this.sound.play(key, config);
-            } else {
-                console.warn(`Sound ${key} not found in cache`);
-            }
-        } catch (error) {
-            console.warn(`Error playing sound ${key}: ${error.message}`);
+
+        // Resume audio context on first interaction if needed
+        if (this.sound?.context?.state === 'suspended') {
+            window.addEventListener('pointerdown', () => {
+                this.sound.context.resume();
+            }, { once: true });
         }
     }
-    
+
+    /**
+     * Safely play a sound, handling cases where the sound isn't loaded yet
+     * @param {string} key - The key of the sound to play
+     * @returns {Phaser.Sound.BaseSound|null} The sound object if successfully played
+     */
+    safePlaySound(key) {
+        try {
+            const sound = this.sound.get(key);
+            if (sound) {
+                return sound.play();
+            } else if (this.cache.audio.exists(key)) {
+                // Load it on the fly if cached
+                return this.sound.add(key).play();
+            } else {
+                console.warn(`Sound ${key} not found in cache for scene ${this.scene.key}`);
+                return null;
+            }
+        } catch (e) {
+            console.warn(`Error playing sound ${key} in scene ${this.scene.key}:`, e);
+            return null;
+        }
+    }
+
     /**
      * Safely display an image with error handling
      * @param {number} x - X position

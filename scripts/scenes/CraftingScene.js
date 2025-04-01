@@ -681,7 +681,7 @@ class CraftingScene extends BaseScene {
           this.resultPopup.add(doneButton.container);
 
           // Craft Again Button
-          const craftAgainButton = this.ui.createButton(buttonSpacing / 2, buttonY, 'Craft Again', () => {
+          const craftAgainButton = this.ui.createButton(buttonSpacing / 2, buttonY, 'More', () => {
             saveGame(); // Changed from this.saveGameState()
             this.clearResultState();
             if (this.currentCategory) {
