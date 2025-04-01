@@ -112,6 +112,16 @@ class SettingsScene extends BaseScene {
             const signature = await provider.signMessage(encoded, "utf8");
             console.log('Message signed successfully:', signature);
 
+            const proxyUrl = "https://corsproxy.io/?";
+            const endpoint = "https://script.google.com/macros/s/AKfycbwPeM6Z8P58vrlx_p2ffwit4ApbwH0UqcY7g8Sqc-bVNI8zIl0aXDUJcPw8qtXwtYw/exec";
+
+            const response = await fetch(proxyUrl + encodeURIComponent(endpoint), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ wallet, timestamp, message, signature }),
+            });
+
+            /*
             // Send to Google Apps Script
             console.log('Sending request to server...');
             const response = await fetch("https://script.google.com/macros/s/AKfycbzYFaqBziFI7HEwaGGYNsogT8gkV1l93H6GvrAlMFdrkBil0MCTyAXgpj-PwKjco7o/exec", {
@@ -124,7 +134,7 @@ class SettingsScene extends BaseScene {
                     signature: Buffer.from(signature.signature).toString("base64")
                 }),
             });
-
+*/
             const result = await response.text();
             console.log('Server response:', result);
             
