@@ -24,12 +24,18 @@ export function saveGame() {
     }
 }
 
-export function loadGame() {
+export function loadGame(preserveCurrentHealth = false) {
      console.log("[SaveLoadManager] Loading gameState from localStorage...");
      const savedState = window.localStorage.getItem(SAVE_KEY);
      if (savedState) {
          try {
              const parsedState = JSON.parse(savedState);
+             
+             // Store current health/mana if needed
+             const currentHealth = preserveCurrentHealth ? gameState.player?.health : undefined;
+             const currentMana = preserveCurrentHealth ? gameState.player?.mana : undefined;
+             console.log("[SaveLoadManager] Current health state:", { health: currentHealth, mana: currentMana });
+
              // --- Perform selective/deep merge ---
              if (parsedState.player) {
                   // Merge loaded player data into existing gameState.player if it exists,
@@ -50,7 +56,14 @@ export function loadGame() {
                   // Ensure critical nested objects exist after load
                   if (!gameState.player.inventory) gameState.player.inventory = { items: [], equipped: {}, maxItems: 50 };
                   if (!gameState.player.inventory.items) gameState.player.inventory.items = [];
-                   if (!gameState.player.inventory.equipped) gameState.player.inventory.equipped = {};
+                  if (!gameState.player.inventory.equipped) gameState.player.inventory.equipped = {};
+
+                  // Restore health/mana if needed
+                  if (preserveCurrentHealth && currentHealth !== undefined && currentMana !== undefined) {
+                      console.log("[SaveLoadManager] Restoring health state:", { health: currentHealth, mana: currentMana });
+                      gameState.player.health = currentHealth;
+                      gameState.player.mana = currentMana;
+                  }
              }
              gameState.currentDungeon = parsedState.currentDungeon || null;
              // ... merge other state parts ...

@@ -23,10 +23,19 @@ class CombatResultScene extends BaseScene {
 
     init(data) {
         console.log("CombatResultScene Init:", data);
-        console.log("Player State:", gameState.player);
+        console.log("Player State:", {
+            health: gameState.player?.health,
+            maxHealth: gameState.player?.maxHealth,
+            mana: gameState.player?.mana,
+            maxMana: gameState.player?.maxMana
+        });
 
-        // Load saved state first
-        loadGame();
+        // Store current health/mana
+        const currentHealth = gameState.player?.health;
+        const currentMana = gameState.player?.mana;
+
+        // Load saved state, preserving health since we're in combat
+        loadGame(true);
         
         this.combatResult = gameState.combatResult;
         if (!this.combatResult) {

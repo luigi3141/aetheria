@@ -39,16 +39,19 @@ class DungeonScene extends BaseScene {
         console.log("DungeonScene init - Player state:", {
             level: gameState.player?.level,
             name: gameState.player?.name,
-            class: gameState.player?.class
+            class: gameState.player?.class,
+            health: gameState.player?.health,
+            maxHealth: gameState.player?.maxHealth
         });
 
         // Store current dungeon data before loading saved state
         const currentDungeonData = data?.currentDungeon || gameState.currentDungeon;
         const fromOverworld = data?.fromOverworld || false;
+        
         console.log("DungeonScene init - Received dungeon data:", currentDungeonData, "fromOverworld:", fromOverworld);
 
-        // Load saved state
-        loadGame();
+        // Load saved state, preserving health if not from overworld
+        loadGame(!fromOverworld);
 
         // If coming from overworld, always start at level 1
         if (fromOverworld) {
@@ -79,6 +82,13 @@ class DungeonScene extends BaseScene {
                 console.error(`No dungeon configuration found for id: ${currentDungeonData.id}`);
             }
         }
+
+        console.log("DungeonScene init - Final health state:", {
+            health: gameState.player.health,
+            maxHealth: gameState.player.maxHealth,
+            mana: gameState.player.mana,
+            maxMana: gameState.player.maxMana
+        });
 
         console.log("DungeonScene init - Inventory state:", {
             itemCount: gameState.player.inventory?.items?.length || 0,
