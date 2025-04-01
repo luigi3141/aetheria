@@ -160,35 +160,36 @@ class DungeonSelectScene extends BaseScene {
                     console.log('Retrieved dungeon data:', dungeonData);
                     
                     // Set current dungeon in game state with complete data
-                    gameState.currentDungeon = {
+                    const initialDungeonData = {
                         id: dungeonData.id,
                         name: dungeonData.name,
                         level: 1, // <<< START AT LEVEL 1
-                        minRooms: dungeonData.minRooms, // Keep these if your design uses them
-                        maxRooms: dungeonData.maxRooms, // Keep these if your design uses them
+                        minRooms: dungeonData.minRooms,
+                        maxRooms: dungeonData.maxRooms,
                         backgroundKey: dungeonData.backgroundKey,
                         minLevel: dungeonData.minLevel,
-                        maxLevel: dungeonData.maxLevel, // Add max level if defined in config
-                        enemyTypes: dungeonData.enemyTypes, // Get enemy types from config
-                        bossTypes: dungeonData.bossTypes, // Get boss types from config
-                        // Add any other relevant dungeon properties from config
+                        maxLevel: dungeonData.maxLevel,
+                        enemyTypes: dungeonData.enemyTypes,
+                        bossTypes: dungeonData.bossTypes,
                     };
+                    
+                    // Store in gameState
+                    gameState.currentDungeon = initialDungeonData;
                     console.log('Set gameState.currentDungeon to:', gameState.currentDungeon);
 
-                    // --- >>> USE TRANSITION MANAGER VIA navigationManager <<< ---
+                    // Use navigationManager with explicit dungeon data
                     console.log('Using navigationManager to transition to DungeonScene');
-                    // navigationManager handles storing previousScene and calling start
-                    // BaseScene's initializeScene should ensure this.transitions exists
                     if (this.transitions) {
                         this.transitions.fade(() => {
-                            // The callback now just tells navigationManager where to go
-                            navigationManager.navigateTo(this, 'DungeonScene');
-                            // NOTE: We pass 'this' (DungeonSelectScene) to navigateTo,
-                            // it will internally call this.scene.start('DungeonScene')
+                            navigationManager.navigateTo(this, 'DungeonScene', {
+                                currentDungeon: initialDungeonData // Pass dungeon data explicitly
+                            });
                         });
                     } else {
-                         console.warn("TransitionManager not found! Starting DungeonScene directly.");
-                         navigationManager.navigateTo(this, 'DungeonScene'); // Fallback without fade
+                        console.warn("TransitionManager not found!");
+                        navigationManager.navigateTo(this, 'DungeonScene', {
+                            currentDungeon: initialDungeonData // Pass dungeon data explicitly
+                        });
                     }
                 },
                 {

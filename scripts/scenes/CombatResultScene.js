@@ -28,17 +28,11 @@ class CombatResultScene extends BaseScene {
         // Load saved state first
         loadGame();
         
-        // Store combat result data - check both scene data and gameState
-        if (data && data.combatResult) {
-            this.combatResult = data.combatResult;
-            console.log("Combat Result from scene data:", this.combatResult);
-        } else if (gameState.combatResult) {
-            // Fallback to gameState if scene data is missing
-            this.combatResult = gameState.combatResult;
-            console.log("Combat Result from gameState:", this.combatResult);
-        } else {
-            console.error("No combat result data in init!");
-            this.combatResult = null;
+        this.combatResult = gameState.combatResult;
+        if (!this.combatResult) {
+            console.error("No combat result data found!");
+            navigationManager.navigateTo(this, 'OverworldScene');
+            return;
         }
 
         // Store the dungeon data from the combat result
@@ -49,19 +43,8 @@ class CombatResultScene extends BaseScene {
             return;
         }
 
-        // Ensure we have the dungeon ID
-        if (!this.dungeonData.id) {
-            const dungeonConfig = getDungeonData(gameState.currentDungeon?.id);
-            if (dungeonConfig) {
-                this.dungeonData.id = dungeonConfig.id;
-            } else {
-                console.error("Could not find dungeon configuration!");
-                navigationManager.navigateTo(this, 'OverworldScene');
-                return;
-            }
-        }
-
-        console.log("CombatResultScene init - Dungeon data:", this.dungeonData);
+        // Log initial dungeon data
+        console.log("CombatResultScene init - Initial dungeon data:", this.dungeonData);
     }
 
     preload() {
@@ -174,48 +157,39 @@ class CombatResultScene extends BaseScene {
     continueExploring() {
         console.log("CombatResultScene: Continue Exploring selected.");
 
-        // Store current dungeon data, ensuring we have the ID
-        const currentDungeonData = { 
-            ...gameState.currentDungeon,
-            id: this.dungeonData.id // Ensure we preserve the dungeon ID
-        };
+        // Store current dungeon data
+        const currentDungeonData = { ...gameState.currentDungeon };
 
         // --- >>> INCREMENT DUNGEON LEVEL ON VICTORY <<< ---
         if (this.combatResult?.outcome === 'victory' && currentDungeonData) {
-            currentDungeonData.level += 1;
+            currentDungeonData.level = (currentDungeonData.level || 1) + 1;
             console.log(`Advanced to Dungeon Level: ${currentDungeonData.level}`);
-            // Optional: Check if max level reached, trigger boss, etc.
+            
+            // Optional: Check if max level reached
             const dungeonConfig = getDungeonData(currentDungeonData.id);
             if (dungeonConfig && currentDungeonData.level > dungeonConfig.maxLevel) {
                 console.log("Max dungeon level reached!");
-                // Handle reaching the end - maybe force Overworld or trigger final boss?
-                // For now, let's just cap it or log it.
-                // currentDungeonData.level = dungeonConfig.maxLevel;
             }
         }
-        // --- <<< END LEVEL INCREMENT >>> ---
         
         // Save game state with updated dungeon data
         gameState.currentDungeon = currentDungeonData;
         saveGame();
 
-        console.log("Calling this.transitions.fade..."); // Log before calling
-        if (!this.transitions) { console.error("!!! this.transitions is missing !!!"); return; } // Add check
+        console.log("Calling this.transitions.fade...");
+        if (!this.transitions) { console.error("!!! this.transitions is missing !!!"); return; }
     
         this.transitions.fade(() => {
-            // --- ADD THIS LOG ---
             console.log(">>> Fade callback started <<<");
-            // --- END ADD ---
-            if (!navigationManager) { console.error("!!! navigationManager is missing !!!"); return; } // Add check
+            if (!navigationManager) { console.error("!!! navigationManager is missing !!!"); return; }
     
             console.log("Attempting navigation via navigationManager...");
             navigationManager.navigateTo(this, 'DungeonScene', { 
                 fromCombat: true,
-                currentDungeon: currentDungeonData // Pass dungeon data explicitly
+                currentDungeon: currentDungeonData
             });
             console.log("navigationManager.navigateTo called.");
         });
-        console.log("this.transitions.fade call finished."); // Log after calling
     }
 
     /**

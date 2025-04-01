@@ -44,6 +44,7 @@ class DungeonScene extends BaseScene {
 
         // Store current dungeon data before loading saved state
         const currentDungeonData = data?.currentDungeon || gameState.currentDungeon;
+        console.log("DungeonScene init - Received dungeon data:", currentDungeonData);
 
         // Load saved state
         loadGame();
@@ -52,13 +53,20 @@ class DungeonScene extends BaseScene {
         if (currentDungeonData) {
             const dungeonConfig = getDungeonData(currentDungeonData.id);
             if (dungeonConfig) {
-                // Merge config data with current state, preserving the level
+                // Merge config data with current state
                 gameState.currentDungeon = {
-                    ...dungeonConfig,
-                    ...currentDungeonData,
-                    name: dungeonConfig.name // Ensure we get the name from config
+                    ...dungeonConfig, // Base properties from config
+                    level: currentDungeonData.level || 1, // Preserve level or default to 1
+                    id: currentDungeonData.id, // Keep the current ID
+                    name: dungeonConfig.name // Always use config name
                 };
                 this.currentDungeon = gameState.currentDungeon;
+                
+                console.log("DungeonScene init - Merged dungeon data:", {
+                    id: gameState.currentDungeon.id,
+                    name: gameState.currentDungeon.name,
+                    level: gameState.currentDungeon.level
+                });
             } else {
                 console.error(`No dungeon configuration found for id: ${currentDungeonData.id}`);
             }
