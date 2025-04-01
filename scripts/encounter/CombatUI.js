@@ -168,9 +168,11 @@ export default class CombatUI {
     }
 
     updatePlayerMana() {
-        const player = gameState.player;
-        if (this.statusBars.playerMana) { // Check existence
+        if (this.statusBars.playerMana) {
+            const player = gameState.player;
             this.statusBars.playerMana.update(player.mana, player.maxMana);
+            // Update special attack button state when mana changes
+            this.updateSpecialAttackButton();
         }
     }
 
@@ -219,12 +221,30 @@ export default class CombatUI {
     
     enableActionButtons() {
         console.log("[CombatUI] Enabling action buttons...");
-        Object.values(this.buttons).forEach((button) => { // Simplified loop
+        // Enable basic attack and retreat buttons
+        ['attack', 'retreat'].forEach(buttonKey => {
+            const button = this.buttons[buttonKey];
             if (button && typeof button.enable === 'function') {
-                 button.enable();
-                 // if(button.container) button.container.setAlpha(1); // Optional alpha reset
+                button.enable();
             }
         });
+        
+        // Special handling for special attack button
+        this.updateSpecialAttackButton();
+    }
+
+    updateSpecialAttackButton() {
+        const specialButton = this.buttons.special;
+        if (!specialButton || typeof specialButton.enable !== 'function') return;
+
+        const player = gameState.player;
+        const manaCost = 10; // TODO: Get from ability data
+
+        if (player && player.mana >= manaCost) {
+            specialButton.enable();
+        } else {
+            specialButton.disable();
+        }
     }
 
     disableActionButtons() {
@@ -232,7 +252,6 @@ export default class CombatUI {
          Object.values(this.buttons).forEach((button) => { // Simplified loop
              if (button && typeof button.disable === 'function') {
                   button.disable();
-                  // if(button.container) button.container.setAlpha(0.5); // Optional alpha set
              }
          });
      }

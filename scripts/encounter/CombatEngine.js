@@ -81,22 +81,6 @@ export default class CombatEngine {
             return; // Exit if state is invalid
         }
 
-        // --- Check Resources (e.g., Mana) ---
-        let sufficientResources = true;
-        if (attackType === 'special') { // Example check for special attack
-            const manaCost = 10; // TODO: Get mana cost from ability data
-            if (player.mana < manaCost) {
-                this.scene.combatLog.addLogEntry("Not enough mana!", true, '#ffaaaa');
-                sufficientResources = false;
-                // Don't end turn here, let player choose another action
-                return;
-            }
-             // Deduct resources ONLY if attack proceeds
-             // gameState.player.mana -= manaCost; // Move deduction after damage calc
-        }
-
-        if (!sufficientResources) return; // Stop if resources insufficient
-
         this.turnInProgress = true;
         this.disablePlayerActions();
 
@@ -104,9 +88,13 @@ export default class CombatEngine {
         // 1. Determine Base Attack Power
         let baseAttackPower = 0;
         if (attackType === 'special') {
-            // TODO: Base this on the specific special ability being used
-            // For now, use calculated magic attack
+            const manaCost = 10; // TODO: Get mana cost from ability data
             baseAttackPower = player.currentMagicAttack || player.intelligence || 10;
+            // Deduct mana cost
+            gameState.player.mana = Math.max(0, player.mana - manaCost);
+            if (this.scene.combatUI) {
+                this.scene.combatUI.updatePlayerMana();
+            }
         } else { // Basic attack
             baseAttackPower = player.currentAttack || player.strength || 10;
         }
@@ -130,14 +118,6 @@ export default class CombatEngine {
         const actualDamage = Math.max(1, randomizedRawDamage - enemyDefense);
 
         // --- Apply Effects ---
-         // Deduct resources now that attack is confirmed
-         if (attackType === 'special') {
-            const manaCost = 10; // Example cost
-            // Ensure mana doesn't go negative (should be checked earlier too)
-            gameState.player.mana = Math.max(0, player.mana - manaCost);
-            this.scene.combatUI.updatePlayerMana();
-        }
-
         // Apply damage to enemy health
         enemy.health = Math.max(0, enemy.health - actualDamage);
 
@@ -346,6 +326,7 @@ export default class CombatEngine {
         console.log("Starting Enemy Turn");
         this.currentTurn = 'enemy';
         this.turnInProgress = true; // Keep actions disabled
+        this.disablePlayerActions(); // Ensure buttons are disabled at start of enemy turn
 
         // Add delay before enemy acts for pacing
         this.scene.time.delayedCall(1200, () => { // Increased delay
@@ -355,16 +336,18 @@ export default class CombatEngine {
         });
     }
 
-    // Added method to explicitly end the enemy turn and switch back to player
     endEnemyTurn() {
         if (this.gameOver) return; // Don't switch if game ended
 
         console.log("Ending Enemy Turn");
         this.currentTurn = 'player';
         this.turnInProgress = false;
-        this.enablePlayerActions();
-        // TODO: Process end-of-turn effects (like poison/regen) for the enemy here?
-        this.scene.combatLog.addLogEntry("Your turn!", false, '#ffff00'); // Notify player
+        this.scene.time.delayedCall(100, () => { // Small delay before enabling actions
+            if (!this.gameOver) {
+                this.enablePlayerActions();
+                this.scene.combatLog.addLogEntry("Your turn!", false, '#ffff00');
+            }
+        });
     }
 
     // Helper to safely play sounds
