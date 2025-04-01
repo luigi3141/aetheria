@@ -131,7 +131,8 @@ export default class EncounterScene extends BaseScene {
         // Add background using the key determined in preload
         this.add.image(0, 0, this.backgroundKeyToUse || 'combat-bg')
             .setOrigin(0)
-            .setDisplaySize(this.cameras.main.width, this.cameras.main.height);
+            .setDisplaySize(this.cameras.main.width, this.cameras.main.height)
+            .setTint(0x999999); // Apply a dark gray tint for better contrast
 
         // Store enemies in gameState AFTER generation and assignment
         gameState.combatData.enemies = this.enemies;

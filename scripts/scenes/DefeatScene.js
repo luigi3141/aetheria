@@ -58,6 +58,15 @@ class DefeatScene extends BaseScene {
       } else { // Defeat
           explanation = "Overcome by your foe, you collapse.\nKind souls brought you back to town to recover.\nUnfortunately, some belongings were lost in the ordeal...";
       }
+
+      // Add a dark rectangle behind the text
+const textWidth = width * 0.7;
+const textHeight = 70; // Adjust height as needed
+const rect = this.add.rectangle(width / 2, height * 0.30, textWidth, textHeight, 0x000000, 0.7)
+    .setOrigin(0.5)
+    .setDepth(1);
+
+    // Add the explanation text
       this.add.text(width / 2, height * 0.30, explanation, {
           fontFamily: "'VT323'", fontSize: this.ui.fontSize.md + 'px', fill: '#ffffff',
           align: 'center', wordWrap: { width: width * 0.7 }
@@ -72,7 +81,7 @@ class DefeatScene extends BaseScene {
       });
 
       // Title for lost items section
-       this.add.text(width / 2, lostItemsYStart , 'Items Lost:', {
+       this.add.text(width / 2, lostItemsYStart +20, 'Items Lost:', {
             fontFamily: "'Press Start 2P'", fontSize: this.ui.fontSize.sm + 'px', fill: '#ffdddd'
        }).setOrigin(0.5, 0).setDepth(2); // Place above panel content slightly
 
@@ -81,7 +90,7 @@ class DefeatScene extends BaseScene {
         };
         const itemSpacing = 20;
         const textStartX = width * 0.5; // Center text
-        let currentY = lostItemsYStart + 35; // Start below title
+        let currentY = lostItemsYStart + 50; // Start below title
 
         if (this.lostItems.length === 0) {
             const noLossText = this.outcome === 'retreat'
@@ -104,7 +113,7 @@ class DefeatScene extends BaseScene {
 
 
       // --- Return Button ---
-      this.ui.createButton(width / 2, height * 0.85, 'Return to Town', () => {
+      this.ui.createButton(width / 2, height * 0.85, 'Overworld', () => {
           saveGame(); // Save after items are lost
           navigationManager.navigateTo(this, 'OverworldScene');
       }, { width: 200, height: 50, depth: 5 }); // Ensure button on top
