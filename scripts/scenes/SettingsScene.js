@@ -99,6 +99,9 @@ class SettingsScene extends BaseScene {
             const wallet = provider.publicKey.toString();
             console.log('Processing wallet:', wallet);
             
+            // Store wallet info in gameState
+            gameState.wallet = wallet;
+            
             // Generate timestamp
             const timestamp = new Date().toISOString();
             console.log('Generated timestamp:', timestamp);
@@ -116,44 +119,21 @@ class SettingsScene extends BaseScene {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  wallet,
-                  timestamp,
-                  message,
-                  signature: Buffer.from(signature.signature).toString("base64")
-                }),
-              });
-              
-            /*
-            const proxyUrl = "https://corsproxy.io/?";
-            const endpoint = "https://script.google.com/macros/s/AKfycbwPeM6Z8P58vrlx_p2ffwit4ApbwH0UqcY7g8Sqc-bVNI8zIl0aXDUJcPw8qtXwtYw/exec";
-
-            const response = await fetch(proxyUrl + encodeURIComponent(endpoint), {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ wallet, timestamp, message, signature }),
-            });
-            */
-
-            /*
-            // Send to Google Apps Script
-            console.log('Sending request to server...');
-            const response = await fetch("https://script.google.com/macros/s/AKfycbzYFaqBziFI7HEwaGGYNsogT8gkV1l93H6GvrAlMFdrkBil0MCTyAXgpj-PwKjco7o/exec", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
                     wallet,
                     timestamp,
                     message,
                     signature: Buffer.from(signature.signature).toString("base64")
                 }),
             });
-*/
+
             const result = await response.text();
             console.log('Server response:', result);
             
             if (result === "Success") {
                 this.giveGoldToPlayer();
             } else if (result === "Already claimed") {
+                // If already claimed, still mark as verified but don't give gold again
+                gameState.walletVerified = true;
                 alert("You've already claimed your reward!");
             } else {
                 console.error('Unexpected server response:', result);
@@ -166,9 +146,16 @@ class SettingsScene extends BaseScene {
     }
 
     giveGoldToPlayer() {
-        const rewardAmount = 1000; // Amount of gold to give
-        gameState.player.gold = (gameState.player.gold || 0) + rewardAmount;
-        alert(`Congratulations! You received ${rewardAmount} gold!`);
+        const rewardAmount = 1000;
+        gameState.walletVerified = true;
+        
+        // Only give gold if game is already started
+        if (gameState.player) {
+            gameState.player.gold = (gameState.player.gold || 0) + rewardAmount;
+            alert(`Congratulations! You received ${rewardAmount} gold!`);
+        } else {
+            alert(`Wallet verified! You'll receive ${rewardAmount} gold when you start a new game.`);
+        }
     }
 }
 

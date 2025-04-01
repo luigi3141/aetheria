@@ -203,19 +203,22 @@ class StartScene extends BaseScene {
     }
 
     startNewGame() {
-        console.log('Starting new game...');
-        if (this.hasSavedGame) {
-            const confirmed = confirm("Starting a new game will overwrite your existing save. Are you sure?");
-            if (!confirmed) {
-                return; // Stop if user cancels
+        // Initialize new player state
+        gameState.player = {
+            gold: gameState.walletVerified ? 1000 : 0,  // Start with 1000 gold if wallet is verified
+            health: 100,
+            maxHealth: 100,
+            level: 1,
+            experience: 0,
+            inventory: [],
+            equipment: {
+                weapon: null,
+                armor: null
             }
-        }
-        // Clear previous game state and navigate
-        clearSaveGame();
-        console.log('Cleared previous game state');
-        // Reset gameState object
-        gameState.player = null;
-        gameState.currentDungeon = null;
+        };
+
+        // Navigate to character select
+        this.safePlaySound('button-click');
         navigationManager.navigateTo(this, 'CharacterSelectScene');
     }
 
