@@ -37,27 +37,26 @@ class StartScene extends BaseScene {
             if(refParam) gameState.portalReferrer = refParam;
             if(incomingUsername) gameState.portalUsername = incomingUsername; // Store username
             // User came from the portal - check if they have a saved game
-            const savedState = window.localStorage.getItem('gameState');
-            if (savedState) {
-                console.log("Saved game found, resuming...");
-                try {
-                    const parsedState = JSON.parse(savedState);
+            try {
+                loadGame();
+                if (gameState.player) {
+                    console.log("Saved game found, resuming...");
                     // --- Deep merge or selective update of gameState ---
                     // Avoid overwriting everything, only update necessary parts
-                    if (parsedState.player) {
+                    if (gameState.player) {
                         // Selectively update player data
-                        gameState.player = { ...gameState.player, ...parsedState.player };
+                        gameState.player = { ...gameState.player, ...gameState.player };
                          // Ensure nested objects like inventory are handled (might need deep merge library or manual merge)
-                         if (parsedState.player.inventory) {
-                             gameState.player.inventory = { ...gameState.player.inventory, ...parsedState.player.inventory };
+                         if (gameState.player.inventory) {
+                             gameState.player.inventory = { ...gameState.player.inventory, ...gameState.player.inventory };
                              // Make sure items array isn't overwritten if gameState already has one, merge instead if needed
-                             if (Array.isArray(parsedState.player.inventory.items)) {
-                                  gameState.player.inventory.items = parsedState.player.inventory.items; // Replace for now, consider merging later
+                             if (Array.isArray(gameState.player.inventory.items)) {
+                                  gameState.player.inventory.items = gameState.player.inventory.items; // Replace for now, consider merging later
                              }
                          }
                     }
                     // Update other parts of gameState if needed (quests, dungeons etc.)
-                    gameState.currentDungeon = parsedState.currentDungeon || null; // Example
+                    gameState.currentDungeon = gameState.currentDungeon || null; // Example
 
                     console.log("GameState updated from save.");
                     // Store referring URL if provided
@@ -69,16 +68,16 @@ class StartScene extends BaseScene {
                     // Directly navigate to OverworldScene (skip menus)
                     navigationManager.navigateTo(this, 'OverworldScene');
                     return; // Stop further execution of create
-                } catch (e) {
-                    console.error("Error parsing saved game state:", e);
-                    // Proceed to normal menu creation if parsing fails
-                    window.localStorage.removeItem('gameState'); // Clear corrupted save
+                } else {
+                    console.log("No saved game found, proceeding to character select...");
+                    // Store referring URL if provided
+                    navigationManager.navigateTo(this, 'CharacterSelectScene', { portalUsername: incomingUsername }); // <<< Pass data
+                    return; // Stop further execution
                 }
-            } else {
-                 console.log("No saved game found, proceeding to character select...");
-                 // Store referring URL if provided
-                 navigationManager.navigateTo(this, 'CharacterSelectScene', { portalUsername: incomingUsername }); // <<< Pass data
-                 return; // Stop further execution
+            } catch (e) {
+                console.error("Error parsing saved game state:", e);
+                // Proceed to normal menu creation if parsing fails
+                window.localStorage.removeItem('gameState'); // Clear corrupted save
             }
         }
         // --- End Portal Entry Check ---

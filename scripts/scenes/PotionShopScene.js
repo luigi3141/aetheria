@@ -5,6 +5,7 @@ import navigationManager from '../navigation/NavigationManager.js';
 import gameState from '../utils/gameState.js';
 import items from '../data/items.js'; // For item data
 import { ASSET_PATHS } from '../config/AssetConfig.js';
+import { saveGame } from '../utils/SaveLoadManager.js';
 
 const { getItemData } = items;
 
@@ -431,7 +432,7 @@ class PotionShopScene extends BaseScene {
             this.updateBuyButtonStates();
             this.showFeedback(`+1 ${potion.name} added!`, '#aaffaa');
             this.safePlaySound('coin-sound'); // Need to load 'coin-sound' asset
-            this.saveGameState(); // Optional: Save state
+            saveGame(); // Changed from this.saveGameState()
         }
     }
 
@@ -593,8 +594,7 @@ class PotionShopScene extends BaseScene {
                 this.updateGoldDisplay();
                 this.showFeedback(`Sold ${itemData.inGameName} for ${sellPrice} G!`, '#aaffaa');
                 this.safePlaySound('coin-sound');
-                this.saveGameState(); // Optional
-
+                saveGame(); // Changed from this.saveGameState()
             } else { /* ... error handling, refund gold ... */
                   console.error(`Item mismatch or invalid index ${inventoryIndex} when selling.`);
                   gameState.player.gold -= sellPrice; // Refund
@@ -664,15 +664,6 @@ class PotionShopScene extends BaseScene {
              onComplete: () => { if (feedbackText.active) feedbackText.destroy(); }
          });
      }
-
-     saveGameState() {
-        console.log("[PotionShopScene] Saving gameState to localStorage...");
-        try {
-            const stateToSave = { player: gameState.player /* Add other relevant state parts if needed */ };
-            window.localStorage.setItem('gameState', JSON.stringify(stateToSave));
-            console.log("[PotionShopScene] GameState saved.");
-        } catch (e) { console.error("[PotionShopScene] Error saving gameState:", e); }
-    }
 
      shutdown() {
          // Destroy items currently on display

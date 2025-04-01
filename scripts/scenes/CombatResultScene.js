@@ -9,6 +9,7 @@ import items from '../data/items.js';
 import CharacterManager from '../utils/CharacterManager.js';
 import { getDungeonData } from '../data/DungeonConfig.js';
 import HealthManager from '../utils/HealthManager.js';
+import { saveGame, loadGame } from '../utils/SaveLoadManager.js'; // Added import
 
 const { getItemData } = items;
 
@@ -25,18 +26,8 @@ class CombatResultScene extends BaseScene {
         console.log("Player State:", gameState.player);
 
         // Load saved state first
-        const savedState = window.localStorage.getItem('gameState');
-        if (savedState) {
-            const parsedState = JSON.parse(savedState);
-            if (parsedState.player) {
-                // Update only inventory and stats, not scene-specific data
-                gameState.player.inventory = parsedState.player.inventory;
-                gameState.player.gold = parsedState.player.gold;
-                gameState.player.experience = parsedState.player.experience;
-                gameState.player.experienceToNextLevel = parsedState.player.experienceToNextLevel;
-            }
-        }
-
+        loadGame();
+        
         // Store combat result data - check both scene data and gameState
         if (data && data.combatResult) {
             this.combatResult = data.combatResult;
@@ -478,37 +469,8 @@ class CombatResultScene extends BaseScene {
             console.log("CombatResultScene - Final state:", JSON.parse(JSON.stringify(finalState)));
         }
 
-        // Save only the necessary game state data
-        const savedState = {
-            player: {
-                name: gameState.player.name,
-                class: gameState.player.class,
-                level: gameState.player.level,
-                health: gameState.player.health,
-                maxHealth: gameState.player.maxHealth,
-                mana: gameState.player.mana,
-                maxMana: gameState.player.maxMana,
-                experience: gameState.player.experience,
-                experienceToNextLevel: gameState.player.experienceToNextLevel,
-                gold: gameState.player.gold,
-                inventory: {
-                    items: gameState.player.inventory.items,
-                    maxItems: gameState.player.inventory.maxItems,
-                    equipped: gameState.player.inventory.equipped
-                }
-            }
-        };
-
-        // Save state and verify it was saved correctly
-        window.localStorage.setItem('gameState', JSON.stringify(savedState));
-        const verifyState = window.localStorage.getItem('gameState');
-        if (verifyState) {
-            const parsedVerify = JSON.parse(verifyState);
-            console.log("Verified saved state:", {
-                itemCount: parsedVerify.player.inventory.items.length,
-                items: parsedVerify.player.inventory.items.map(i => `${i.itemId} (x${i.quantity})`)
-            });
-        }
+        // Save game state
+        saveGame();
     }
     
     displayLevelUpMessage() {

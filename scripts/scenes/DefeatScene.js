@@ -4,6 +4,7 @@ import BaseScene from './BaseScene.js';
 import navigationManager from '../navigation/NavigationManager.js'; // For navigation
 import UIManager from '../ui/UIManager.js'; // For UI elements
 import { ASSET_PATHS } from '../config/AssetConfig.js'; // For background
+import { saveGame } from '../utils/SaveLoadManager.js'; // Added import
 
 class DefeatScene extends BaseScene {
     constructor() {
@@ -104,9 +105,7 @@ class DefeatScene extends BaseScene {
 
       // --- Return Button ---
       this.ui.createButton(width / 2, height * 0.85, 'Return to Town', () => {
-          // Optional: Clear combat state? Might be good practice
-          // gameState.combatResult = null;
-          // gameState.combatData = null;
+          saveGame(); // Save after items are lost
           navigationManager.navigateTo(this, 'OverworldScene');
       }, { width: 200, height: 50, depth: 5 }); // Ensure button on top
     } // End create()

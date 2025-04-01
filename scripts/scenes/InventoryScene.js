@@ -13,6 +13,7 @@ const { getItemData } = items;
 import HealthManager from '../utils/HealthManager.js';
 import BaseScene from './BaseScene.js';
 import CharacterManager from '../utils/CharacterManager.js';
+import { loadGame } from '../utils/SaveLoadManager.js'; // Added import
 
 class InventoryScene extends BaseScene {
     constructor() {
@@ -50,39 +51,14 @@ class InventoryScene extends BaseScene {
     init(data) {
         this.returnSceneKey = data?.returnSceneKey || gameState.previousScene || 'OverworldScene';
         console.log(`InventoryScene init - Will return/wake to ${this.returnSceneKey}`);
-        console.log("[Inv Init] gameState inventory BEFORE localStorage load:", JSON.parse(JSON.stringify(gameState.player?.inventory?.items || 'No Inventory')));
+        console.log("[Inv Init] gameState inventory BEFORE load:", JSON.parse(JSON.stringify(gameState.player?.inventory?.items || 'No Inventory')));
 
-        // Load saved state
-        const savedState = window.localStorage.getItem('gameState');
-        if (savedState) {
-            const parsedState = JSON.parse(savedState);
-            if (parsedState.player) {
-                // Update only inventory and stats, not scene-specific data
-                console.log("[Inv Init] Loading from localStorage...");
+        // Load saved state using SaveLoadManager
+        loadGame();
 
-                // Make sure to initialize if player or inventory doesn't exist
-                if (!gameState.player) gameState.player = {};
-                if (!gameState.player.inventory) gameState.player.inventory = { items: [], equipped: {}, maxItems: 50 };
-
-
-                gameState.player.inventory = parsedState.player.inventory;
-                gameState.player.gold = parsedState.player.gold;
-                gameState.player.experience = parsedState.player.experience;
-                gameState.player.experienceToNextLevel = parsedState.player.experienceToNextLevel;
-                // Add missing stats if they exist in save
-                gameState.player.health = parsedState.player.health;
-                gameState.player.maxHealth = parsedState.player.maxHealth;
-                gameState.player.mana = parsedState.player.mana;
-                gameState.player.maxMana = parsedState.player.maxMana;
-
-                console.log("[Inv Init] gameState inventory AFTER localStorage load:", JSON.parse(JSON.stringify(gameState.player.inventory.items)));
-
-            }
-        } else {
-             // Ensure player and inventory exist even if no save data
-             if (!gameState.player) gameState.player = { name: 'Hero', class: 'Warrior', level: 1 /* ... other defaults ... */ };
-             if (!gameState.player.inventory) gameState.player.inventory = { items: [], equipped: {}, maxItems: 50 };
-        }
+        // Ensure player and inventory exist even if no save data
+        if (!gameState.player) gameState.player = { name: 'Hero', class: 'Warrior', level: 1 /* ... other defaults ... */ };
+        if (!gameState.player.inventory) gameState.player.inventory = { items: [], equipped: {}, maxItems: 50 };
 
         // Log inventory state on scene init
         console.log('InventoryScene init - Final Inventory state:', {

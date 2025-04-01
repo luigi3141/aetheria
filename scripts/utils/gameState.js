@@ -17,7 +17,7 @@ const gameState = {
         gold: 50,
         inventory: {
             items: [],
-            maxItems: 20,
+            maxItems: 50,
             equipped: {
                 weapon: null,
                 armor: null,

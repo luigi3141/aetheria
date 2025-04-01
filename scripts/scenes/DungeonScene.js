@@ -6,6 +6,7 @@ import TransitionManager from '../ui/TransitionManager.js';
 import HealthManager from '../utils/HealthManager.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
 import { getDungeonData } from '../data/DungeonConfig.js';
+import { loadGame } from '../utils/SaveLoadManager.js';
 import BaseScene from './BaseScene.js';
 
 class DungeonScene extends BaseScene {
@@ -42,15 +43,11 @@ class DungeonScene extends BaseScene {
         });
 
         // Load saved state
-        const savedState = window.localStorage.getItem('gameState');
-        if (savedState) {
-            const parsedState = JSON.parse(savedState);
-            if (parsedState.player) {
-                // Update only inventory and stats, not scene-specific data
-                gameState.player.inventory = parsedState.player.inventory;
-                gameState.player.gold = parsedState.player.gold;
-                gameState.player.experience = parsedState.player.experience;
-                gameState.player.experienceToNextLevel = parsedState.player.experienceToNextLevel;
+        loadGame();
+        if (gameState.player) {
+            // Update dungeon progress
+            if (gameState.currentDungeon) {
+                this.currentDungeon = gameState.currentDungeon;
             }
         }
 

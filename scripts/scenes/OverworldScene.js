@@ -8,6 +8,7 @@ import navigationManager from '../navigation/NavigationManager.js';
 import HealthManager from '../utils/HealthManager.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
 import BaseScene from './BaseScene.js'; // <<< IMPORT BaseScene
+import { saveGame } from '../utils/SaveLoadManager.js'; // Added import
 
 // --- Extend BaseScene ---
 class OverworldScene extends BaseScene {
@@ -53,6 +54,7 @@ class OverworldScene extends BaseScene {
             gameState.player.health = gameState.player.maxHealth;
             gameState.player.mana = gameState.player.maxMana;
             HealthManager.validatePlayerHealth();
+            saveGame(); // Save after restoring health
             console.log(`Player Restored: HP ${gameState.player.health}/${gameState.player.maxHealth}, MP ${gameState.player.mana}/${gameState.player.maxMana}`);
         } else {
             console.warn("OverworldScene: Player data not found, cannot restore health/mana.");
