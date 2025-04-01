@@ -2,6 +2,7 @@ import BaseScene from './BaseScene.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
 import gameState from '../utils/gameState.js';
+import { saveGame } from '../utils/SaveLoadManager.js';
 
 class SettingsScene extends BaseScene {
     constructor() {
@@ -135,6 +136,7 @@ class SettingsScene extends BaseScene {
                 
                 if (gameState.player) {
                     gameState.player.gold = (gameState.player.gold || 0) + 1000;
+                    saveGame(); // Save after modifying gameState
                     alert("Congratulations! You received 1000 gold!");
                 } else {
                     alert("Wallet verified! You'll receive 1000 gold when you start a new game.");
@@ -153,6 +155,7 @@ class SettingsScene extends BaseScene {
         const rewardAmount = 1000;
         if (gameState.player) {
             gameState.player.gold = (gameState.player.gold || 0) + rewardAmount;
+            saveGame(); // Save after modifying gameState
             alert(`Congratulations! You received ${rewardAmount} gold!`);
         } else {
             alert(`Wallet verified! You'll receive ${rewardAmount} gold when you start a new game.`);
