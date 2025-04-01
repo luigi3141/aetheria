@@ -42,13 +42,16 @@ class DungeonScene extends BaseScene {
             class: gameState.player?.class
         });
 
+        // Store current dungeon data before loading saved state
+        const currentDungeonData = data?.currentDungeon || gameState.currentDungeon;
+
         // Load saved state
         loadGame();
-        if (gameState.player) {
-            // Update dungeon progress
-            if (gameState.currentDungeon) {
-                this.currentDungeon = gameState.currentDungeon;
-            }
+
+        // Restore dungeon data after loading saved state
+        if (currentDungeonData) {
+            gameState.currentDungeon = currentDungeonData;
+            this.currentDungeon = currentDungeonData;
         }
 
         console.log("DungeonScene init - Inventory state:", {
@@ -57,9 +60,6 @@ class DungeonScene extends BaseScene {
             equipped: gameState.player.inventory?.equipped || {}
         });
 
-        if (data?.currentDungeon) {
-            gameState.currentDungeon = data.currentDungeon;
-        }
         console.log("DungeonScene init - Current dungeon:", gameState.currentDungeon);
     }
 
