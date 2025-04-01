@@ -192,12 +192,20 @@ class DungeonScene extends BaseScene {
         // --- END MODIFICATION ---
 
         const player = gameState.player;
+
+        // Add a dark rectangle behind the text
+        const rectWidth = 300; // Adjust width as needed
+        const rectHeight = 120; // Adjust height as needed
+        const rect = this.add.rectangle(width * 0.5, height * 0.3, rectWidth, rectHeight, 0x000000, 0.7)
+            .setOrigin(0.5)
+            .setDepth(1);
+
         // --- Consider updating player stats display here too if needed ---
-         const playerInfoText = this.ui.createText(
-             width * 0.5, // Centered maybe?
-             height * 0.3,
-             `${player.name || 'Adventurer'} | Lvl ${player.level}\n` +
-             `HP: ${player.health}/${player.maxHealth}\n` +
+        const playerInfoText = this.ui.createText(
+            width * 0.5, // Centered maybe?
+            height * 0.3,
+            `${player.name || 'Adventurer'} \n Lvl ${player.level}\n` +
+            `HP: ${player.health}/${player.maxHealth}\n` +
              `MP: ${player.mana}/${player.maxMana}`,
              {
                  fontSize: this.ui.fontSize.sm,
@@ -207,7 +215,7 @@ class DungeonScene extends BaseScene {
                  backgroundColor: '#000000cc', // Add slight background
                  padding: {x: 10, y: 5}
              }
-         ).setOrigin(0.5); // Center the text block
+            ).setOrigin(0.5).setDepth(2); // Ensure text is above the rectangle
     }
 
     createEncounterButton() {
