@@ -56,7 +56,7 @@ class DungeonSelectScene extends BaseScene {
         this.ui.createButton(
             width * 0.5,
             height * 0.9,
-            'BACK TO TOWN',
+            'Overworld',
             () => {
                 navigationManager.navigateTo(this, 'OverworldScene');
             },

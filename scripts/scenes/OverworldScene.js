@@ -130,7 +130,7 @@ class OverworldScene extends BaseScene {
 
         // Create text using ui manager for consistency
         const playerName = player.name || 'Adventurer';
-        const playerClass = player.class || 'Warrior';
+        const playerClass = (player.class || 'Warrior').charAt(0).toUpperCase() + (player.class || 'Warrior').slice(1).toLowerCase();
         const playerStats = `${playerName}\n${playerClass}\nHP: ${currentHealth}/${maxHealth}\nMP: ${currentMana}/${maxMana}`;
 
         this.playerInfoText = this.ui.createText(infoX + 20, infoY, playerStats, {
@@ -149,7 +149,7 @@ class OverworldScene extends BaseScene {
         const height = this.cameras.main.height;
 
         // --- Layout Configuration ---
-        const buttonWidth = 180;
+        const buttonWidth = 200;
         const buttonHeight = 50;
         const horizontalSpacing = 40; // Space between buttons horizontally
         const verticalSpacing = 20;   // Space between rows
