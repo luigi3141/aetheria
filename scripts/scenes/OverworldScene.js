@@ -37,9 +37,6 @@ class OverworldScene extends BaseScene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
-        // --- REMOVE the manual UIManager creation ---
-        // this.ui = new UIManager(this); // NO LONGER NEEDED
-
         // Add background
         this.add.image(width/2, height/2, 'overworld-bg').setDisplaySize(width, height);
 
@@ -75,7 +72,7 @@ class OverworldScene extends BaseScene {
                 if (this && this.scene && this.sys.isActive()) {
                      this.transitions.fadeIn(); // Fade in this scene smoothly
                 } else {
-                    console.warn(`Scene ${this.scene?.key || 'Unknown'} became inactive before delayed fadeIn.`);
+                    console.warn(`Scene ${this.scene.key || 'Unknown'} became inactive before delayed fadeIn.`);
                 }
             });
         } else {
@@ -108,7 +105,8 @@ class OverworldScene extends BaseScene {
         // Create player avatar section
         const avatarX = width * 0.2;
         const avatarY = height * 0.3;
-        const avatarContainer = this.ui.createPanel(avatarX, avatarY, 100, 100, { /* styles */ });
+        const avatarSize = 100;
+        const avatarContainer = this.ui.createPanel(avatarX, avatarY, avatarSize, avatarSize, { /* styles */ });
 
         // Safely add the avatar image using the key loaded in preload
         const portraitKey = 'player-avatar';
@@ -119,33 +117,28 @@ class OverworldScene extends BaseScene {
              this.add.rectangle(avatarX, avatarY, 80, 80, 0x555555); // Placeholder
         }
 
-        // Create player text info section
+        // Create background panel first
+        const textWidth = 300;  // Width for the panel
+        const textHeight = avatarSize; // Match avatar height
         const infoX = width * 0.35;
         const infoY = height * 0.3;
+        this.ui.createPanel(infoX + (textWidth/2), infoY, textWidth, textHeight, {
+            fillColor: this.ui.colors.secondary,
+            fillAlpha: 0.8,
+            strokeColor: this.ui.colors.accent
+        });
+
+        // Create text using ui manager for consistency
         const playerName = player.name || 'Adventurer';
         const playerClass = player.class || 'Warrior';
         const playerStats = `${playerName}\n${playerClass}\nHP: ${currentHealth}/${maxHealth}\nMP: ${currentMana}/${maxMana}`;
 
-        // Create text using ui manager for consistency
-        this.playerInfoText = this.ui.createText(infoX, infoY, playerStats, {
+        this.playerInfoText = this.ui.createText(infoX + 20, infoY, playerStats, {
             fontSize: this.ui.fontSize.md,
             color: '#ffffff',
             align: 'left',
             lineSpacing: 8
         }).setOrigin(0, 0.5); // Align origin to middle-left
-
-        // If you used createSectionLabel before and liked that style:
-        /*
-        this.playerInfoText = this.ui.createSectionLabel(
-            infoX, infoY, playerStats,
-            {
-                fontSize: this.ui.fontSize.md,
-                background: true,
-                align: 'left',
-                animate: false // Maybe don't animate stats constantly
-            }
-        ).setOrigin(0, 0.5); // Adjust origin if using section label
-        */
     }
 
     /**
