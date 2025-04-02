@@ -119,28 +119,28 @@ export const ASSET_PATHS = {
     SOUNDS: {
         combat: {
             attack: 'assets/audio/combat/attack.mp3',
-            hit: 'assets/audio/combat/player-hit.mp3',
-            victory: 'assets/audio/combat/victory.mp3',
-            defeat: 'assets/audio/combat/defeat.mp3',
+           // hit: 'assets/audio/combat/player-hit.mp3',
+            //victory: 'assets/audio/combat/victory.mp3',
+            //defeat: 'assets/audio/combat/defeat.mp3',
             levelUp: 'assets/audio/combat/level-up.mp3',
-            heal: 'assets/audio/combat/heal.mp3',
+            //heal: 'assets/audio/combat/heal.mp3',
             playerHit: 'assets/audio/combat/player-hit.mp3'
         },
         ui: {
             buttonClick: 'assets/audio/ui/button-click.mp3',
-            menuOpen: 'assets/audio/ui/menu-open.mp3',
-            menuClose: 'assets/audio/ui/menu-close.mp3'
+           //menuOpen: 'assets/audio/ui/menu-open.mp3',
+           //menuClose: 'assets/audio/ui/menu-close.mp3'
         }
     },
     
     // Music
     MUSIC: {
         TITLE: 'assets/audio/music/title.mp3',
-        BATTLE: 'assets/audio/music/battle.mp3',
-        VICTORY: 'assets/audio/music/victory.mp3',
-        DEFEAT: 'assets/audio/music/defeat.mp3',
-        OVERWORLD: 'assets/audio/music/overworld.mp3',
-        DUNGEON: 'assets/audio/music/dungeon.mp3'
+        //BATTLE: 'assets/audio/music/battle.mp3',
+        //VICTORY: 'assets/audio/music/victory.mp3',
+        //DEFEAT: 'assets/audio/music/defeat.mp3',
+        //OVERWORLD: 'assets/audio/music/overworld.mp3',
+        //DUNGEON: 'assets/audio/music/dungeon.mp3'
     },
     
     // Character portraits

@@ -1,283 +1,269 @@
 // ---- File: StartScene.js ----
 
-import UIManager from '../ui/UIManager.js';
-import Button from '../ui/components/Button.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import { ASSET_PATHS } from '../config/AssetConfig.js';
 import gameState from '../utils/gameState.js';
 import BaseScene from './BaseScene.js';
-import { hasSaveGame, loadGame, clearSaveGame } from '../utils/SaveLoadManager.js';
-import PreloadScene from './PreloadScene.js';
+import { hasSaveGame, loadGame, clearSaveGame, saveGame } from '../utils/SaveLoadManager.js';
+import { AssetLoader } from '../utils/AssetLoader.js'; // Import the utility class
 
 class StartScene extends BaseScene {
     constructor() {
         super({ key: 'StartScene' });
-        this.hasSavedGame = false; // Flag to track if save exists
+        this.hasSavedGame = false;
     }
 
     preload() {
-        // Load only what StartScene needs immediately
-        this.load.image('title-bg', ASSET_PATHS.BACKGROUNDS.TITLE);
-        
-        // Preload shared assets in the background
-        PreloadScene.preloadSharedAssets(this);
-
-        // Resume audio context on first interaction
-        window.addEventListener('pointerdown', () => {
-            if (this.sound.context.state === 'suspended') {
-                this.sound.context.resume();
-            }
-        }, { once: true });
+        console.log("[StartScene] Preload: Loading essential assets...");
+        // Load ONLY what StartScene absolutely needs to display immediately
+        // Use tryLoadImage pattern for safety
+        const tryLoadImage = (key, path) => {
+            if (path && !this.textures.exists(key)) {
+                console.log(`[StartScene Preload] Loading: ${key}`);
+                this.load.image(key, path);
+            } else if (!path) { console.warn(`Image path missing for ${key}`); }
+        };
+        tryLoadImage('title-bg', ASSET_PATHS.BACKGROUNDS.TITLE);
+        console.log("[StartScene] Preload finished.");
     }
 
+    // ---- **** FULL create() METHOD **** ----
     create() {
+        console.log("[StartScene] Create started.");
         this.initializeScene(); // Initialize BaseScene components
 
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
+        // --- Resume Audio Context on Interaction ---
+        // Add listener once per game session start
+        const resumeAudio = () => {
+            if (this.sound.context.state === 'suspended') {
+                 console.log("AudioContext suspended, attempting resume...");
+                 this.sound.context.resume().then(() => {
+                     console.log("AudioContext resumed successfully.");
+                 }).catch(e => console.error("Error resuming AudioContext:", e));
+                 // Remove listener after first attempt (or success)
+                 window.removeEventListener('pointerdown', resumeAudio);
+                 document.removeEventListener('keydown', resumeAudio); // Also resume on keydown
+            }
+        };
+        // Listen for first click OR keypress
+        window.addEventListener('pointerdown', resumeAudio, { once: true });
+        document.addEventListener('keydown', resumeAudio, { once: true });
+        // --- End Audio Context ---
+
         // --- Check for Portal Entry ---
         const urlParams = new URLSearchParams(window.location.search);
         const portalParam = urlParams.get('portal');
-        const refParam = urlParams.get('ref'); // Get referring game URL
-
         if (portalParam === 'true') {
-            console.log("Detected portal entry. Checking for saved game...");
-            const incomingUsername = urlParams.get('username'); // Get username
+            console.log("Detected portal entry.");
+            const refParam = urlParams.get('ref');
+            const incomingUsername = urlParams.get('username');
             if(refParam) gameState.portalReferrer = refParam;
-            if(incomingUsername) gameState.portalUsername = incomingUsername; // Store username
-            // User came from the portal - check if they have a saved game
-            try {
-                loadGame();
-                if (gameState.player) {
-                    console.log("Saved game found, resuming...");
-                    // --- Deep merge or selective update of gameState ---
-                    // Avoid overwriting everything, only update necessary parts
-                    if (gameState.player) {
-                        // Selectively update player data
-                        gameState.player = { ...gameState.player, ...gameState.player };
-                         // Ensure nested objects like inventory are handled (might need deep merge library or manual merge)
-                         if (gameState.player.inventory) {
-                             gameState.player.inventory = { ...gameState.player.inventory, ...gameState.player.inventory };
-                             // Make sure items array isn't overwritten if gameState already has one, merge instead if needed
-                             if (Array.isArray(gameState.player.inventory.items)) {
-                                  gameState.player.inventory.items = gameState.player.inventory.items; // Replace for now, consider merging later
-                             }
-                         }
-                    }
-                    // Update other parts of gameState if needed (quests, dungeons etc.)
-                    gameState.currentDungeon = gameState.currentDungeon || null; // Example
+            if(incomingUsername) gameState.portalUsername = incomingUsername;
 
-                    console.log("GameState updated from save.");
-                    // Store referring URL if provided
-                    if(refParam) {
-                        gameState.portalReferrer = refParam;
-                        console.log(`Stored portal referrer: ${refParam}`);
-                    }
-
-                    // Directly navigate to OverworldScene (skip menus)
-                    navigationManager.navigateTo(this, 'OverworldScene');
-                    return; // Stop further execution of create
-                } else {
-                    console.log("No saved game found, proceeding to character select...");
-                    // Store referring URL if provided
-                    navigationManager.navigateTo(this, 'CharacterSelectScene', { portalUsername: incomingUsername }); // <<< Pass data
-                    return; // Stop further execution
-                }
-            } catch (e) {
-                console.error("Error parsing saved game state:", e);
-                // Proceed to normal menu creation if parsing fails
-                window.localStorage.removeItem('gameState'); // Clear corrupted save
+            if (loadGame()) { // Tries to load game into gameState
+                console.log("Saved game found and loaded, resuming directly to Overworld...");
+                navigationManager.navigateTo(this, 'OverworldScene');
+                return; // Stop further execution of this create()
+            } else {
+                console.log("No valid saved game found, proceeding to character select for portal user...");
+                // Pass portal username if available
+                navigationManager.navigateTo(this, 'CharacterSelectScene', { portalUsername: gameState.portalUsername });
+                return; // Stop further execution of this create()
             }
         }
         // --- End Portal Entry Check ---
 
-
         // --- Normal Start Scene Setup ---
-        this.add.image(width/2, height/2, 'title-bg').setDisplaySize(width, height);
+        // Display essential UI immediately using preloaded assets
+        // Use safeAddImage from BaseScene
+        this.safeAddImage(width / 2, height / 2, 'title-bg', {
+             displayWidth: width, displayHeight: height
+        }).setDepth(0); // Ensure background is at the back
 
-        this.ui.createTitle(width/2, height * 0.15, 'Gates of Aetheria', {
+
+        // Use UIManager for title
+        this.ui.createTitle(width / 2, height * 0.15, 'Gates of Aetheria', {
             fontSize: this.ui.fontSize.xl
-        });
+        }).setDepth(1); // Ensure title is on top
 
-        // --- Check for Existing Save Game ---
+        // Check save state for buttons
         this.hasSavedGame = hasSaveGame();
         console.log("Has saved game:", this.hasSavedGame);
-        // ---
-        window.addEventListener('pointerdown', () => {
-            if (this.sound.context.state === 'suspended') {
-                this.sound.context.resume();
-            }
-        }, { once: true }); // Only need it once
-        
 
+        // Create buttons (Resume enabled/disabled based on hasSavedGame)
         this.createButtons();
-        if (!this.scene.isActive('PreloadScene')) {
-            this.scene.launch('PreloadScene', { headless: true });
-        }
-        
-        this.load.once('complete', () => {
-            console.log('✅ StartScene finished loading essentials');
-        });
-        this.load.start();
-
-        // Fade In
-        if (this.transitions) this.transitions.fadeIn();
-    }
-
-    createButtons() {
-        const width = this.cameras.main.width;
-        const height = this.cameras.main.height;
-        const buttonYStart = height * 0.40;
-        const buttonSpacing = 70;
-
-        // Create Resume Game button with initial disabled state
-        const hasExistingSave = hasSaveGame();
-        const resumeButton = this.ui.createButton(
-            width / 2,
-            buttonYStart,
-            'RESUME GAME',
-            () => {
-                this.safePlaySound('button-click');
-                if (loadGame()) {
-                    console.log("Resuming game with loaded state.");
-                    navigationManager.navigateTo(this, 'OverworldScene');
-                } else {
-                    console.error("Resume clicked but failed to load saved game!");
-                }
-            },
-            { 
-                width: 200, 
-                height: 50,
-                disabled: !hasExistingSave
-            }
-        );
-
-        if (!hasExistingSave && resumeButton.container) {
-            resumeButton.container.setAlpha(0.5);
-        }
-
-        // Create New Game button
-        const newGameButton = this.ui.createButton(
-            width / 2,
-            buttonYStart + buttonSpacing,
-            'NEW GAME',
-            () => {
-                console.log('New Game clicked');
-                this.safePlaySound('button-click');
-                this.startNewGame();
-            },
-            { width: 200, height: 50 }
-        );
-
-        // Create Settings button
-        this.ui.createButton(
-            width / 2,
-            buttonYStart + buttonSpacing * 2,
-            'SETTINGS',
-            () => {
-                console.log('Settings clicked');
-                this.safePlaySound('button-click');
-                navigationManager.navigateTo(this, 'SettingsScene');
-            },
-            { width: 200, height: 50 }
-        );
-
-        // Create Credits button
-        this.ui.createButton(
-            width / 2,
-            buttonYStart + buttonSpacing * 3,
-            'CREDITS',
-            () => {
-                console.log('Credits clicked');
-                this.safePlaySound('button-click');
-                /* Implement credits functionality */
-            },
-            { width: 200, height: 50 }
-        );
-
-        // Create Portal button
-        this.ui.createButton(
-            width / 2,
-            buttonYStart + buttonSpacing * 4,
-            'PORTAL',
-            () => {
-                console.log('Portal clicked');
-                this.safePlaySound('button-click');
-                this.enterPortal();
-            },
-            {
-                width: 200, 
-                height: 50,
-                fillColor: 0x9b59b6, // Purple color for portal
-                hoverColor: 0x8e44ad
-            }
-        );
 
         // Add version text
         this.add.text(width - 20, height - 20, 'v0.1.0', {
-            fontFamily: 'VT323',
-            fontSize: '16px',
-            color: '#ffffff'
-        }).setOrigin(1, 1);
+            fontFamily: "'VT323'", fontSize: '16px', fill: '#cccccc', resolution: 2
+        }).setOrigin(1, 1).setDepth(100); // Ensure version is on top
 
-        // Fade In
-        if (this.transitions) this.transitions.fadeIn();
-    }
+        // --- Trigger Background Asset Loading ---
+        console.log("[StartScene] Triggering background asset load...");
+        // Ensure AssetLoader is correctly imported and method exists
+        if (typeof AssetLoader?.loadSharedAssetsInBackground === 'function') {
+            AssetLoader.loadSharedAssetsInBackground(this);
+        } else {
+            console.error("[StartScene] AssetLoader or loadSharedAssetsInBackground method not found!");
+        }
+        // --- End Background Loading ---
 
-    startNewGame() {
-        // Initialize new player state
-        gameState.player = {
-            gold: gameState.walletVerified ? 1000 : 0,  // Start with 1000 gold if wallet is verified
-            health: 100,
-            maxHealth: 100,
-            level: 1,
-            experience: 0,
-            inventory: [],
-            equipment: {
-                weapon: null,
-                armor: null
+        // --- TEMPORARY TEST: Force Visibility ---
+    console.log("[StartScene Create] Forcing camera alpha to 1, skipping fade.");
+    this.cameras.main.setAlpha(1);
+    if(this.input) this.input.enabled = true; // Ensure input enabled too
+    // --- END TEMPORARY TEST ---
+
+       // Fade In - Delayed slightly and with extra check
+       /*
+    if (this.transitions) {
+        this.cameras.main.setAlpha(0); // Set alpha before delay
+        this.time.delayedCall(50, () => {
+            // --- ADD THIS CHECK ---
+            if (this && this.scene?.isActive) { // Check if scene is still active
+                console.log("[StartScene] Fading in...");
+                this.transitions.fadeIn();
+            } else {
+                console.warn("StartScene became inactive before delayed fadeIn could run.");
             }
-        };
+            // --- END CHECK ---
+            
+        });
+    } else {
+        console.warn("TransitionManager not found for StartScene fade.");
+        this.cameras.main.setAlpha(1);
+        if (this.input) this.input.enabled = true;
+    }
+        */
+    console.log("[StartScene] Create finished.");
+    }
+    // --- END OF create() METHOD ---
 
-        // Navigate to character select
-        this.safePlaySound('button-click');
-        navigationManager.navigateTo(this, 'CharacterSelectScene');
+    // createButtons method (ensure safePlaySound is called correctly)
+    createButtons() {
+        const width = this.cameras.main.width; const height = this.cameras.main.height;
+        const buttonYStart = height * 0.40; const buttonSpacing = 70;
+
+        // --- Resume Game Button ---
+        const resumeButton = this.ui.createButton( width / 2, buttonYStart, 'RESUME GAME',
+         () => {
+            this.safePlaySound('button-click'); // Play sound first
+            if (loadGame()) { // Try to load
+                console.log("Resuming game with loaded state.");
+                navigationManager.navigateTo(this, 'OverworldScene');
+            } else {
+                console.error("Resume clicked but failed to load saved game!");
+                // Optionally visually disable the button again if load fails
+                resumeButton?.disable(); // Use optional chaining
+                if(resumeButton?.container) resumeButton.container.setAlpha(0.5);
+            }
+         },
+         { width: 260, height: 50, disabled: !this.hasSavedGame } // Initial disabled state
+        );
+        // Set initial alpha based on disabled state
+        if (!this.hasSavedGame && resumeButton?.container) {
+             resumeButton.container.setAlpha(0.5);
+        }
+        // --- End Resume Button ---
+
+        // --- New Game Button ---
+        this.ui.createButton( width / 2, buttonYStart + buttonSpacing, 'NEW GAME',
+        () => this.startNewGame(), // Calls helper
+        { width: 260, height: 50 });
+        // --- End New Game Button ---
+
+        // --- Settings Button ---
+        this.ui.createButton( width / 2, buttonYStart + buttonSpacing * 2, 'SETTINGS',
+            () => {
+                 this.safePlaySound('button-click');
+                 console.log('Settings clicked');
+                 navigationManager.navigateTo(this, 'SettingsScene'); // <<< ADD THIS
+            },
+            { width: 260, height: 50 });
+        // --- End Settings Button ---
+
+        /*
+        // --- Credits Button ---
+        this.ui.createButton( width / 2, buttonYStart + buttonSpacing * 3, 'CREDITS',
+        () => {
+             this.safePlaySound('button-click');
+             console.log('Credits clicked'); 
+             // navigationManager.navigateTo(this, 'CreditsScene');
+        },
+        { width: 260, height: 50 });
+        // --- End Credits Button ---
+*/
+        // --- Portal Button ---
+        this.ui.createButton( width / 2, buttonYStart + buttonSpacing * 4, 'VIBEVERSE PORTAL',
+        () => this.enterPortal(), // Calls helper
+        { width: 260, height: 50, fillColor: 0x9b59b6, hoverColor: 0x8e44ad });
+        // --- End Portal Button ---
     }
 
+    // startNewGame method (ensure safePlaySound is called correctly)
+    startNewGame() {
+         this.safePlaySound('button-click'); // Play sound first
+         console.log('New Game clicked');
+         if (this.hasSavedGame) {
+              // Use confirm for simple confirmation
+             const confirmed = confirm("Starting a new game will overwrite your existing save. Are you sure?");
+             if (!confirmed) {
+                 console.log("New game cancelled by user.");
+                 return; // Stop if user cancels
+             }
+         }
+         clearSaveGame(); // Use manager to clear save
+         console.log('Cleared previous game state');
+         gameState.player = null; // Reset runtime state
+         gameState.currentDungeon = null;
+         // Reset portal info if needed
+         gameState.portalReferrer = null;
+         gameState.portalUsername = null;
+         navigationManager.navigateTo(this, 'CharacterSelectScene');
+    }
+
+    // enterPortal method (ensure safePlaySound is called correctly)
     enterPortal() {
-         console.log('Entering Vibeverse Portal...');
-         this.safePlaySound('button-click'); // Or a specific portal sound
+        this.safePlaySound('button-click'); // Play sound first
+        console.log('Entering Vibeverse Portal...');
+        // --- Save game state BEFORE redirecting ---
+        if (this.hasSavedGame) { // Only save if a game is actually in progress
+             saveGame(); // Use manager - make sure saveGame is imported
+             console.log("Game state saved before entering portal.");
+        } else {
+             console.log("No active game to save before entering portal.");
+        }
+        // ---
 
-         // 1. Gather Player Data
-         const player = gameState.player; // Get current player data
-         const username = player?.name || 'Adventurer';
-         const playerClass = player?.class || 'warrior';
-         // Determine color based on class (example)
-         let color = 'gray';
-         if (playerClass === 'mage') color = 'blue';
-         else if (playerClass === 'warrior') color = 'red';
-         else if (playerClass === 'rogue') color = 'green';
-         else if (playerClass === 'cleric') color = 'yellow';
-         // Add other optional params if available (speed, avatar_url, etc.)
-         // const speed = player?.speed || 0; // Example if speed is tracked
+        const player = gameState.player; // Get current player data OR defaults
+        const username = player?.name || 'Adventurer';
+        const playerClass = player?.class || 'warrior';
+        let color = 'gray'; // Determine color based on class
+        if (playerClass === 'mage') color = 'blue';
+        else if (playerClass === 'warrior') color = 'red';
+        else if (playerClass === 'rogue') color = 'green';
+        else if (playerClass === 'cleric') color = 'yellow';
+        // Add other colors for Ranger, Bard etc.
 
-         // 2. Construct URL
-         const portalBaseUrl = 'http://portal.pieter.com/';
-         const params = new URLSearchParams();
-         params.append('username', username);
-         params.append('color', color);
-         // params.append('speed', speed.toString());
-         params.append('ref', window.location.origin + window.location.pathname); // URL of *this* game
+        const portalBaseUrl = 'http://portal.pieter.com/';
+        const params = new URLSearchParams();
+        params.append('username', username);
+        params.append('color', color);
+        // Add other relevant params if tracked (speed, avatar_url)
+        // params.append('speed', (player?.speed || 0).toString());
+        // params.append('avatar_url', player?.portrait || ''); // Example
+        params.append('ref', window.location.origin + window.location.pathname);
 
-         const portalUrl = `${portalBaseUrl}?${params.toString()}`;
-         console.log(`Redirecting to: ${portalUrl}`);
+        const portalUrl = `${portalBaseUrl}?${params.toString()}`;
+        console.log(`Redirecting to: ${portalUrl}`);
 
-         // 3. Redirect
-         // Optional: Add a small delay or visual effect before redirecting
-         this.time.delayedCall(200, () => {
-             window.location.href = portalUrl;
-         });
+        // Redirect after a short delay
+        this.time.delayedCall(200, () => {
+            window.location.href = portalUrl;
+        });
     }
 }
 

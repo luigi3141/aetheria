@@ -1,5 +1,5 @@
 // Import all scene classes
-import PreloadScene from './scenes/PreloadScene.js';
+//import PreloadScene from './utils/AssetLoader.js';
 import StartScene from './scenes/StartScene.js';
 import CharacterSelectScene from './scenes/CharacterSelectScene.js';
 import OverworldScene from './scenes/OverworldScene.js';
@@ -31,7 +31,7 @@ window.addEventListener('load', function() {
     
     // Check each module
     const modules = {
-        PreloadScene: checkModule('PreloadScene', PreloadScene),
+        //PreloadScene: checkModule('PreloadScene', PreloadScene),
         StartScene: checkModule('StartScene', StartScene),
         CharacterSelectScene: checkModule('CharacterSelectScene', CharacterSelectScene),
         OverworldScene: checkModule('OverworldScene', OverworldScene),
@@ -68,7 +68,7 @@ window.addEventListener('load', function() {
                 modules.CharacterSheetScene,
                 modules.DefeatScene,
                 modules.PotionShopScene,
-                modules.PreloadScene,
+                //modules.PreloadScene,
                 modules.SettingsScene,
             ],
             backgroundColor: '#000000',
