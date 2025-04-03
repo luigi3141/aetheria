@@ -238,7 +238,7 @@ export default class CombatUI {
         if (!specialButton || typeof specialButton.enable !== 'function') return;
 
         const player = gameState.player;
-        const manaCost = 10; // TODO: Get from ability data
+        const manaCost = 30; // TODO: Get from ability data
 
         if (player && player.mana >= manaCost) {
             specialButton.enable();

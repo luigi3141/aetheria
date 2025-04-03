@@ -91,8 +91,10 @@ export default class CombatEngine {
         // 1. Determine Base Attack Power
         let baseAttackPower = 0;
         if (attackType === 'special') {
-            const manaCost = 10; // TODO: Get mana cost from ability data
-            baseAttackPower = player.currentMagicAttack || player.intelligence || 10;
+            const manaCost = 30; // TODO: Get mana cost from ability data
+            const magicAttackStat = player.currentMagicAttack || player.intelligence || 10;
+            baseAttackPower = Math.floor(magicAttackStat * 1.2); 
+
             // Deduct mana cost
             gameState.player.mana = Math.max(0, player.mana - manaCost);
             if (this.scene.combatUI) {
