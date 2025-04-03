@@ -266,10 +266,10 @@ export default class CombatUI {
         this.scene.tweens.add({
             targets: effect,
             alpha: { from: 0, to: 1 },
-            duration: 300, // Increased duration to be more visible
+            duration: 150, // Increased duration to be more visible
             ease: 'Linear',
             yoyo: true,
-            hold: 100, // Hold at full opacity for a moment
+            hold: 50, // Hold at full opacity for a moment
             onComplete: () => {
                 effect.destroy();
                 if (onComplete) onComplete();

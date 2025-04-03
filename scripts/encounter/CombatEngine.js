@@ -335,7 +335,7 @@ export default class CombatEngine {
         this.disablePlayerActions(); // Ensure buttons are disabled at start of enemy turn
 
         // Add delay before enemy acts for pacing
-        this.scene.time.delayedCall(1200, () => { // Increased delay
+        this.scene.time.delayedCall(600, () => { // Increased delay
             if (this.gameOver) return; // Check again in case player conceded etc.
             // Start enemy attack with animation
             this.processEnemyAttack(false); // Start with animation
@@ -348,7 +348,7 @@ export default class CombatEngine {
         console.log("Ending Enemy Turn");
         this.currentTurn = 'player';
         this.turnInProgress = false;
-        this.scene.time.delayedCall(100, () => { // Small delay before enabling actions
+        this.scene.time.delayedCall(50, () => { // Small delay before enabling actions
             if (!this.gameOver) {
                 this.enablePlayerActions();
                 this.scene.combatLog.addLogEntry("Your turn!", false, '#ffff00');
