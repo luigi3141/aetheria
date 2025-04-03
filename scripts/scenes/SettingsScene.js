@@ -41,8 +41,8 @@ class SettingsScene extends BaseScene {
         // Free Gold button with direct connection handling
         this.ui.createButton(
             width / 2,
-            height * 0.4,
-            '💎 Free Gold',
+            height * 0.6,
+            'Connect Wallet for\n 💎 Free Gold 💎',
             async () => {
                 const provider = window.solana;
                 if (!provider?.isPhantom) {
@@ -87,10 +87,11 @@ class SettingsScene extends BaseScene {
                 }
             },
             { 
-                width: 200, 
-                height: 50,
+                width: 300, 
+                height: 75,
                 fillColor: 0xffd700, // Gold color
-                hoverColor: 0xffa500  // Orange on hover
+                hoverColor: 0xffa500,  // Orange on hover
+                textColor: '#000000'
             }
         );
     }
