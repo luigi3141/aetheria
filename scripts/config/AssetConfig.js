@@ -118,15 +118,19 @@ export const ASSET_PATHS = {
     // Audio for combat
     SOUNDS: {
         combat: {
+            ATTACK_KEY: 'attack',
             attack: 'assets/audio/combat/attack.mp3',
            // hit: 'assets/audio/combat/player-hit.mp3',
             //victory: 'assets/audio/combat/victory.mp3',
             //defeat: 'assets/audio/combat/defeat.mp3',
+            LEVELUP_KEY: 'level-up',
             levelUp: 'assets/audio/combat/level-up.mp3',
             //heal: 'assets/audio/combat/heal.mp3',
+            PLAYERHIT_KEY: 'player-hit',
             playerHit: 'assets/audio/combat/player-hit.mp3'
         },
         ui: {
+            BUTTON_CLICK_KEY: 'button-click',
             buttonClick: 'assets/audio/ui/button-click.mp3',
            //menuOpen: 'assets/audio/ui/menu-open.mp3',
            //menuClose: 'assets/audio/ui/menu-close.mp3'
@@ -135,8 +139,10 @@ export const ASSET_PATHS = {
     
     // Music
     MUSIC: {
+        TITLE_KEY: 'title-music',
         TITLE: 'assets/audio/music/title.mp3',
-        //BATTLE: 'assets/audio/music/battle.mp3',
+        BATTLE_KEY: 'battle-music',
+        BATTLE: 'assets/audio/music/battle.mp3',
         //VICTORY: 'assets/audio/music/victory.mp3',
         //DEFEAT: 'assets/audio/music/defeat.mp3',
         //OVERWORLD: 'assets/audio/music/overworld.mp3',

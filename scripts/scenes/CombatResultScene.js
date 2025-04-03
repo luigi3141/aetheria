@@ -10,6 +10,7 @@ import CharacterManager from '../utils/CharacterManager.js';
 import { getDungeonData } from '../data/DungeonConfig.js';
 import HealthManager from '../utils/HealthManager.js';
 import { saveGame, loadGame } from '../utils/SaveLoadManager.js'; // Added import
+import audioManager from '../utils/AudioManager.js'; // CORRECT - Imports the default export instance
 
 const { getItemData } = items;
 
@@ -156,7 +157,7 @@ class CombatResultScene extends BaseScene {
         if (this.combatResult.outcome !== 'defeat') {
             this.createLootDisplay();
         }
-
+        audioManager.playMusic(ASSET_PATHS.MUSIC.TITLE_KEY);
         // --- Create Navigation Buttons ---
         this.createNavigationButtons();
 

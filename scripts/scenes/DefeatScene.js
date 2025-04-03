@@ -5,6 +5,7 @@ import navigationManager from '../navigation/NavigationManager.js'; // For navig
 import UIManager from '../ui/UIManager.js'; // For UI elements
 import { ASSET_PATHS } from '../config/AssetConfig.js'; // For background
 import { saveGame } from '../utils/SaveLoadManager.js'; // Added import
+import audioManager from '../utils/AudioManager.js'; // CORRECT - Imports the default export instance
 
 class DefeatScene extends BaseScene {
     constructor() {
@@ -60,11 +61,11 @@ class DefeatScene extends BaseScene {
       }
 
       // Add a dark rectangle behind the text
-const textWidth = width * 0.7;
-const textHeight = 70; // Adjust height as needed
-const rect = this.add.rectangle(width / 2, height * 0.30, textWidth, textHeight, 0x000000, 0.7)
-    .setOrigin(0.5)
-    .setDepth(1);
+      const textWidth = width * 0.7;
+      const textHeight = 70; // Adjust height as needed
+      const rect = this.add.rectangle(width / 2, height * 0.30, textWidth, textHeight, 0x000000, 0.7)
+          .setOrigin(0.5)
+          .setDepth(1);
 
     // Add the explanation text
       this.add.text(width / 2, height * 0.30, explanation, {
@@ -110,7 +111,7 @@ const rect = this.add.rectangle(width / 2, height * 0.30, textWidth, textHeight,
             });
              // TODO: If many items can be lost, replace this text list with a ScrollableContainer
         }
-
+        audioManager.playMusic(ASSET_PATHS.MUSIC.TITLE_KEY);
 
       // --- Return Button ---
       this.ui.createButton(width / 2, height * 0.85, 'Overworld', () => {

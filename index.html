@@ -10,12 +10,101 @@
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
     <!-- Phaser must be loaded before modules -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <!-- Simple styles for the settings controls -->
+    <style>
+        .audio-settings {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 8px;
+            border-radius: 5px;
+            z-index: 10001; /* Above game canvas and jam link */
+            font-family: 'VT323', monospace;
+            color: white;
+            font-size: 14px;
+        }
+        .audio-settings label {
+            display: block; /* Each setting on a new line */
+            margin-bottom: 4px;
+            cursor: pointer;
+        }
+        .audio-settings input[type="checkbox"] {
+             margin-right: 5px;
+             vertical-align: middle; /* Align checkbox with text */
+        }
+    </style>
 </head>
 <body>
+    <!-- Audio Settings Controls -->
+    <div id="audio-settings" class="audio-settings">
+        <label>
+            <input type="checkbox" id="music-toggle" checked> Music
+        </label>
+        <label>
+            <input type="checkbox" id="sfx-toggle" checked> SFX
+        </label>
+        <!-- Optional Volume Sliders
+        <label>Music Vol: <input type="range" id="music-volume" min="0" max="1" step="0.1" value="0.6"></label>
+        <label>SFX Vol: <input type="range" id="sfx-volume" min="0" max="1" step="0.1" value="0.8"></label>
+         -->
+    </div>
+
     <div id="game-container"></div>
-    
-    <!-- Game Scripts - Added at the end of body for better loading -->
+
+    <!-- Game Scripts -->
     <script type="module" src="scripts/main.js"></script>
+
+    <!-- Script to connect HTML controls to AudioManager -->
+    <script type="module">
+        // Import the singleton instance
+        import audioManagerInstance from './scripts/utils/AudioManager.js';
+
+        // Wait for the DOM and the AudioManager to be ready (game instance might take time)
+        function setupAudioControls() {
+             // Check if game and audioManager are ready
+             if (window.game && window.game.isRunning && audioManagerInstance) {
+                console.log("Setting up HTML audio controls...");
+                const musicToggle = document.getElementById('music-toggle');
+                const sfxToggle = document.getElementById('sfx-toggle');
+                // const musicVolumeSlider = document.getElementById('music-volume');
+                // const sfxVolumeSlider = document.getElementById('sfx-volume');
+
+                // Set initial checkbox states from loaded settings
+                musicToggle.checked = audioManagerInstance.isMusicEnabled;
+                sfxToggle.checked = audioManagerInstance.isSfxEnabled;
+                // musicVolumeSlider.value = audioManagerInstance.musicVolume;
+                // sfxVolumeSlider.value = audioManagerInstance.sfxVolume;
+
+
+                musicToggle.addEventListener('change', (event) => {
+                    audioManagerInstance.toggleMusic(event.target.checked);
+                });
+
+                sfxToggle.addEventListener('change', (event) => {
+                    audioManagerInstance.toggleSfx(event.target.checked);
+                });
+
+                /* // Volume Slider Listeners (Optional)
+                 musicVolumeSlider.addEventListener('input', (event) => {
+                     audioManagerInstance.setMusicVolume(parseFloat(event.target.value));
+                 });
+                  sfxVolumeSlider.addEventListener('input', (event) => {
+                     audioManagerInstance.setSfxVolume(parseFloat(event.target.value));
+                 });
+                */
+
+             } else {
+                 // If not ready, wait a bit and try again
+                 // console.log("Waiting for game/AudioManager to initialize...");
+                 setTimeout(setupAudioControls, 100); // Retry after 100ms
+             }
+        }
+        // Start the setup check
+        setupAudioControls();
+
+    </script>
+
     <a target="_blank" href="https://jam.pieter.com" style="font-family: 'system-ui', sans-serif; position: fixed; bottom: -1px; right: -1px; padding: 7px; font-size: 14px; font-weight: bold; background: #fff; color: #000; text-decoration: none; z-index: 10; border-top-left-radius: 12px; z-index: 10000; border: 1px solid #fff;">🕹️ Vibe Jam 2025</a>
 </body>
 </html>

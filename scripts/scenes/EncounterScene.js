@@ -12,8 +12,8 @@ import gameState from '../utils/gameState.js';
 import navigationManager from '../navigation/NavigationManager.js';
 import { generateLoot } from '../data/enemies.js';
 import { processItemLoss } from '../utils/PenaltyManager.js';
-import { getDungeonData } from '../data/DungeonConfig.js'; // Import getDungeonData
-
+import { getDungeonData } from '../data/DungeonConfig.js'; 
+import audioManager from '../utils/AudioManager.js'; // CORRECT - Imports the default export instance
 import items from '../data/items.js'; // Import the entire default export object
 const { getItemData } = items; // Destructure getItemData from the imported object
 
@@ -101,6 +101,14 @@ export default class EncounterScene extends BaseScene {
         // Load combat effect sprites as regular images
         this.load.image('slash', ASSET_PATHS.EFFECTS.SLASH);
         this.load.image('fire', ASSET_PATHS.EFFECTS.FIRE);
+/*
+        // Load combat audio
+        const combatAudioKey = ASSET_PATHS.SOUNDS.combat.attack;
+        if (combatAudioKey && !this.cache.audio.exists(combatAudioKey)) {
+            console.log(`[EncounterScene Preload] Loading: ${combatAudioKey}`);
+            this.load.audio(combatAudioKey, ASSET_PATHS.SOUNDS.combat.attack);
+        }
+        */
     }
 
     create(data) { // data argument might be empty here
@@ -162,6 +170,9 @@ export default class EncounterScene extends BaseScene {
         // --- Start Combat After Delay ---
         this.time.delayedCall(1250, () => {
             messageContainer.destroy();
+            const battleMusicKey = ASSET_PATHS.MUSIC.BATTLE_KEY || 'battle-music'; // Use Key or fallback
+            console.log(`[EncounterScene DelayedCall] Playing music: ${battleMusicKey}`);
+            audioManager.playMusic(battleMusicKey);
             this.combatEngine.setEnemies(this.enemies); // Set enemies in engine
             this.combatUI.createCombatUI(); // Create main UI elements
 
@@ -173,7 +184,6 @@ export default class EncounterScene extends BaseScene {
             this.combatUI.createEnemyHealthBar(enemy);
 
             this.combatEngine.startCombat(); // Start the engine logic
-            this.combatAudio.playBattleMusic();
         });
 
        // --- MODIFIED FADE IN AT THE END ---
@@ -193,7 +203,6 @@ export default class EncounterScene extends BaseScene {
          if(this.input) this.input.enabled = true;
     }
     // --- END MODIFICATION ---
-
     console.log(`${this.scene.key} Create End`); // Optional log
     }
 

@@ -18,10 +18,14 @@ class AssetLoader {
         const loader = scene.load;
 
         const tryLoadAudio = (key, path) => {
-            // Only queue if not already loaded OR loading
-            if (path && !scene.cache.audio.exists(key) && !loader.isLoading(key)) {
-                 // console.log(`Queueing Audio: ${key}`);
+            // Only queue if not already loaded AND not currently loading
+            if (path && !scene.cache.audio.exists(key) && !scene.load.isLoading(key)) {
+                 console.log(`[AssetLoader] Queueing Audio: ${key}`);
                  loader.audio(key, path);
+            } else if (scene.cache.audio.exists(key)) {
+                 // console.log(`[AssetLoader] Audio already cached: ${key}`);
+            } else if (scene.load.isLoading(key)) {
+                 // console.log(`[AssetLoader] Audio already loading: ${key}`);
             } else if (!path) { console.warn(`Audio path missing for ${key}`); }
         };
         const tryLoadImage = (key, path) => {
@@ -47,9 +51,9 @@ class AssetLoader {
         //tryLoadAudio('background-music', ASSET_PATHS.MUSIC.BACKGROUND);
         //tryLoadAudio('combat-music', ASSET_PATHS.MUSIC.COMBAT);
         //tryLoadAudio('menu-music', ASSET_PATHS.MUSIC.MENU);
-        //tryLoadAudio('title-music', ASSET_PATHS.MUSIC.TITLE);
+        tryLoadAudio('title-music', ASSET_PATHS.MUSIC.TITLE);
         //tryLoadAudio('game-music', ASSET_PATHS.MUSIC.GAME);
-        //tryLoadAudio('battle-music', ASSET_PATHS.MUSIC.BATTLE);
+        tryLoadAudio('battle-music', ASSET_PATHS.MUSIC.BATTLE);
         //tryLoadAudio('crafting-music', ASSET_PATHS.MUSIC.CRAFTING);
         //tryLoadAudio('inventory-music', ASSET_PATHS.MUSIC.INVENTORY);
         tryLoadAudio('player-hit', ASSET_PATHS.SOUNDS.combat.playerHit);
@@ -92,6 +96,16 @@ class AssetLoader {
          // Optional: Listen for load completion for debugging
          loader.off('complete', AssetLoader.onLoadComplete); // Remove previous listener if any
          loader.on('complete', AssetLoader.onLoadComplete);
+
+          // Only start loader if it's not already running AND has files queued
+     if (!loader.isLoading() && loader.totalToLoad > 0) {
+        console.log("[AssetLoader] Starting background asset load...");
+        loader.start();
+     } else if (loader.isLoading()){
+         console.log("[AssetLoader] Loader already active, assets queued.");
+     } else {
+          console.log("[AssetLoader] No new assets queued for background loading.");
+     }
     }
 
     static onLoadComplete() {

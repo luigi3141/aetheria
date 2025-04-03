@@ -6,6 +6,7 @@ import gameState from '../utils/gameState.js';
 import BaseScene from './BaseScene.js';
 import { hasSaveGame, loadGame, clearSaveGame, saveGame } from '../utils/SaveLoadManager.js';
 import { AssetLoader } from '../utils/AssetLoader.js'; // Import the utility class
+import audioManager from '../utils/AudioManager.js'; // CORRECT - Imports the default export instance
 
 class StartScene extends BaseScene {
     constructor() {
@@ -24,6 +25,12 @@ class StartScene extends BaseScene {
             } else if (!path) { console.warn(`Image path missing for ${key}`); }
         };
         tryLoadImage('title-bg', ASSET_PATHS.BACKGROUNDS.TITLE);
+        const buttonClickKey = ASSET_PATHS.SOUNDS.ui.BUTTON_CLICK_KEY;
+    const buttonClickPath = ASSET_PATHS.SOUNDS.ui.BUTTON_CLICK;
+    if (buttonClickKey && buttonClickPath && !this.cache.audio.exists(buttonClickKey)) {
+        console.log(`[StartScene Preload] Loading: ${buttonClickKey}`);
+        this.load.audio(buttonClickKey, buttonClickPath);
+    }
         console.log("[StartScene] Preload finished.");
     }
 
@@ -52,7 +59,8 @@ class StartScene extends BaseScene {
         window.addEventListener('pointerdown', resumeAudio, { once: true });
         document.addEventListener('keydown', resumeAudio, { once: true });
         // --- End Audio Context ---
-
+        console.log("[StartScene] Requesting title music via AudioManager.");
+        audioManager.playMusic(ASSET_PATHS.MUSIC.TITLE_KEY || ASSET_PATHS.MUSIC.TITLE); // Use Key if defined, else Path
         // --- Check for Portal Entry ---
         const urlParams = new URLSearchParams(window.location.search);
         const portalParam = urlParams.get('portal');
@@ -106,6 +114,7 @@ class StartScene extends BaseScene {
         // Ensure AssetLoader is correctly imported and method exists
         if (typeof AssetLoader?.loadSharedAssetsInBackground === 'function') {
             AssetLoader.loadSharedAssetsInBackground(this);
+            
         } else {
             console.error("[StartScene] AssetLoader or loadSharedAssetsInBackground method not found!");
         }
@@ -150,7 +159,7 @@ class StartScene extends BaseScene {
         // --- Resume Game Button ---
         const resumeButton = this.ui.createButton( width / 2, buttonYStart, 'RESUME GAME',
          () => {
-            this.safePlaySound('button-click'); // Play sound first
+            this.safePlaySound(ASSET_PATHS.SOUNDS.ui.BUTTON_CLICK_KEY); // Use the KEY
             if (loadGame()) { // Try to load
                 console.log("Resuming game with loaded state.");
                 navigationManager.navigateTo(this, 'OverworldScene');
@@ -178,7 +187,7 @@ class StartScene extends BaseScene {
         // --- Settings Button ---
         this.ui.createButton( width / 2, buttonYStart + buttonSpacing * 2, 'SETTINGS',
             () => {
-                 this.safePlaySound('button-click');
+                 this.safePlaySound(ASSET_PATHS.SOUNDS.ui.BUTTON_CLICK_KEY);
                  console.log('Settings clicked');
                  navigationManager.navigateTo(this, 'SettingsScene'); // <<< ADD THIS
             },
@@ -189,7 +198,7 @@ class StartScene extends BaseScene {
         // --- Credits Button ---
         this.ui.createButton( width / 2, buttonYStart + buttonSpacing * 3, 'CREDITS',
         () => {
-             this.safePlaySound('button-click');
+             this.safePlaySound(ASSET_PATHS.SOUNDS.ui.BUTTON_CLICK_KEY);
              console.log('Credits clicked'); 
              // navigationManager.navigateTo(this, 'CreditsScene');
         },
@@ -205,7 +214,7 @@ class StartScene extends BaseScene {
 
     // startNewGame method (ensure safePlaySound is called correctly)
     startNewGame() {
-         this.safePlaySound('button-click'); // Play sound first
+         this.safePlaySound(ASSET_PATHS.SOUNDS.ui.BUTTON_CLICK_KEY); // Play sound first
          console.log('New Game clicked');
          if (this.hasSavedGame) {
               // Use confirm for simple confirmation
@@ -227,7 +236,7 @@ class StartScene extends BaseScene {
 
     // enterPortal method (ensure safePlaySound is called correctly)
     enterPortal() {
-        this.safePlaySound('button-click'); // Play sound first
+        this.safePlaySound(ASSET_PATHS.SOUNDS.ui.BUTTON_CLICK_KEY); // Play sound first
         console.log('Entering Vibeverse Portal...');
         // --- Save game state BEFORE redirecting ---
         if (this.hasSavedGame) { // Only save if a game is actually in progress
