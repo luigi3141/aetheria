@@ -293,10 +293,10 @@ const enemyData = {
     "cave-bat": {
         name: "Crystal Bat",
         sprite: "BAT",
-        level: 4,
-        baseHealth: 30,
-        baseAttack: 10,
-        baseDefense: 3,
+        level: 1,
+        baseHealth: 130,
+        baseAttack: 50,
+        baseDefense: 25,
         abilities: ["sonic-screech", "dive-attack"],
         lootTable: {
             gold: { min: 20, max: 40 },
@@ -311,10 +311,10 @@ const enemyData = {
     "crystal-golem": {
         name: "Crystal Golem",
         sprite: "CRYSTAL_GOLEM", // Add to AssetConfig.js (or use CRYSTAL if that's the key)
-        level: 6,
-        baseHealth: 80,
-        baseAttack: 12,
-        baseDefense: 10,
+        level: 1,
+        baseHealth: 180,
+        baseAttack: 60,
+        baseDefense: 35,
         abilities: ["crystal-smash", "reflect-light", "harden"],
         lootTable: {
             gold: { min: 30, max: 60 },
@@ -329,10 +329,10 @@ const enemyData = {
     "miner-ghost": {
         name: "Spectral Miner",
         sprite: "GHOST",
-        level: 5,
-        baseHealth: 45,
-        baseAttack: 15,
-        baseDefense: 2,
+        level: 2,
+        baseHealth: 200,
+        baseAttack: 70,
+        baseDefense: 40,
         abilities: ["ghostly-pickaxe", "terrifying-wail", "phase"],
         lootTable: {
             gold: { min: 25, max: 50 },
@@ -350,10 +350,10 @@ const enemyData = {
     "goblin-chief": { // Verdant Woods Boss
         name: "Goblin Chieftain",
         sprite: "GOBLIN_CHIEFTAIN",
-        level: 5,
-        baseHealth: 100,
-        baseAttack: 12,
-        baseDefense: 8,
+        level: 4,
+        baseHealth: 200,
+        baseAttack: 80,
+        baseDefense: 50,
         abilities: ["cleave", "rally", "throw-rock"],
         lootTable: {
             gold: { min: 25, max: 50 },
@@ -370,10 +370,10 @@ const enemyData = {
     "crystal-queen": { // Crystal Caverns Boss
         name: "Crystal Queen",
         sprite: "CRYSTAL_QUEEN",
-        level: 8,
-        baseHealth: 150,
-        baseAttack: 18,
-        baseDefense: 12,
+        level: 5,
+        baseHealth: 250,
+        baseAttack: 100,
+        baseDefense: 60,
         abilities: ["crystal-storm", "summon-shard", "blinding-light", "crystal-heal"],
         lootTable: {
             gold: { min: 40, max: 80 },
