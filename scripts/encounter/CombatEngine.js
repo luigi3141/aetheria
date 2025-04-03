@@ -8,6 +8,7 @@ import HealthManager from '../utils/HealthManager.js';
 // import CharacterManager from '../utils/CharacterManager.js';
 import { processItemLoss } from '../utils/PenaltyManager.js'; // Import the new function
 import navigationManager from '../navigation/NavigationManager.js';
+import { ASSET_PATHS } from '../config/AssetConfig.js';
 
 /**
  * Handles combat mechanics and turn management
@@ -166,7 +167,24 @@ export default class CombatEngine {
         }
 
         // Play player hit sound
-        this.scene.safePlaySound('player-hit');
+        //this.scene.safePlaySound('player-hit');
+
+        // --- Play Gender-Specific Hit Sound ---
+        let hitSoundKey = ASSET_PATHS.SOUNDS.combat.PLAYERHIT_M_KEY; // Default to male key
+        if (gameState.player.gender === 'female') {
+            hitSoundKey = ASSET_PATHS.SOUNDS.combat.PLAYERHIT_F_KEY; // Use female key if applicable
+        } else if (!gameState.player.gender) {
+             console.warn("Player gender not set, defaulting to male hit sound.");
+        }
+
+        // Use BaseScene's safePlaySound which delegates to AudioManager
+        if (this.scene?.safePlaySound && hitSoundKey) {
+            console.log(`Playing player hit sound: ${hitSoundKey} for gender: ${gameState.player.gender}`);
+            this.scene.safePlaySound(hitSoundKey); // Pass the determined key
+        } else {
+            console.error("Could not play player hit sound - safePlaySound or key missing.", { key: hitSoundKey });
+        }
+        // --- End Gender-Specific Hit Sound ---
 
         // --- Calculate Damage ---
         // 1. Determine Base Attack Power

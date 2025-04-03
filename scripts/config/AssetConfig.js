@@ -126,8 +126,10 @@ export const ASSET_PATHS = {
             LEVELUP_KEY: 'level-up',
             levelUp: 'assets/audio/combat/level-up.mp3',
             //heal: 'assets/audio/combat/heal.mp3',
-            PLAYERHIT_KEY: 'player-hit',
-            playerHit: 'assets/audio/combat/player-hit.mp3'
+            PLAYERHIT_M_KEY: 'player-hit-male',
+            playerHit_M: 'assets/audio/combat/player-hit.mp3',
+            PLAYERHIT_F_KEY: 'player-hit-female',
+            playerHit_F: 'assets/audio/combat/player-hit-female.mp3'
         },
         ui: {
             BUTTON_CLICK_KEY: 'button-click',

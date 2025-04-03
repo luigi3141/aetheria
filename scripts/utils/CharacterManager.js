@@ -16,7 +16,8 @@ const CLASS_DEFINITIONS = {
         hpGrowth: 10.0,
         // Define base mana if needed, or default
         baseMana: 30.0, // Example base mana
-        manaGrowth: 2.0  // Example mana growth per level
+        manaGrowth: 2.0,  // Example mana growth per level
+        gender: 'male'
     },
     'mage': {
         name: 'Mage',
@@ -27,7 +28,8 @@ const CLASS_DEFINITIONS = {
         baseHp: 60.0,
         hpGrowth: 6.0,
         baseMana: 100.0,
-        manaGrowth: 10.0
+        manaGrowth: 10.0,
+        gender: 'female'
     },
     'rogue': {
         name: 'Rogue',
@@ -38,7 +40,8 @@ const CLASS_DEFINITIONS = {
         baseHp: 60.0,
         hpGrowth: 8.0,
         baseMana: 40.0,
-        manaGrowth: 3.0
+        manaGrowth: 3.0,
+        gender: 'female'
     },
     'cleric': {
         name: 'Cleric',
@@ -49,7 +52,8 @@ const CLASS_DEFINITIONS = {
         baseHp: 50.0,
         hpGrowth: 8.0,
         baseMana: 80.0,
-        manaGrowth: 6.0
+        manaGrowth: 6.0,
+        gender: 'female'
     },
     'ranger': {
         name: 'Ranger',
@@ -60,7 +64,8 @@ const CLASS_DEFINITIONS = {
         baseHp: 60.0,
         hpGrowth: 8.0,
         baseMana: 45.0,
-        manaGrowth: 3.0
+        manaGrowth: 3.0,
+        gender: 'female'
     },
     'bard': {
         name: 'Bard',
@@ -71,7 +76,8 @@ const CLASS_DEFINITIONS = {
         baseHp: 50.0,
         hpGrowth: 8.0,
         baseMana: 70.0,
-        manaGrowth: 5.0
+        manaGrowth: 5.0,
+        gender: 'female'
     },
     // Add 'spare' if needed, using defaults or specific values
      'spare': {
@@ -83,7 +89,8 @@ const CLASS_DEFINITIONS = {
         baseHp: 75.0,
         hpGrowth: 10.0,
         baseMana: 20.0,
-        manaGrowth: 1.0
+        manaGrowth: 1.0,
+        gender: 'male'
     }
 };
 
@@ -119,6 +126,7 @@ class CharacterManager {
             gold: 50,
             inventory: { items: [], maxItems: 20, equipped: { weapon: null, body: null, accessory: null } }, // Adjusted slots
             abilities: [], // TODO: Add starting abilities based on classDef if needed
+            gender: classDef.gender || 'male', // Copy gender, default to 'male' if undefined
 
             // --- Set Initial Primary Stats from Base ---
             strength: classDef.baseStats.strength,
@@ -150,7 +158,7 @@ class CharacterManager {
         character.health = character.maxHealth;
         character.mana = character.maxMana;
 
-        console.log(`Created new character: ${name} the ${character.class}`);
+        console.log(`Created new character: ${name} the ${character.class} (${character.gender})`); // Log gender
         console.log('Initial Character stats:', JSON.parse(JSON.stringify(character))); // Log clean copy
         return character;
     }

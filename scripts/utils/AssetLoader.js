@@ -56,7 +56,8 @@ class AssetLoader {
         tryLoadAudio('battle-music', ASSET_PATHS.MUSIC.BATTLE);
         //tryLoadAudio('crafting-music', ASSET_PATHS.MUSIC.CRAFTING);
         //tryLoadAudio('inventory-music', ASSET_PATHS.MUSIC.INVENTORY);
-        tryLoadAudio('player-hit', ASSET_PATHS.SOUNDS.combat.playerHit);
+        tryLoadAudio('player-hit-male', ASSET_PATHS.SOUNDS.combat.playerHit_M);
+        tryLoadAudio('player-hit-female', ASSET_PATHS.SOUNDS.combat.playerHit_F);
 
         // Load shared images
         // Common backgrounds used across scenes
