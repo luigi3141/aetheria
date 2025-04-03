@@ -7,6 +7,7 @@
     "start": "http-server -c-1 -p 8080"
   },
   "dependencies": {
+    "@vercel/analytics": "^1.5.0",
     "phaser": "^3.88.2"
   },
   "devDependencies": {
